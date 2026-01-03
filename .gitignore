@@ -3,6 +3,8 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+*.ipynb
+
 # C extensions
 *.so
 
@@ -25,6 +27,7 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+.yarn/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -51,9 +54,15 @@ coverage.xml
 .pytest_cache/
 cover/
 
+nod/labextension
+
+.DS_Store
+
 # Translations
 *.mo
 *.pot
+
+yarn.lock
 
 # Django stuff:
 *.log
@@ -205,3 +214,4 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+node_modules
