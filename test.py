@@ -1,24 +1,28 @@
 from nod import nod
-import inspect
-def caller():
-    print(inspect.stack()[0].filename)
-    # print(inspect.getframeinfo(inspect.getfr))
-    # print(__file__)
-    # # print(__annotations__)
-    # # print(__path__)
-    # print(__package__)
-    # print(__spec__)
-    # print(__name__)
-    # print(__doc__)
-    # print(__frame__)
+import ipdb
+def caller(\
+        ):
+    a = 15
+    baller(a, 10, 20)
+
+def baller(a, \
+           b, c):
+    b = 20
+
+    c = 40
+
+    for x in range(0,10):
+        c+=1
+        
+    nod()
 
 
 global a 
 a = 10
 b = 20
 print(b)
-nod()
 caller()
+# nod()
 
 
 

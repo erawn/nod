@@ -13,3 +13,12 @@ TODO
 
 - Send quit from client on frontend send 
 - add exit without saving button 
+- add code above/below 
+- add age for temp files? 
+- autosplit option
+- remove nod() call from the generated notebook
+- mark cells above nod() call as run? 
+
+
+Settings 
+- format for notebook converstion with jupytext (light, percent, etc)
