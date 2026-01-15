@@ -12,6 +12,7 @@ except ImportError:
 import inspect
 import shlex
 import sys
+import re
 import tempfile
 import ipykernel
 from jupyter_client import KernelProvisionerBase
@@ -40,15 +41,14 @@ def nod():
     # print(frameInfo)
     sourceProgram = open(frameInfo.filename).read()
     # print(sourceProgram)
-    programAST = AnnotateParents().visit(ast.parse(sourceProgram))
+    programAST = AnnotateParents().visit(ast.parse(sourceProgram, type_comments=True))
     nodCall: ast.AST = ExpressionFinder(frameInfo.lineno).visit(programAST)
-    currentFunction = nodCall.parent
+    currentFunction = nodCall.parent.parent
     # TODO -- return if not in a function?
     if not isinstance(currentFunction, ast.Module):
         print("lineinfo")
         print(currentFunction.lineno)
         print(currentFunction.end_lineno)
-    print("nodeParent")
     print("function", frameInfo.function)
     print(ast.dump(currentFunction, include_attributes=True, indent=4))
     # sourceSegment = ast.get_source_segment(sourceProgram, currentFunction)
@@ -75,7 +75,9 @@ def nod():
     # print(tempPath)
 
     print("sourceProgram", repr(sourceProgram))
-    sourceLines = sourceProgram.splitlines("\n")
+
+    sourceProgramWithoutNod = re.sub("nod(.*)", "", sourceProgram)
+    sourceLines = sourceProgramWithoutNod.splitlines("\n")
     functionHeader = sourceLines[functionDefStart:functionBodyStart]
     functionBody = [
         line[col_offset:] if line[:col_offset] == """ """ * col_offset else line
@@ -118,16 +120,32 @@ def nod():
             "textAbove": textAbove,
             "textBelow": textBelow,
             "functionHeader": functionHeader,
-            "nodCallPosition": (nodCall.lineno, nodCall.end_lineno),
+            "funcBodyPosition": (currentFunction.lineno, currentFunction.end_lineno),
         }
     }
     scope.update(caller_frame.f_globals)
     scope.update(caller_frame.f_locals)
 
-    # app = embed_kernel(local_ns = scope)
-    # args = shlex.split("jupyter lab --KernelProvisionerFactory.default_provisioner_name=nod-provisioner " + tempNotebook)
-    # notebookProcess = subprocess.Popen(args)
-    # app.start()
+    c = Config()
+    # c.InteractiveShellApp.exec_file =
+    c.InteractiveShellApp.exec_lines = [
+        # "from ipylab import JupyterFrontEnd",
+        # "app = JupyterFrontEnd()",
+        # "app.on_ready(app.commands.execute('apputils:change-theme', { 'theme': 'JupyterLab Dark' }))",
+    ]
+    app = embed_kernel(local_ns=scope, config=c)
+    app.exec_lines = ["testVar = 2010"]
+    args = shlex.split(
+        "jupyter lab --KernelProvisionerFactory.default_provisioner_name=nod-provisioner "
+        + "--ContentsManager.allow_hidden=True "
+        + "--notebook-dir "
+        + os.path.dirname(frameInfo.filename)
+        + " "
+        + tempNotebook
+    )
+    notebookProcess = subprocess.Popen(args)
+    app.init_code()
+    app.start()
 
 
 def embed_kernel(module=None, local_ns=None, **kwargs):
@@ -149,8 +167,10 @@ def embed_kernel(module=None, local_ns=None, **kwargs):
     # os.environ["NOD_IPYTHON_CONNECTION_FILE"] = "test2"
     # get the app if it exists, or set it up if it doesn't
     if IPKernelApp.initialized():
+        print("Already Initialized")
         app = IPKernelApp.instance()
     else:
+        print("Initializing")
         app = IPKernelApp.instance(**kwargs)
         app.initialize([])
         # Undo unnecessary sys module mangling from init_sys_modules.
@@ -177,9 +197,6 @@ def embed_kernel(module=None, local_ns=None, **kwargs):
     # os.environ["NOD_IPYTHON_CONNECTION_FILE"] = "test"
     # print("setting connection file:", app.connection_file)
     return app
-
-
-c = Config()
 
 
 # _log = logging.getLogger(__name__)

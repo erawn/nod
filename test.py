@@ -1,31 +1,28 @@
 from nod import nod
 import ipdb
-def caller(\
-        ):
+
+
+def caller():
     a = 15
 
-
-    def baller(a, \
-            b, c):
+    def baller(a, b, c):
         b = 20
 
         c = 40
-        print('\n')
+        print("\n")
 
-        for x in range(0,10):
-
-            c+=1
+        for x in range(0, 10):
+            c += 1
+        # test
 
         nod()
+
     baller(a, 10, 20)
 
 
-global a 
+global a
 a = 10
 b = 20
 print(b)
 caller()
 # nod()
-
-
-
