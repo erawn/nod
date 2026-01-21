@@ -13,9 +13,12 @@ def caller():
 
         for x in range(0, 10):
             c += 1
-        # test
+        # demo
+        l = []
+        l.append(l)
 
-        nod()
+        assert l[0] is l
+        pass
 
     baller(a, 10, 20)
 

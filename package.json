@@ -58,7 +58,9 @@
     },
     "dependencies": {
         "@jupyterlab/application": "^4.0.0",
-        "@jupyterlab/settingregistry": "^4.0.0"
+        "@jupyterlab/settingregistry": "^4.0.0",
+        "zod": "^4.3.5",
+        "zod_utilz": "^0.8.4"
     },
     "devDependencies": {
         "@jupyterlab/builder": "^4.0.0",

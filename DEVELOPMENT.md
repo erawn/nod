@@ -18,7 +18,10 @@ TODO
 - autosplit option
 - remove nod() call from the generated notebook
 - mark cells above nod() call as run? 
-
-
+- mode to create function at call site? 
+- shut down kernel + jupyter session on exit
+- add param to nod() for stack frame/indent depth?
+- exit without saving button
+- move old notebooks to subfolder
 Settings 
 - format for notebook converstion with jupytext (light, percent, etc)

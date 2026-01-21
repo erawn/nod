@@ -8,12 +8,13 @@ except ImportError:
 
     warnings.warn("Importing 'nod' outside a proper installation.")
     __version__ = "dev"
-
+import time
 import inspect
 import shlex
 import sys
 import re
 import tempfile
+import typing
 import ipykernel
 from jupyter_client import KernelProvisionerBase
 import os
@@ -28,65 +29,48 @@ from IPython.utils.frame import extract_module_locals
 import ast
 import uuid
 from pathlib import Path
-
+import libcst as cst
 import jupytext.cli
-
-from nod.ast_tools import AnnotateParents, ExpressionFinder
+from libcst.display import dump
+from nod.ast_tools import NodFinder, NodRemove
+from libcst.metadata import CodePosition, CodeRange
+from libcst.metadata import PositionProvider, ParentNodeProvider
 
 _log = logging.getLogger(__name__)
 
 
 def nod():
     frameInfo = inspect.stack()[1]
-    # print(frameInfo)
-    sourceProgram = open(frameInfo.filename).read()
-    # print(sourceProgram)
-    programAST = AnnotateParents().visit(ast.parse(sourceProgram, type_comments=True))
-    nodCall: ast.AST = ExpressionFinder(frameInfo.lineno).visit(programAST)
-    currentFunction = nodCall.parent.parent
+    origSourceProgram = open(frameInfo.filename).read()
+    wrapper = cst.MetadataWrapper(cst.parse_module(origSourceProgram))
+
+    finder = NodFinder(frameInfo.lineno)
+    metaAST = wrapper.visit(finder)
+    newWrapper = cst.MetadataWrapper(metaAST)
+    filteredAST = newWrapper.visit(NodRemove(frameInfo.lineno))
+    target_node = finder.target_node
+    func_body: CodeRange = finder.body_indent
+    func_pos: CodeRange = finder.target_pos
+    indent = func_body.start.column
+    print("BODY POS", finder.body_indent)
+    print("DEF POS", finder.target_pos)
+
+    if func_pos is None:
+        print("BAD POS")
+        return
     # TODO -- return if not in a function?
-    if not isinstance(currentFunction, ast.Module):
-        print("lineinfo")
-        print(currentFunction.lineno)
-        print(currentFunction.end_lineno)
-    print("function", frameInfo.function)
-    print(ast.dump(currentFunction, include_attributes=True, indent=4))
-    # sourceSegment = ast.get_source_segment(sourceProgram, currentFunction)
 
-    functionDefStart = currentFunction.lineno - 1
-    functionEnd = currentFunction.end_lineno
-    functionBodyStart = (
-        currentFunction.body.pop(0).lineno - 1
-        if len(currentFunction.body) > 0
-        else functionEnd
-    )
-    col_offset = (
-        currentFunction.body.pop(0).col_offset
-        if len(currentFunction.body) > 0
-        else functionEnd
-    )
+    sourceLines = filteredAST.code.splitlines("\n")
+    functionHeader = sourceLines[func_pos.start.line - 1 : func_body.start.line - 1]
 
-    print("functionLines", functionDefStart, functionEnd, functionBodyStart)
-
-    # os.getcwd()
-
-    # tempCode = tempfile.TemporaryFile()
-    # tempPath = os.path.abspath(tempCode)
-    # print(tempPath)
-
-    print("sourceProgram", repr(sourceProgram))
-
-    sourceProgramWithoutNod = re.sub("nod(.*)", "", sourceProgram)
-    sourceLines = sourceProgramWithoutNod.splitlines("\n")
-    functionHeader = sourceLines[functionDefStart:functionBodyStart]
     functionBody = [
-        line[col_offset:] if line[:col_offset] == """ """ * col_offset else line
-        for line in sourceLines[functionBodyStart:functionEnd]
+        line[indent:] if line[:indent] == """ """ * indent else line
+        for line in sourceLines[func_body.start.line - 1 : func_body.end.line]
     ]
-    textAbove = sourceLines[max(functionDefStart - 11, 0) : functionDefStart]
+    textAbove = sourceLines[max(func_pos.start.line - 11, 0) : func_pos.start.line - 1]
     textBelow = sourceLines[
-        min(functionEnd, len(sourceLines) - 1) : min(
-            functionEnd + 11, len(sourceLines) - 1
+        min(func_pos.end.line, len(sourceLines) - 1) : min(
+            func_pos.end.line + 11, len(sourceLines) - 1
         )
     ]
 
@@ -113,27 +97,29 @@ def nod():
     jupytext.cli.jupytext(args)
 
     caller_frame = frameInfo.frame
-    scope = {
-        "__NODINFO": {
-            "sourceFile": frameInfo.filename,
-            "line": frameInfo.lineno,
-            "textAbove": textAbove,
-            "textBelow": textBelow,
-            "functionHeader": functionHeader,
-            "funcBodyPosition": (currentFunction.lineno, currentFunction.end_lineno),
-        }
+    info = {
+        "sourceFile": os.path.relpath(frameInfo.filename),
+        "line": frameInfo.lineno,
+        "textAbove": textAbove,
+        "textBelow": textBelow,
+        "functionHeader": functionHeader,
+        "funcBodyPosition": (func_body.start.column, func_body.end.line),
+        "indent": indent,
     }
+    scope = {"__NODINFO": json.dumps(info)}
     scope.update(caller_frame.f_globals)
     scope.update(caller_frame.f_locals)
 
     c = Config()
     # c.InteractiveShellApp.exec_file =
     c.InteractiveShellApp.exec_lines = [
-        # "from ipylab import JupyterFrontEnd",
-        # "app = JupyterFrontEnd()",
-        # "app.on_ready(app.commands.execute('apputils:change-theme', { 'theme': 'JupyterLab Dark' }))",
+        "from ipylab import JupyterFrontEnd",
+        "app = JupyterFrontEnd()",
+        "app.on_ready(app.commands.execute('apputils:change-theme', { 'theme': 'JupyterLab Dark' }))",
     ]
-    app = embed_kernel(local_ns=scope, config=c)
+    print("PID", os.getpid())
+    app = embed_kernel(local_ns=scope, config=c, no_stdout=False, no_stderr=False)
+    print("Connection File", app.abs_connection_file)
     app.exec_lines = ["testVar = 2010"]
     args = shlex.split(
         "jupyter lab --KernelProvisionerFactory.default_provisioner_name=nod-provisioner "
@@ -144,8 +130,27 @@ def nod():
         + tempNotebook
     )
     notebookProcess = subprocess.Popen(args)
+
     app.init_code()
     app.start()
+
+    # notebookProcess.kill()
+
+    # # Fork a child process
+    # processid = os.fork()
+    # print(processid)
+
+    # # processid > 0 represents the parent process
+    # if processid > 0:
+    #     print("\nParent Process:")
+    #     print("Process ID:", os.getpid())
+    #     print("Child's process ID:", processid)
+
+    # # processid = 0 represents the created child process
+    # else:
+    #     print("\nChild Process:")
+    #     print("Process ID:", os.getpid())
+    #     print("Parent's process ID:", os.getppid())
 
 
 def embed_kernel(module=None, local_ns=None, **kwargs):
@@ -172,6 +177,8 @@ def embed_kernel(module=None, local_ns=None, **kwargs):
     else:
         print("Initializing")
         app = IPKernelApp.instance(**kwargs)
+
+        app.abs_connection_file
         app.initialize([])
         # Undo unnecessary sys module mangling from init_sys_modules.
         # This would not be necessary if we could prevent it
@@ -216,7 +223,10 @@ def get_latest_connection_file():
 
     jupyter_runtime_dir = get_jupyter_runtime_dir()
     connection_filenames = glob.glob(f"{jupyter_runtime_dir}/kernel-*.json")
-    latest_connection_filename = max(connection_filenames, key=os.path.getctime)
+
+    regex = re.compile(r".*kernel-.{2,8}\.json")
+    pid_filenames = list(filter(regex.match, connection_filenames))
+    latest_connection_filename = max(pid_filenames, key=os.path.getctime)
     print("FILENAME", latest_connection_filename)
 
     # connection_file = os.environ["NOD_IPYTHON_CONNECTION_FILE"]
