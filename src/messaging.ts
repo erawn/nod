@@ -3,63 +3,90 @@ import { KernelMessage } from '@jupyterlab/services';
 
 import '../style/index.css';
 
-import {
-    INotebookTracker,
-} from '@jupyterlab/notebook';
-
 import { nodState } from './state';
 import { nodSchema } from './types';
 
 import {
     Contents,
 } from '@jupyterlab/services'
+import { IShellFuture } from '@jupyterlab/services/lib/kernel/kernel';
+import { IExecuteReplyMsg, IExecuteRequestMsg } from '@jupyterlab/services/lib/kernel/messages';
 
-export async function checkNodInfo(notebookTracker: INotebookTracker): Promise<KernelMessage.IExecuteReplyMsg | void> {
-
-    const notebook = notebookTracker.currentWidget!;
-    const kernel = notebook.sessionContext?.session?.kernel;
+export function requestExecute(code: string): IShellFuture<IExecuteRequestMsg, IExecuteReplyMsg> | null {
+    const kernel = nodState.Instance().tracker.currentWidget?.sessionContext?.session?.kernel;
     if (!kernel) {
+        //TODO--throw error
         console.log('Session has no kernel.');
-        return;
+        return null;
     }
     const content: KernelMessage.IExecuteRequestMsg['content'] = {
-        code: 'print(__NODINFO)',
+        code: code,
         silent: true,
         store_history: false
     };
-
     const future = kernel.requestExecute(content);
-    future.onIOPub = msg => {
-        if (
-            msg.header.msg_type !== 'status' &&
-            msg.header.msg_type !== 'stream'
-        ) {
-            console.log('checkIPPlugin', msg.header.msg_type, msg.content);
+    return future
+
+}
+
+export async function resetState() {
+    const future = requestExecute(`get_ipython().reset_selective(r"^(?!__STARTINGVARIABLES$).*$")`)
+    if (future !== null) {
+        future.onIOPub = msg => {
+            console.log("resetState")
+            console.log(msg)
         }
-        if (KernelMessage.isStreamMsg(msg)) {
-            const result = msg as KernelMessage.IStreamMsg;
+        return future.done
+    }
+    return null
+}
+
+export async function exitSession() {
+    const future = requestExecute('exit')
+    if (future !== null) {
+        future.onReply = msg => {
+            nodState.Instance().app.commands.execute('notebook:close-and-shutdown')
+        }
+    }
+    return
+}
+
+export async function checkNodInfo(): Promise<KernelMessage.IExecuteReplyMsg | null> {
+    const future = requestExecute('print(__NODINFO)')
+    if (future !== null) {
+        future.onIOPub = msg => {
             if (
-                result.content.name === "stdout"
+                msg.header.msg_type !== 'status' &&
+                msg.header.msg_type !== 'stream'
             ) {
-                console.log("setting active")
-                try {
-                    const jsonObj = JSON.parse(result.content.text)
-                    const schema = nodSchema.parse(jsonObj)
-                    nodState.Instance().pythonInfo = schema
-                    nodState.Instance().status = 'active'
-                    console.log(schema)
-                } catch (err) {
-                    console.log(err)
-                }
-                //TODO: Find condition on failure
-            } else if (result.content.text.search('') >= 0) {
-                nodState.Instance().status = 'inactive'
-            } else {
-                console.log('found weird message!', msg);
+                console.log('requestExecute', msg.header.msg_type, msg.content);
             }
-        }
-    };
-    return future.done
+            if (KernelMessage.isStreamMsg(msg)) {
+                const result = msg as KernelMessage.IStreamMsg;
+                if (
+                    result.content.name === "stdout"
+                ) {
+                    console.log("setting active")
+                    try {
+                        const jsonObj = JSON.parse(result.content.text)
+                        const schema = nodSchema.parse(jsonObj)
+                        nodState.Instance().pythonInfo = schema
+                        nodState.Instance().status = 'active'
+                        console.log(schema)
+                    } catch (err) {
+                        console.log(err)
+                    }
+                    //TODO: Find condition on failure
+                } else if (result.content.text.search('') >= 0) {
+                    nodState.Instance().status = 'inactive'
+                } else {
+                    console.log('found weird message!', msg);
+                }
+            }
+        };
+        return future.done
+    }
+    return null
 }
 
 export function writeChange() {
@@ -99,21 +126,8 @@ export function writeChange() {
         } as Contents.IModel;
         return contentsManager.save(sourceFile, newModel)
     }).then(() => {
-        const notebook = nodState.Instance().tracker.currentWidget!;
-        const kernel = notebook.sessionContext?.session?.kernel;
-        if (!kernel) {
-            console.log('Session has no kernel.');
-            return;
-        }
-        const content: KernelMessage.IExecuteRequestMsg['content'] = {
-            code: 'exit',
-            silent: true,
-            store_history: false
-        };
+        exitSession()
 
-        kernel.requestExecute(content).onReply = msg => {
-            nodState.Instance().app.commands.execute('notebook:close-and-shutdown')
-        }
     }).then(() => {
 
     }).catch((err) => {

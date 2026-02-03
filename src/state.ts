@@ -55,6 +55,9 @@ export class nodState {
     get tracker(): INotebookTracker {
         return this._notebookTracker
     }
+    set tracker(tracker: INotebookTracker) {
+        this._notebookTracker = tracker
+    }
     get contentsManager(): Contents.IManager {
         return this._contentsManager
     }

@@ -58,6 +58,10 @@
     },
     "dependencies": {
         "@jupyterlab/application": "^4.0.0",
+        "@jupyterlab/apputils": "^4.0.0",
+        "@jupyterlab/coreutils": "^6.0.0",
+        "@jupyterlab/launcher": "^4.0.0",
+        "@jupyterlab/services": "^7.0.0",
         "@jupyterlab/settingregistry": "^4.0.0",
         "zod": "^4.3.5",
         "zod_utilz": "^0.8.4"
@@ -101,6 +105,16 @@
         "access": "public"
     },
     "jupyterlab": {
+        "discovery": {
+            "server": {
+                "managers": [
+                    "pip"
+                ],
+                "base": {
+                    "name": "nod"
+                }
+            }
+        },
         "extension": true,
         "outputDir": "nod/labextension",
         "schemaDir": "schema"

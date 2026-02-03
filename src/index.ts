@@ -18,7 +18,8 @@ import {
 } from '@jupyterlab/services'
 import { checkNodInfo } from './messaging';
 import { nodState } from './state';
-import { addStyling } from './addStyling';
+// import { addStyling } from './addStyling';
+import { PageConfig } from '@jupyterlab/coreutils';
 // import { nodState } from './state';
 /**
  * Initialization data for the nod extension.
@@ -38,11 +39,15 @@ const plugin: JupyterFrontEndPlugin<void> = {
     settingRegistry: ISettingRegistry | null,
     contentsManager: Contents.IManager,) => {
 
+    const isActive = PageConfig.getOption('nod_active');
+    console.log("nod_active", isActive)
+    if (isActive !== 'true') {
+      console.log("Nod extension loaded, but not called from a nod() call, deactivating")
+      return
+    }
+
     nodState.Instance(notebookTracker, app, contentsManager) // initialize singleton with tracker
     console.log('JupyterLab extension nod is activated!');
-
-
-    // const state = nodState.Instance
 
     if (settingRegistry) {
       Promise.all([app.restored, settingRegistry.load(plugin.id)])
@@ -62,19 +67,53 @@ const plugin: JupyterFrontEndPlugin<void> = {
     }
 
     // const contentsManager = new ContentsManager();
+    // console.log('update!')
+    // notebookTracker.activeCellChanged.connect(() => {
+    //   addStyling(notebookTracker)
+    //   const panel = notebookTracker.currentWidget
+    //   if (panel?.sessionContext.session?.kernel) {
+    //     panel.sessionContext.session.model
+    //     panel.sessionContext.session?.kernel.anyMessage.connect((sender, args) => {
+    //       console.log("MSG")
+    //       const { direction, msg } = args
+    //       if (direction === 'send') {
+    //         msg.header.msg_type ==
+    //           console.log("MESSAGE")
+    //         console.log(msg)
+    //       }
+    //     })
+    //   }
+    // })
 
-    notebookTracker.activeCellChanged.connect(() => addStyling(notebookTracker))
+    // notebookTracker.currentWidget?.sessionContext.connectionStatusChanged.connect(() => {
+    //   const panel = notebookTracker.currentWidget
+    //   if (panel?.sessionContext.session?.kernel) {
+    //     panel.sessionContext.
+    //       panel.sessionContext.session?.kernel.anyMessage.connect((sender, args) => {
+    //         const { direction, msg } = args
+    //         if (direction === 'send') {
+    //           console.log("MESSAGE")
+    //           console.log(msg)
+    //         }
+    //       })
+    //   }
+    // })
 
-    notebookTracker.currentWidget?.sessionContext.connectionStatusChanged
     notebookTracker.currentChanged.connect((tracker, notebook) => {
       console.log("currentChanged")
-      checkNodInfo(tracker)
+      nodState.Instance().tracker = tracker
+      checkNodInfo()
+
 
       tracker?.currentWidget?.sessionContext?.connectionStatusChanged.connect(() => {
         console.log("connectionStatusChanged")
-        checkNodInfo(tracker)
+        checkNodInfo()
       });
     });
+    // https://github.com/fails-components/jupyterfails/blob/master/packages/interceptor/src/index.ts
+    // notebookTracker.widgetAdded.connect(
+
+    // )
 
     app.commands.addCommand('toolbar-button:add-pagebreak', {
       icon: checkIcon,

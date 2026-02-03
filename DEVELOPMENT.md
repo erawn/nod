@@ -14,14 +14,12 @@ TODO
 - Send quit from client on frontend send 
 - add exit without saving button 
 - add code above/below 
-- add age for temp files? 
 - autosplit option
-- remove nod() call from the generated notebook
 - mark cells above nod() call as run? 
 - mode to create function at call site? 
-- shut down kernel + jupyter session on exit
 - add param to nod() for stack frame/indent depth?
-- exit without saving button
-- move old notebooks to subfolder
+- Add check interface where it shows side by side 
+- Put file in .nod with info, check for it on startup 
+- add doc to nod() call 
 Settings 
 - format for notebook converstion with jupytext (light, percent, etc)

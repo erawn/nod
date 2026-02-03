@@ -8,6 +8,9 @@ except ImportError:
 
     warnings.warn("Importing 'nod' outside a proper installation.")
     __version__ = "dev"
+import shutil
+
+import orjson
 import time
 import inspect
 import shlex
@@ -19,72 +22,127 @@ import ipykernel
 from jupyter_client import KernelProvisionerBase
 import os
 import logging
+import traceback as tb
 import json
 import os
 import subprocess
 import glob
 from traitlets.config import Config
-from ipykernel.kernelapp import IPKernelApp
-from IPython.utils.frame import extract_module_locals
-import ast
 import uuid
 from pathlib import Path
 import libcst as cst
 import jupytext.cli
 from libcst.display import dump
-from nod.ast_tools import NodFinder, NodRemove
+from .serverExtension import Nod
 from libcst.metadata import CodePosition, CodeRange
 from libcst.metadata import PositionProvider, ParentNodeProvider
+from IPython.core.interactiveshell import InteractiveShell
+from varname import nameof
+import snoop
+import executing
+from dataclasses import dataclass
+from typing import List
+from IPython.core.getipython import get_ipython
+
+from nod.embed_kernel import embed_kernel
+from nod.ast_tools import NodFinder
+from nod.serverExtension import setup_handlers
+from .file_helpers import ProgramInfo, getProgramInfo
+from .datastore import LogStore, StartingVariables
 
 _log = logging.getLogger(__name__)
 
+from nod.provisioner import nodProvisioner
 
-def nod():
-    frameInfo = inspect.stack()[1]
-    origSourceProgram = open(frameInfo.filename).read()
-    wrapper = cst.MetadataWrapper(cst.parse_module(origSourceProgram))
 
-    finder = NodFinder(frameInfo.lineno)
-    metaAST = wrapper.visit(finder)
-    newWrapper = cst.MetadataWrapper(metaAST)
-    filteredAST = newWrapper.visit(NodRemove(frameInfo.lineno))
-    target_node = finder.target_node
-    func_body: CodeRange = finder.body_indent
-    func_pos: CodeRange = finder.target_pos
-    indent = func_body.start.column
-    print("BODY POS", finder.body_indent)
-    print("DEF POS", finder.target_pos)
+def resetState():
+    """Clear all internal namespaces, and attempt to release references to
+    user objects.
 
-    if func_pos is None:
-        print("BAD POS")
+    If new_session is True, a new history session will be opened.
+    """
+    shell = get_ipython()
+    shell.run_line_magic("reset", "-f -s")
+    if shell.user_ns.get("__STARTINGVARIABLES", False):
+        shell.push(shell.user_ns["__STARTINGVARIABLES"])
+
+
+def log(*args, **kwargs):
+    logStore = LogStore()
+    logStore.logs.append()
+
+    logStore.logs.append(dict(val))
+    vars = locals() + globals()
+
+    [k for k, v in locals.items() if v in args][0]
+
+    for key, val in kwargs.items():
+        logStore.logs.append(dict(key=val))
+        print(key, val)
+
+
+def notebook(
+    on_condition: bool = True,
+):
+    if not on_condition:
         return
-    # TODO -- return if not in a function?
 
-    sourceLines = filteredAST.code.splitlines("\n")
-    functionHeader = sourceLines[func_pos.start.line - 1 : func_body.start.line - 1]
+    try:
+        name = get_ipython().__class__.__name__
+        if name != "NoneType":
+            return
+    except NameError:
+        pass
 
-    functionBody = [
-        line[indent:] if line[:indent] == """ """ * indent else line
-        for line in sourceLines[func_body.start.line - 1 : func_body.end.line]
-    ]
-    textAbove = sourceLines[max(func_pos.start.line - 11, 0) : func_pos.start.line - 1]
-    textBelow = sourceLines[
-        min(func_pos.end.line, len(sourceLines) - 1) : min(
-            func_pos.end.line + 11, len(sourceLines) - 1
-        )
-    ]
+    stack = inspect.stack()
 
-    print("header,body", functionHeader, functionBody)
-    print("pre/post text", textAbove, textBelow)
+    def find_in_notebook(frame: inspect.FrameInfo):
+        for line in frame.code_context:
+            if line.find("notebook()") > 0:
+                return True
+        return False
 
+    notebook_call = next((frame for frame in stack if find_in_notebook(frame)), None)
+
+    program_text = open(notebook_call.filename).read()
+    wrapper = cst.MetadataWrapper(cst.parse_module(program_text))
+    finder = NodFinder(notebook_call.lineno)
+    ast_with_position = wrapper.visit(finder)
+
+    if finder.body_indent is None:
+        # TODO raise error
+        return
+
+    program_info = getProgramInfo(finder, ast_with_position)
+
+    ## FILE ORGANIZATION
     hiddenDir = os.path.join(os.getcwd(), ".nod")
     os.makedirs(hiddenDir, exist_ok=True)
+    archiveDir = os.path.join(hiddenDir, "archive")
+    os.makedirs(archiveDir, exist_ok=True)
+
+    connection_dir = os.path.join(hiddenDir, "connection")
+    if os.path.exists(connection_dir):
+        shutil.rmtree(connection_dir)
+    os.makedirs(connection_dir, exist_ok=True)
+
+    file_names = os.listdir(hiddenDir)
+    for file_name in file_names:
+        if os.path.isfile(os.path.join(hiddenDir, file_name)):
+            if os.path.exists(os.path.join(archiveDir, file_name)):
+                os.replace(
+                    os.path.join(hiddenDir, file_name),
+                    os.path.join(archiveDir, file_name),
+                )
+            else:
+                shutil.move(os.path.join(hiddenDir, file_name), archiveDir)
+
     tempFileStem = os.path.join(
-        os.getcwd(), ".nod", Path(frameInfo.filename).stem + str(uuid.uuid1())
+        hiddenDir, Path(notebook_call.filename).stem + str(uuid.uuid1())
     )
     tempPythonFile = tempFileStem + ".py"
     with open(tempPythonFile, "x") as f:
-        f.writelines(functionBody)
+        f.writelines(program_info.text_body)
 
     tempNotebook = tempFileStem + ".ipynb"
     args = shlex.split(
@@ -96,189 +154,106 @@ def nod():
     )
     jupytext.cli.jupytext(args)
 
-    caller_frame = frameInfo.frame
-    info = {
-        "sourceFile": os.path.relpath(frameInfo.filename),
-        "line": frameInfo.lineno,
-        "textAbove": textAbove,
-        "textBelow": textBelow,
-        "functionHeader": functionHeader,
-        "funcBodyPosition": (func_body.start.column, func_body.end.line),
-        "indent": indent,
-    }
-    scope = {"__NODINFO": json.dumps(info)}
-    scope.update(caller_frame.f_globals)
-    scope.update(caller_frame.f_locals)
+    jsonInfo = orjson.dumps(program_info)
+
+    ## STARTING STATE
+
+    startingVariables = {}
+    startingVariables.update(notebook_call.frame.f_globals)
+    startingVariables.update(notebook_call.frame.f_locals)
+    scope = {"__NODINFO": jsonInfo, "__STARTINGVARIABLES": startingVariables}
 
     c = Config()
-    # c.InteractiveShellApp.exec_file =
+    # so they get added to user namespace
     c.InteractiveShellApp.exec_lines = [
-        "from ipylab import JupyterFrontEnd",
-        "app = JupyterFrontEnd()",
-        "app.on_ready(app.commands.execute('apputils:change-theme', { 'theme': 'JupyterLab Dark' }))",
+        "get_ipython().push(__STARTINGVARIABLES)",
     ]
-    print("PID", os.getpid())
-    app = embed_kernel(local_ns=scope, config=c, no_stdout=False, no_stderr=False)
-    print("Connection File", app.abs_connection_file)
-    app.exec_lines = ["testVar = 2010"]
+    # c.InteractiveShellApp.hide_initial_ns = False
+    app = embed_kernel(
+        local_ns=scope, config=c, no_stdout=False, no_stderr=False, quiet=False
+    )
+    app.shell.push(startingVariables)
+    # connection_file = app.abs_connection_file
+    # shutil.copy(
+    #     connection_file, os.path.join(connection_dir, Path(connection_file).name)
+    # )
+    # print("Connection File", app.abs_connection_file)
+    # app.exec_lines = ["testVar = 2010"]
+    _log.warning(jsonInfo)
+
+    ## RUNNING NOTEBOOK
     args = shlex.split(
-        "jupyter lab --KernelProvisionerFactory.default_provisioner_name=nod-provisioner "
-        + "--ContentsManager.allow_hidden=True "
-        + "--notebook-dir "
-        + os.path.dirname(frameInfo.filename)
+        "jupyter lab --KernelProvisionerFactory.default_provisioner_name=nod-provisioner"
+        + " "
+        + "--ContentsManager.allow_hidden=True"
+        + " "
+        + "--notebook-dir"
+        + " "
+        + os.path.dirname(notebook_call.filename)
+        + " "
+        + "--Nod.is_active=True"
+        + " "
+        + "--Nod.info="
+        + str(jsonInfo)
+        # + " "
+        # + "--ServerApp.jpserver_extensions="
         + " "
         + tempNotebook
     )
-    notebookProcess = subprocess.Popen(args)
 
-    app.init_code()
+    notebookProcess = subprocess.Popen(args)
     app.start()
 
     # notebookProcess.kill()
 
     # # Fork a child process
+    # _log.warning("forking")
     # processid = os.fork()
-    # print(processid)
+    # _log.warning(processid)
 
     # # processid > 0 represents the parent process
     # if processid > 0:
-    #     print("\nParent Process:")
-    #     print("Process ID:", os.getpid())
-    #     print("Child's process ID:", processid)
+    #     _log.warning("\nParent Process:")
+    #     _log.warning(os.getpid())
+    #     _log.warning("Child's process ID: %d", processid)
+    #
+    #     sys.op
 
     # # processid = 0 represents the created child process
     # else:
-    #     print("\nChild Process:")
-    #     print("Process ID:", os.getpid())
-    #     print("Parent's process ID:", os.getppid())
 
-
-def embed_kernel(module=None, local_ns=None, **kwargs):
-    """Embed and start an IPython kernel in a given scope.
-
-    Parameters
-    ----------
-    module : ModuleType, optional
-        The module to load into IPython globals (default: caller)
-    local_ns : dict, optional
-        The namespace to load into IPython user namespace (default: caller)
-    kwargs : dict, optional
-        Further keyword args are relayed to the IPKernelApp constructor,
-        allowing configuration of the Kernel.  Will only have an effect
-        on the first embed_kernel call for a given process.
-
-    """
-    print("Starting Kernel")
-    # os.environ["NOD_IPYTHON_CONNECTION_FILE"] = "test2"
-    # get the app if it exists, or set it up if it doesn't
-    if IPKernelApp.initialized():
-        print("Already Initialized")
-        app = IPKernelApp.instance()
-    else:
-        print("Initializing")
-        app = IPKernelApp.instance(**kwargs)
-
-        app.abs_connection_file
-        app.initialize([])
-        # Undo unnecessary sys module mangling from init_sys_modules.
-        # This would not be necessary if we could prevent it
-        # in the first place by using a different InteractiveShell
-        # subclass, as in the regular embed case.
-        main = app.kernel.shell._orig_sys_modules_main_mod
-        if main is not None:
-            sys.modules[app.kernel.shell._orig_sys_modules_main_name] = main
-
-    # load the calling scope if not given
-    (caller_module, caller_locals) = extract_module_locals(1)
-    if module is None:
-        module = caller_module
-    if local_ns is None:
-        local_ns = dict(**caller_locals)
-
-    app.kernel.user_module = module
-    assert isinstance(local_ns, dict)
-    app.kernel.user_ns = local_ns
-    app.shell.set_completer_frame()  # type:ignore[union-attr]
-    # print("Starting IPKernel with NS:")
-    # print(local_ns)
-    # os.environ["NOD_IPYTHON_CONNECTION_FILE"] = "test"
-    # print("setting connection file:", app.connection_file)
-    return app
+    #     app.init_code()
+    #     app.start()
+    #     _log.warning("\nChild Process:")
+    #     _log.warning("Process ID:%d", os.getpid())
+    #     _log.warning("Parent's process ID:%d", os.getppid())
 
 
 # _log = logging.getLogger(__name__)
 
 
-def get_latest_connection_file():
-
-    def get_jupyter_runtime_dir():
-        result = subprocess.run(
-            ["jupyter", "--runtime-dir"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            check=True,
-        )
-        return result.stdout.strip()
-
-    jupyter_runtime_dir = get_jupyter_runtime_dir()
-    connection_filenames = glob.glob(f"{jupyter_runtime_dir}/kernel-*.json")
-
-    regex = re.compile(r".*kernel-.{2,8}\.json")
-    pid_filenames = list(filter(regex.match, connection_filenames))
-    latest_connection_filename = max(pid_filenames, key=os.path.getctime)
-    print("FILENAME", latest_connection_filename)
-
-    # connection_file = os.environ["NOD_IPYTHON_CONNECTION_FILE"]
-    # print("connection file", connection_file)
-    return latest_connection_filename
-
-
-class nodProvisioner(KernelProvisionerBase):
-    """
-    A Kernel Provisioner that re-uses an existing kernel.
-    The kernel connection file is fetched as the latest
-    modified connection file.
-    """
-
-    async def launch_kernel(self, cmd, **kwargs):
-        connection_file = get_latest_connection_file()
-
-        with open(connection_file) as f:
-            file_info = json.load(f)
-
-        file_info["key"] = file_info["key"].encode()
-        print(file_info)
-        return file_info
-
-    async def pre_launch(self, **kwargs):
-        kwargs = await super().pre_launch(**kwargs)
-        kwargs.setdefault("cmd", None)
-        return kwargs
-
-    def has_process(self) -> bool:
-        return True
-
-    async def poll(self):
-        pass
-
-    async def wait(self):
-        pass
-
-    async def send_signal(self, signum: int):
-        pass
-
-    async def kill(self, restart=False):
-        if restart:
-            _log.warning("Cannot restart kernel.")
-
-    async def terminate(self, restart=False):
-        if restart:
-            _log.warning("Cannot restart kernel.")
-
-    async def cleanup(self, restart):
-        pass
-
-
 def _jupyter_labextension_paths():
     return [{"src": "labextension", "dest": "nod"}]
+
+
+def _jupyter_server_extension_points():
+    return [
+        {
+            "module": "nod",
+            "app": Nod,  # <- Note this is not quoted.  This is the module
+            # "name": "nod",
+        }
+    ]
+
+
+def _load_jupyter_server_extension(server_app):
+    """Registers the API handler to receive HTTP requests from the frontend extension.
+
+    Parameters
+    ----------
+    server_app: jupyterlab.labapp.LabApp
+        JupyterLab application instance
+    """
+    setup_handlers(server_app.web_app)
+    name = "nod"
+    server_app.log.info(f"Registered {name} server extension")

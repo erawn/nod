@@ -1,4 +1,4 @@
-from nod import nod
+from nod import notebook, log
 import ipdb
 
 
@@ -9,16 +9,13 @@ def caller():
         b = 20
 
         c = 40
-        print("\n")
 
         for x in range(0, 10):
             c += 1
-        # demo
+        # change
         l = []
         l.append(l)
-
-        assert l[0] is l
-        pass
+        notebook()
 
     baller(a, 10, 20)
 

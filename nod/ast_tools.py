@@ -1,8 +1,25 @@
 import ast
+from inspect import FrameInfo
 from typing import Optional, Sequence, Union
 import libcst as cst
 import libcst.matchers as m
 from libcst.metadata import PositionProvider, ParentNodeProvider
+from libcst.metadata import CodePosition, CodeRange
+
+
+# def getCSTInfo(sourceProgram: str, frameInfo: FrameInfo):
+#     wrapper = cst.MetadataWrapper(cst.parse_module(sourceProgram))
+
+#     finder = NodFinder(frameInfo.lineno)
+#     metaAST = wrapper.visit(finder)
+#     func_body: CodeRange = finder.body_indent
+#     func_pos: CodeRange = finder.target_pos
+#     newWrapper = cst.MetadataWrapper(metaAST)
+#     filteredAST = newWrapper.visit(NodRemove(frameInfo.lineno))
+#     # todo None check
+#     indent = func_body.start.column
+
+#     return filteredAST, func_body, func_pos, indent
 
 
 class findIndent(cst.CSTVisitor):
@@ -29,7 +46,7 @@ class NodFinder(m.MatcherDecoratableTransformer):
         self.target_node: cst.FunctionDef = None
         self.target_pos: cst.metadata.CodePosition = None
         self.call_stack: cst.List[cst.FunctionDef] = []
-        self.body_indent = None
+        self.body_indent: cst.metadata.CodePosition = None
 
     def visit_FunctionDef(self, node: cst.FunctionDef) -> None:
         if m.matches(node.name, m.Name()):
@@ -43,7 +60,7 @@ class NodFinder(m.MatcherDecoratableTransformer):
         return original_node
 
     def visit_Call(self, node: cst.Call) -> None:
-        if m.matches(node.func, m.Name("nod")):
+        if m.matches(node.func, m.Name("notebook")):
             pos: cst.metadata.CodePosition = self.get_metadata(PositionProvider, node)
 
             if pos.start.line == self.lineno:
