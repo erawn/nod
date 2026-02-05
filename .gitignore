@@ -217,3 +217,5 @@ __marimo__/
 node_modules
 
 test*.py
+nod/_version.py
+tsconfig.tsbuildinfo
