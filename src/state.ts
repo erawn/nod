@@ -2,7 +2,7 @@ import { nodSchema } from "./types";
 import {
     INotebookTracker,
 } from '@jupyterlab/notebook';
-import { tryAddExportButton } from "./exportButton";
+// import { tryAddExportButton } from "./exportButton";
 import { JupyterFrontEnd } from "@jupyterlab/application";
 import {
     Contents,
@@ -32,10 +32,11 @@ export class nodState {
     private _contentsManager: Contents.IManager
 
     set status(status: pluginStatus) {
-        this._status = status
-        if (this._status === 'active') {
-            tryAddExportButton(this._notebookTracker, this)
+        if (this._status !== 'active' && status === 'active') {
+            // tryAddExportButton(this._notebookTracker, this)
+
         }
+        this._status = status
     }
     get status() {
         return this._status

@@ -46,7 +46,6 @@ from IPython.core.getipython import get_ipython
 
 from nod.embed_kernel import embed_kernel
 from nod.ast_tools import NodFinder
-from nod.serverExtension import setup_handlers
 from .file_helpers import ProgramInfo, getProgramInfo
 from .datastore import LogStore, StartingVariables
 
@@ -240,20 +239,20 @@ def _jupyter_server_extension_points():
     return [
         {
             "module": "nod",
-            "app": Nod,  # <- Note this is not quoted.  This is the module
-            # "name": "nod",
+            "app": Nod,
+            "name": "nod",
         }
     ]
 
 
-def _load_jupyter_server_extension(server_app):
-    """Registers the API handler to receive HTTP requests from the frontend extension.
+# def _load_jupyter_server_extension(server_app):
+#     """Registers the API handler to receive HTTP requests from the frontend extension.
 
-    Parameters
-    ----------
-    server_app: jupyterlab.labapp.LabApp
-        JupyterLab application instance
-    """
-    setup_handlers(server_app.web_app)
-    name = "nod"
-    server_app.log.info(f"Registered {name} server extension")
+#     Parameters
+#     ----------
+#     server_app: jupyterlab.labapp.LabApp
+#         JupyterLab application instance
+#     """
+#     # setup_handlers(server_app.web_app)
+#     name = "nod"
+#     server_app.log.info(f"Registered {name} server extension")

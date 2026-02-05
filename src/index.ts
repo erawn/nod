@@ -1,4 +1,5 @@
 import {
+  ILabShell,
   JupyterFrontEnd,
   JupyterFrontEndPlugin
 } from '@jupyterlab/application';
@@ -7,9 +8,9 @@ import {
   INotebookTracker,
 } from '@jupyterlab/notebook';
 
-import {
-  checkIcon
-} from '@jupyterlab/ui-components'
+// import {
+//   checkIcon
+// } from '@jupyterlab/ui-components'
 
 import { ISettingRegistry } from '@jupyterlab/settingregistry';
 import {
@@ -20,7 +21,19 @@ import { checkNodInfo } from './messaging';
 import { nodState } from './state';
 // import { addStyling } from './addStyling';
 import { PageConfig } from '@jupyterlab/coreutils';
+import { IMainMenu } from '@jupyterlab/mainmenu';
+import { ITranslator } from '@jupyterlab/translation';
 // import { nodState } from './state';
+
+
+namespace CommandIDs {
+  export const changeKernel = 'nod:changeKernel';
+  export const clearAllOutputs = 'nod:clearAllOutputs';
+  export const interrupt = 'nod:interrupt';
+  export const reconnectToKernel = 'nod:reconnectToKernel';
+  export const restart = 'nod:restart';
+  export const shutdown = 'nod:shutdown';
+}
 /**
  * Initialization data for the nod extension.
  */
@@ -32,13 +45,20 @@ const plugin: JupyterFrontEndPlugin<void> = {
     INotebookTracker,
     ISettingRegistry,
     IContentsManager,
+    ILabShell,
+    IMainMenu,
+    ITranslator,
   ],
   optional: [ISettingRegistry],
   activate: (app: JupyterFrontEnd,
     notebookTracker: INotebookTracker,
     settingRegistry: ISettingRegistry | null,
-    contentsManager: Contents.IManager,) => {
-
+    contentsManager: Contents.IManager,
+    labShell: ILabShell | null,
+    mainMenu: IMainMenu,
+    translator: ITranslator,) => {
+    const { commands } = app;
+    const trans = translator.load('jupyterlab');
     const isActive = PageConfig.getOption('nod_active');
     console.log("nod_active", isActive)
     if (isActive !== 'true') {
@@ -46,17 +66,81 @@ const plugin: JupyterFrontEndPlugin<void> = {
       return
     }
 
+
+    // mainMenu.kernelMenu.kernelUsers.shutdownKernel.getActiveCommandId()
+    // mainMenu.kernelMenu.kernelUsers.reconnectToKernel.remove()
+    // const trans = translator.load('jupyterlab');
+    // mainMenu.kernelMenu.kernelUsers.changeKernel.add()
+    const isEnabled = (): boolean => {
+      return nodState.Instance().status === 'active'
+    };
+
+    commands.addCommand(CommandIDs.changeKernel, {
+      label: trans.__('Change Kernel…'),
+      describedBy: {
+        args: {
+          type: 'object',
+          properties: {
+            activate: {
+              type: 'boolean',
+              description: trans.__('Whether to activate the widget')
+            }
+          }
+        }
+      },
+      execute: args => {
+        console.log("CHANGE KERNEL FIRE")
+        // const current = getCurrent(args);
+        // if (!current) {
+        //   return;
+        // }
+        // return sessionDialogs.selectKernel(current.console.sessionContext);
+      },
+      isEnabled
+    });
+
+    mainMenu.kernelMenu.kernelUsers.changeKernel.add({
+      id: CommandIDs.changeKernel,
+      isEnabled,
+      rank: 0,
+    });
+    mainMenu.kernelMenu.kernelUsers.clearWidget.add({
+      id: CommandIDs.clearAllOutputs,
+      isEnabled,
+      rank: 0,
+    });
+    mainMenu.kernelMenu.kernelUsers.interruptKernel.add({
+      id: CommandIDs.interrupt,
+      isEnabled,
+      rank: 0,
+    });
+    mainMenu.kernelMenu.kernelUsers.reconnectToKernel.add({
+      id: CommandIDs.reconnectToKernel,
+      isEnabled,
+      rank: 0,
+    });
+    mainMenu.kernelMenu.kernelUsers.restartKernel.add({
+      id: CommandIDs.restart,
+      isEnabled,
+      rank: 0,
+    });
+    mainMenu.kernelMenu.kernelUsers.shutdownKernel.add({
+      id: CommandIDs.shutdown,
+      isEnabled,
+      rank: 0,
+    });
+
+
     nodState.Instance(notebookTracker, app, contentsManager) // initialize singleton with tracker
     console.log('JupyterLab extension nod is activated!');
 
     if (settingRegistry) {
       Promise.all([app.restored, settingRegistry.load(plugin.id)])
         .then(([_, setting]) => {
-          const onSettingsUpdate = () => {
-            console.log("settings updated!")
-          };
-          onSettingsUpdate();
-          setting.changed.connect(onSettingsUpdate);
+          setting.user
+          setting.changed.connect((arg) => {
+            console.log("settings changed", arg)
+          });
         })
         .catch(error => {
           console.error(
@@ -116,7 +200,6 @@ const plugin: JupyterFrontEndPlugin<void> = {
     // )
 
     app.commands.addCommand('toolbar-button:add-pagebreak', {
-      icon: checkIcon,
       caption: 'Mark This Cell To Export',
       execute: () => {
 

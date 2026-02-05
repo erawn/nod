@@ -10,7 +10,11 @@
 
 
 TODO
+JUST MAKE A CUSTOM RESTART BUTTON
 
+Open only as nb 
+
+save cell output -- display somehow in main code? 
 - Send quit from client on frontend send 
 - add exit without saving button 
 - add code above/below 
@@ -19,7 +23,7 @@ TODO
 - mode to create function at call site? 
 - add param to nod() for stack frame/indent depth?
 - Add check interface where it shows side by side 
-- Put file in .nod with info, check for it on startup 
 - add doc to nod() call 
+- 
 Settings 
 - format for notebook converstion with jupytext (light, percent, etc)
