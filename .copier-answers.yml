@@ -1,0 +1,15 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: v4.5.2
+_src_path: https://github.com/jupyterlab/extension-template
+author_email: erawn65@gmail.com
+author_name: Eric Rawn
+has_ai_rules: false
+has_binder: true
+has_settings: true
+kind: frontend-and-server
+labextension_name: nodjs
+project_short_description: A JupyterLab extension.
+python_name: nodpy
+repository: ''
+test: true
+

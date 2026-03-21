@@ -1,0 +1,23 @@
+/*
+    See the JupyterLab Developer Guide for useful CSS Patterns:
+
+    https://jupyterlab.readthedocs.io/en/stable/developer/css.html
+*/
+.lm-Widget.jp-Cell.jp-Notebook-cell.nod-export {
+    opacity: .5;
+}
+.lm-Widget.jp-CodeMirrorEditor.jp-Editor.jp-nod-viewer{
+    background: var(--jp-cell-editor-background);
+    min-height: auto;
+}
+/* .lm-Widget.jp-CodeMirrorEditor.jp-Editor.jp-nod-Header{
+    opacity:1
+}
+.lm-Widget.jp-CodeMirrorEditor.jp-Editor.jp-nod-Footer{
+    opacity:1
+} */
+
+/* .jp-myextension-myheader {
+  min-height: 20px;
+  background-color: lightsalmon;
+} */
