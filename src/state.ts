@@ -34,9 +34,13 @@ export class nodState {
     private _app: JupyterFrontEnd<JupyterFrontEnd.IShell, "desktop" | "mobile">
     private _contentsManager: Contents.IManager
     private _translator: ITranslator
+    private _currentFrame: number = 0
 
     public isMainFile(panel: NotebookPanel) {
-        return this.pythonInfo.file_name.includes(panel.context.path)
+        return this.pythonInfo[this._currentFrame].notebook_file.includes(panel.context.path)
+    }
+    get currentFrame() {
+        return this.pythonInfo[this._currentFrame]
     }
     set status(status: pluginStatus) {
         this._status = status

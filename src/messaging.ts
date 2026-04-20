@@ -110,7 +110,7 @@ export function writeChange() {
 
 
     const children = nodState.Instance().tracker.currentWidget?.content.widgets
-    const indent = nodState.Instance().pythonInfo.indent
+    const indent = nodState.Instance().currentFrame.indent
     if (children === undefined) {
         return
     }
@@ -125,14 +125,14 @@ export function writeChange() {
 
     console.log('path', nodState.Instance().tracker.currentWidget?.context.path)
     const contentsManager = nodState.Instance().contentsManager
-    const sourceFile = contentsManager.normalize(nodState.Instance().pythonInfo.export_file)
+    const sourceFile = contentsManager.normalize(nodState.Instance().currentFrame.relative_source_file)
     console.log("sourcefile", sourceFile)
 
     //TODO: Rewrite this --- pass in top text and bottom text at start so we can't run into alignment, overwriting issues like this.
     contentsManager.get(sourceFile, { type: "file", content: true }).then(original => {
 
         let lines = (original.content as string).split(/\r?\n/)
-        const editPos = nodState.Instance().pythonInfo?.function_body_position
+        const editPos = nodState.Instance().currentFrame.function_body_position
         if (editPos === undefined) {
             return
         }

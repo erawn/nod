@@ -16,67 +16,24 @@ import {
 import { nodState } from './state';
 import { PageConfig } from '@jupyterlab/coreutils';
 import { IMainMenu } from '@jupyterlab/mainmenu';
-import { ITranslator, nullTranslator } from '@jupyterlab/translation';
+import { ITranslator } from '@jupyterlab/translation';
 import { addCommands } from './commands';
 import { ICommandPalette, ISessionContextDialogs, IToolbarWidgetRegistry } from '@jupyterlab/apputils';
-import { addToolbarButtons, VariablesBodyTree } from './buttons';
+import { addToolbarButtons } from './buttons';
 import {
   IConsoleTracker
 } from '@jupyterlab/console';
 import { nodSchema } from './types';
 import { CodeViewers } from './codeViewers';
-import { bugIcon, buildIcon, PanelWithToolbar, SidePanel } from '@jupyterlab/ui-components';
+import { buildIcon } from '@jupyterlab/ui-components';
 import { IDebugger } from '@jupyterlab/debugger';
 import { requestDebug } from './messaging';
 import { requestAPI } from './request';
+import { NodSidebar } from './sidebar';
 /**
  * Initialization data for the nod extension.
  */
-export function createNode(): HTMLElement {
-  const span = document.createElement('span');
-  span.textContent = 'My custom header';
-  return span;
-}
 
-
-
-class frameStack extends PanelWithToolbar {
-  private _tree: VariablesBodyTree;
-  constructor() {
-    super();
-    const translator = nullTranslator;
-    const trans = translator.load('jupyterlab');
-    this.title.label = trans.__('Variables');
-    this.toolbar.addClass('jp-DebuggerVariables-toolbar');
-    this.toolbar.node.setAttribute('aria-label', trans.__('Variables toolbar'));
-    this._tree = new VariablesBodyTree();
-
-    this.addWidget(this._tree);
-    this.addClass('jp-DebuggerVariables');
-  }
-}
-
-
-export class NodSidebar extends SidePanel {
-  /**
-   * Instantiate a new Debugger.Sidebar
-   *
-   * @param options The instantiation options for a Debugger.Sidebar
-   */
-  constructor(options: { translator: ITranslator }) {
-    const translator = options.translator || nullTranslator;
-    super({ translator });
-    this.id = 'jp-debugger-sidebar';
-    this.title.icon = bugIcon;
-    this.addClass('jp-DebuggerSidebar');
-
-    this.content.addClass('jp-DebuggerSidebar-body');
-
-    const widget = new frameStack()
-
-    this.addWidget(widget);
-  }
-}
 
 const plugin: JupyterFrontEndPlugin<void> = {
   id: 'nod:plugin',
@@ -133,12 +90,12 @@ const plugin: JupyterFrontEndPlugin<void> = {
     widget.title.icon = buildIcon;
     widget.title.caption = 'Nod Stack';
     widget.id = 'jp-nod-inspector';
-    app.shell.add(widget, 'right', { type: 'Debugger' });
+    app.shell.add(widget, 'left', { type: 'Debugger' });
     widget.show() //TODO 
     notebookTracker.activeCellChanged.connect((tracker, panel) => {
       requestAPI<any>('hello', app.serviceManager.serverSettings)
         .then(data => {
-          console.log(data);
+          // console.log(data);
         })
         .catch(reason => {
           console.error(
@@ -149,8 +106,8 @@ const plugin: JupyterFrontEndPlugin<void> = {
       console.log('updated')
       if (future) {
         future.onReply = async msg => {
-          const jsonObj = JSON.parse(atob(msg.content.body))
-          console.log(jsonObj)
+          // const jsonObj = JSON.parse(atob(msg.content.body))
+          // console.log(jsonObj)
         }
       }
     })
@@ -180,6 +137,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
 
     // })
     // console.log("Kernelspecs", kernelSpec.specs?.kernelspecs)
+    console.log(nodState.Instance().currentFrame)
     addToolbarButtons(sessionContextDialogs, toolbarRegistry)
     addCommands(mainMenu, translator, palette, consoleTracker)
     app.docRegistry.addWidgetExtension('Notebook', new CodeViewers());

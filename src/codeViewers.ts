@@ -63,19 +63,19 @@ export class CodeViewers implements DocumentRegistry.IWidgetExtension<
 export function makeCodeViewer(panel: NotebookPanel, className: 'jp-nod-Footer' | 'jp-nod-Header' | 'jp-nod-Function') {
     let source = ""
     let editor
-    const pythonInfo = nodState.Instance().pythonInfo
+    const currentFrame = nodState.Instance().currentFrame
     switch (className) {
         case NOD_HEADER_CLASS:
-            source = pythonInfo.text_above.join('').split('\\n').join('\n')
+            source = currentFrame.text_above.join('').split('\\n').join('\n')
         case NOD_FOOTER_CLASS:
-            source = pythonInfo?.text_below.join('').split('\\n').join('\n')
+            source = currentFrame.text_below.join('').split('\\n').join('\n')
             if (source.startsWith('\n')) {
                 source = source.slice(source.indexOf('\n'))
             }
             editor = makeCodeViewerWidget(className, source)
             return editor
         case NOD_FUNC_CLASS:
-            source = pythonInfo?.text_header.join('').split('\\n').join('\n')
+            source = currentFrame.text_header.join('').split('\\n').join('\n')
             if (source.endsWith('\n')) {
                 source = source.slice(0, source.lastIndexOf('\n'))
             }

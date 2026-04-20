@@ -32,9 +32,34 @@ _log.setLevel(logging.INFO)
 #         super(__class__, self).__init__()
 #         self.block: cst.IndentedBlock = None
 
+
 #     def visit_IndentedBlock(self, node) -> Optional[bool]:
 #         self.block = node
 #         return False
+class FunctionFinder(m.MatcherDecoratableTransformer):
+    METADATA_DEPENDENCIES = (
+        ParentNodeProvider,
+        PositionProvider,
+    )
+    parent_node: cst.CSTNode
+    parent_pos: CodeRange
+    body_indent: CodeRange
+    target_function: str
+
+    def __init__(self, target_function: str):
+        super(__class__, self).__init__()  # type: ignore
+        self.target_function: str = target_function
+
+    @m.visit(m.FunctionDef())
+    def visit_function(self, node: cst.FunctionDef):
+        if m.matches(node, m.FunctionDef(m.Name(self.target_function))):
+            self.parent_node = node
+            parent_pos = self.get_metadata(PositionProvider, node)
+            if isinstance(parent_pos, CodeRange):
+                self.parent_pos = parent_pos
+            body_indent = self.get_metadata(PositionProvider, node.body)
+            if isinstance(body_indent, CodeRange):
+                self.body_indent = body_indent
 
 
 class NodFinder(m.MatcherDecoratableTransformer):
@@ -49,44 +74,24 @@ class NodFinder(m.MatcherDecoratableTransformer):
     def __init__(self, lineno: int):
         super(__class__, self).__init__()  # type: ignore
         self.lineno = lineno
-        self.call_stack: List[cst.FunctionDef] = []
         self.indent_stack: List[cst.IndentedBlock] = []
 
-    # def visit_FunctionDef(self, node: cst.FunctionDef) -> None:
-    #     if m.matches(node.name, m.Name()):
-    #         self.call_stack.append(cst.ensure_type(node, cst.FunctionDef))
-
-    # def leave_FunctionDef(
-    #     self, original_node: cst.FunctionDef, updated_node: cst.FunctionDef
-    # ) -> cst.FunctionDef:
-    #     if m.matches(original_node.name, m.Name()):
-    #         self.call_stack.pop()
-    #     return original_node
-
-    # def visit_Call(self, node: cst.Call) -> None:
-    #     if m.matches(node.func, m.Name("notebook")):
-    #         pos: cst.metadata.CodePosition = self.get_metadata(PositionProvider, node)
-
-    #         if pos.start.line == self.lineno:
-    #             if len(self.call_stack) > 0:
-    #                 parent_node: cst.FunctionDef = self.call_stack[-1]
-    #                 self.parent_node = parent_node
-    #                 self.parent_pos = self.get_metadata(PositionProvider, parent_node)
-
-    #             indentVisitor = findIndent()
-    #             parent_node.visit(indentVisitor)
-    #             self.body_indent = self.get_metadata(
-    #                 PositionProvider, indentVisitor.block
-    #             )
-
-    @m.visit(m.Call(func=m.Name("notebook")))
-    def visit_notebook_call(self, node):
-        if len(self.indent_stack) > 0:
-            indent_block = self.indent_stack[-1]
-            parent_node = self.get_metadata(ParentNodeProvider, indent_block)
-            self.parent_node = parent_node
-            self.parent_pos = self.get_metadata(PositionProvider, parent_node)
-            self.body_indent = self.get_metadata(PositionProvider, indent_block)
+    @m.visit(m.Call())
+    def visit_notebook_call(self, node: cst.Call):
+        if m.matches(node, m.Call(func=m.Name("notebook"))):
+            pos = self.get_metadata(PositionProvider, node)
+            if isinstance(pos, CodeRange):
+                if pos.start.line == self.lineno and len(self.indent_stack) > 0:
+                    indent_block = self.indent_stack[-1]
+                    parent_node = self.get_metadata(ParentNodeProvider, indent_block)
+                    if isinstance(parent_node, cst.CSTNode):
+                        self.parent_node = parent_node
+                        parent_pos = self.get_metadata(PositionProvider, parent_node)
+                        if isinstance(parent_pos, CodeRange):
+                            self.parent_pos = parent_pos
+                        body_indent = self.get_metadata(PositionProvider, indent_block)
+                        if isinstance(body_indent, CodeRange):
+                            self.body_indent = body_indent
 
     def visit_IndentedBlock(self, node):
         self.indent_stack.append(cst.ensure_type(node, cst.IndentedBlock))

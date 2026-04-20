@@ -6,8 +6,6 @@ import { IDisposable, DisposableDelegate } from '@lumino/disposable';
 import {
     ToolbarButton,
 } from '@jupyterlab/apputils';
-import { ReactWidget } from '@jupyterlab/ui-components';
-import React from 'react';
 import { DocumentRegistry } from '@jupyterlab/docregistry';
 // import {
 //   Toolbar as AppToolbar,
@@ -87,38 +85,3 @@ export function addToolbarButtons(sessionContextDialogs: ISessionContextDialogs,
     );
 }
 
-export class VariablesBodyTree extends ReactWidget {
-    /**
-     * Instantiate a new Body for the tree of variables.
-     *
-     * @param options The instantiation options for a VariablesBodyTree.
-     */
-    constructor() {
-        super();
-
-        // const model = (this.model = options.model);
-        // model.changed.connect(this._updateScopes, this);
-
-        this.addClass('jp-DebuggerVariables-body');
-    }
-
-    /**
-     * Render the VariablesBodyTree.
-     */
-    render(): JSX.Element {
-        // const scope =
-        //   this._scopes.find(scope => scope.name === this._scope) ?? this._scopes[0];
-
-        // const handleSelectVariable = (variable: IDebugger.IVariable) => {
-        //   this.model.selectedVariable = variable;
-        // };
-
-        // if (scope?.name !== 'Globals') {
-        //   this.addClass('jp-debuggerVariables-local');
-        // } else {
-        //   this.removeClass('jp-debuggerVariables-local');
-        // }
-
-        return (<div></div>)
-    }
-}

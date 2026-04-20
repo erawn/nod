@@ -11,6 +11,7 @@ except ImportError:
 import atexit
 import base64
 import inspect
+from pprint import pprint
 import shutil
 
 import jupytext  # type: ignore
@@ -46,8 +47,8 @@ from typing import List, Literal, TYPE_CHECKING, IO, Any
 from IPython.core.getipython import get_ipython
 from ipykernel.connect import get_connection_info
 from .embed_kernel import embed_kernel
-from .ast_tools import NodFinder
-from .file_helpers import ProgramInfo, getProgramInfo
+from .ast_tools import FunctionFinder, NodFinder
+from .file_helpers import PathManager, ProgramInfo, makeProgramInfo
 from .datastore import LogStore
 from inspect import FrameInfo, Traceback
 from types import FrameType, TracebackType
@@ -188,7 +189,7 @@ def notebook(
         if true, invoke the notebook, else no-op.
 
     deep_copy
-        if true, deep copy the variables to put into the notebook. By default, in-place modifications are persisted through kernel restarts. Can lead to performance issues with large variables in memory.
+        if true, deep copy the variables to put into the notebook. By default, in-place modifications to existing variables are persisted through kernel restarts. Enabling can lead to performance issues with large variables in memory. Some variables cannot be deep-copied, and will throw a warning on execution.
 
     """
     # indent
@@ -225,153 +226,34 @@ def notebook(
         raise IndexError
     notebook_parent_frame = stack[notebook_call_index + 1]
 
+    modules.append("__main__")
     relevant_stack_frames = [
         frame
         for frame in stack[notebook_call_index:]
-        if frame.frame.f_globals.get("__name__") == "__main__"
-        or frame.frame.f_globals.get("__name__") in modules
+        if frame.frame.f_globals.get("__name__") in modules
     ]
     print("relevant stack frames")
     print(relevant_stack_frames)
 
-    modules.append("__main__")
-
-    def tracing_function(frame: FrameType, event: str, arg: Any):
-        if event == "call":  # only get function calls
-            module_name = frame.f_globals.get("__name__")
-            if module_name in modules:
-                frame_info = inspect.getframeinfo(frame)
-                if frame.f_back is None:
-                    # TODO
-                    parent_frame_info = None
-                else:
-                    parent_frame_info = inspect.getframeinfo(frame.f_back)
-
-                if len(
-                    [
-                        fr
-                        for fr in relevant_stack_frames
-                        if compare_identifiers(fr, frame_info)
-                    ]
-                ) > 0 or (
-                    parent_frame_info is not None
-                    and compare_identifiers(notebook_parent_frame, parent_frame_info)
-                ):  # only get calls in modules we're interested in
-                    print("FOUND FRAME")
-                    print(frame)
-                    # print(arg)
-                    return tracing_function
-        return None
-
-    sys.setprofile(tracing_function)  # type: ignore
-
-    program_text = open(notebook_call.filename).read()
-    wrapper = cst.MetadataWrapper(cst.parse_module(program_text))
-    # _log.info(dump(cst.parse_module(program_text)))
-    finder = NodFinder(notebook_call.lineno)
-    ast_with_position = wrapper.visit(finder)
-    # _log.info("CST with notebook call removed ")
-    # _log.info(dump(cst.parse_module(program_text)))
-    if finder.body_indent is None:
-        # TODO raise error
-        return
-
-    program_info = getProgramInfo(finder, ast_with_position)
-
     ## FILE ORGANIZATION
-    hiddenDir = os.path.join(os.getcwd(), ".nod")
-    os.makedirs(hiddenDir, exist_ok=True)
+    pm = PathManager()
 
-    archiveDir = os.path.join(hiddenDir, "archive")
-    os.makedirs(archiveDir, exist_ok=True)
+    module_sources: dict[str, cst.Module] = {}
+    for stackFrame in relevant_stack_frames:
+        if module_sources.get(stackFrame.filename) is None:
+            program_text = open(stackFrame.filename).read()
+            module_sources.update({stackFrame.filename: cst.parse_module(program_text)})
 
-    notebook_checkpoints = os.path.join(hiddenDir, ".ipynb_checkpoints")
-    os.makedirs(notebook_checkpoints, exist_ok=True)
+    stack_info = [
+        makeProgramInfo(stackFrame, module_sources[stackFrame.filename], pm)
+        for stackFrame in relevant_stack_frames
+    ]
 
-    archive_checkpoints = os.path.join(archiveDir, ".ipynb_checkpoints")
-    os.makedirs(archive_checkpoints, exist_ok=True)
-    # TODO - check if file, if so, delete
+    pprint(stack_info)
 
-    connection_dir = os.path.join(hiddenDir, "connection")
-    if os.path.exists(connection_dir):
-        shutil.rmtree(connection_dir)
-    os.makedirs(connection_dir, exist_ok=True)
-
-    file_names = os.listdir(notebook_checkpoints)
-    for file_name in file_names:
-        if os.path.isfile(os.path.join(notebook_checkpoints, file_name)):
-            if os.path.exists(os.path.join(archive_checkpoints, file_name)):
-                os.replace(
-                    os.path.join(notebook_checkpoints, file_name),
-                    os.path.join(archive_checkpoints, file_name),
-                )
-            else:
-                shutil.move(
-                    os.path.join(notebook_checkpoints, file_name), archive_checkpoints
-                )
-
-    os.rmdir(notebook_checkpoints)
-
-    file_names = os.listdir(hiddenDir)
-    for file_name in file_names:
-        if os.path.isfile(os.path.join(hiddenDir, file_name)):
-            if os.path.exists(os.path.join(archiveDir, file_name)):
-                os.replace(
-                    os.path.join(hiddenDir, file_name),
-                    os.path.join(archiveDir, file_name),
-                )
-            else:
-                shutil.move(os.path.join(hiddenDir, file_name), archiveDir)
-
-    tempFileStem = os.path.join(
-        hiddenDir, Path(notebook_call.filename).stem + str(uuid.uuid1())
-    )
-    # tempPythonFile = tempFileStem + ".py"
-    # with open(tempPythonFile, "x") as f:
-    #     f.writelines(program_info.text_body)
-
-    tempNotebook = tempFileStem + ".ipynb"
-    # args = shlex.split(
-    #     "--to notebook "
-    #     + tempPythonFile
-    #     + " --from py:light "
-    #     + "--output "
-    #     + tempNotebook
-    # )
-    # jupytext.cli.jupytext(args)
-    notebook: NotebookNode = jupytext.reads(
-        "".join(program_info.text_body), fmt=long_form_one_format("py:light")
-    )
-    notebook.metadata["language_info"] = {
-        "name": "python",
-        "version": "3.14.3",
-        "mimetype": "text/x-python",
-        "codemirror_mode": {"name": "ipython", "version": 3},
-        "pygments_lexer": "ipython3",
-        "nbconvert_exporter": "python",
-        "file_extension": ".py",
-    }
-    notebook.metadata["kernelspec"] = {
-        "display_name": "Python 3 (ipykernel)",
-        "language": "python",
-        "name": "python3",
-    }
-
-    jupytext.write(notebook, tempNotebook, fmt=".ipynb")
-
-    def getNotebook(notebook):
-        content = jupytext.writes(
-            notebook, version=nbformat.NO_CONVERT, fmt=long_form_one_format("ipynb")
-        )
-        if isinstance(content, bytes):
-            content = content.decode("utf8")
-        return content
-
-    program_info.file_name = os.path.relpath(tempNotebook, os.getcwd())
-    program_info.export_file = os.path.relpath(notebook_call.filename, os.getcwd())
-    program_info.connection_dir = os.path.relpath(connection_dir, os.getcwd())
-    _log.info(program_info)
-    jsonInfo = orjson.dumps(program_info)
+    program_info = stack_info[0]
+    _log.info(stack_info)
+    jsonInfo = orjson.dumps(stack_info)
     # _log.info("Program Info JSON: " + str(jsonInfo))
 
     c = Config()
@@ -381,20 +263,20 @@ def notebook(
     # ]
     # c.InteractiveShellApp.hide_initial_ns = False
 
-    ## STARTING STATE
-    # startingVariables = {}
-    # if deep_copy:
-    #     startingVariables.update(copy.deepcopy(notebook_call.frame.f_globals))
-    #     startingVariables.update(copy.deepcopy(notebook_call.frame.f_locals))
-    # else:
-    #     startingVariables.update(notebook_call.frame.f_globals)
-    #     startingVariables.update(notebook_call.frame.f_locals)
+    # STARTING STATE
+    startingVariables = {}
+    if deep_copy:
+        startingVariables.update(copy.deepcopy(notebook_call.frame.f_globals))
+        startingVariables.update(copy.deepcopy(notebook_call.frame.f_locals))
+    else:
+        startingVariables.update(notebook_call.frame.f_globals)
+        startingVariables.update(notebook_call.frame.f_locals)
 
     scope = {
         "__NODINFO": program_info,
-        "__NODSTACK": stack[stack.index(notebook_call) :],
+        "__NODSTACK": relevant_stack_frames,
     }
-
+    scope.update(startingVariables)
     app = embed_kernel(
         local_ns=scope, config=c, no_stdout=False, no_stderr=False, quiet=False
     )
@@ -421,7 +303,7 @@ def notebook(
     with open(connection_file, "w") as f:
         f.write(orjson.dumps(info).decode("utf-8"))
 
-    nod_connection_file = os.path.join(connection_dir, Path(connection_file).name)
+    nod_connection_file = os.path.join(pm.connection_dir, Path(connection_file).name)
     shutil.copy(connection_file, nod_connection_file)
 
     # _log.warning(jsonInfo)
@@ -473,14 +355,14 @@ def notebook(
         + " "
         # + "--ServerApp.jpserver_extensions=\"{'nod': True}\""
         # + " "
-        + tempNotebook
+        + program_info.notebook_file
     )
-    _log.info(cmd)
+    # _log.info(cmd)
     args = shlex.split(cmd)
-    _log.info("Notebook Args: " + str(args))
+    # _log.info("Notebook Args: " + str(args))
     if not DRY_RUN:
         nb_env = os.environ.copy()
-        nb_env["JUPYTER_RUNTIME_DIR"] = connection_dir
+        nb_env["JUPYTER_RUNTIME_DIR"] = pm.connection_dir
         notebookProcess = subprocess.Popen(args, env=nb_env)
         app.nod_notebook_process = notebookProcess  # type: ignore
 
