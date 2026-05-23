@@ -22,9 +22,41 @@ COMMANDS
 - restart button
     - launches kernel again
 
-
+NOTES:
+- cant watch connection dir from server, because we can't trigger a client update from server
 
 TODO
+- remove file bar 
+- Make nod cli that has command 
+- add tree view to side bar now that we have xml
+- parse HTML? or will it render automatically?
+- mode order -- 1. just do forward eval, 2. deep-copy for expensive programs, 3. adult-mode.
+    - how to switch modes? notebook() args? 
+- figure out why jupytext isn't respecting the kernelinfo metadata, so that we can restart the notebook without switching to normal python kernel
+    - alternatively, figure out how to switch the kernel always to python
+    - ok maybe its actually switching properly but restart has wiped the state 
+- restart python program by getting original arguments from python, sending to jupyter, then sending "quit" to ipython and re-running the args 
+    - backup-- a nodConfig() object to paste the command? 
+- clear old kernels from jupyter (get shutdown registering properly??)
+- rename nb files to function--class
+- select NOD kernel at notebook open
+    - throw warning if spec not installed
+- convert system to background runner - look for incoming kernel files and update UI to match 
+    - Watch for changes + update
+- Maybe have the current NOD Instance notebook be undeleteable and a different color? 
+- Stack frame viewer + navigator 
+- Nod log right sidebar 
+- Logging system 
+- Force re-runs on export (manual? How to trigger from nb?)
+- Linked editing on all nod-logged stack frames? 
+- Auto install kernel file 
+
+
+
+
+
+
+
 - show side panel on start
 - grey out shutdown button
 - test timeouts to optimize (and on networked connections?)

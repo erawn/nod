@@ -1,0 +1,102 @@
+// Copyright (c) Jupyter Development Team.
+// Distributed under the terms of the Modified BSD License.
+
+import type { ITranslator } from '@jupyterlab/translation';
+import { nullTranslator } from '@jupyterlab/translation';
+import {
+  CommandToolbarButton,
+  AccordionToolbar,
+  PanelWithToolbar
+} from '@jupyterlab/ui-components';
+
+import type { CommandRegistry } from '@lumino/commands';
+import { AccordionPanel, type Panel } from '@lumino/widgets';
+import type { IDebugger } from '@jupyterlab/debugger'
+import { CallstackBody } from './body';
+import { CallstackModel } from './model';
+
+/**
+ * A Panel to show a callstack.
+ */
+export class Callstack extends PanelWithToolbar {
+  /**
+   * Instantiate a new Callstack Panel.
+   *
+   * @param options The instantiation options for a Callstack Panel.
+   */
+  constructor(options: Callstack.IOptions) {
+    super(options);
+    const { model } = options;
+    const trans = (options.translator ?? nullTranslator).load('jupyterlab');
+    this.title.label = trans.__('Nod Callstack');
+    const widget = new CallstackBody(model)
+    // widgets.map(widget => accordion.addWidget(widget))
+    this.addWidget(widget)
+    this.addClass('jp-DebuggerCallstack');
+  }
+}
+
+/**
+ * A namespace for Callstack `statics`.
+ */
+export namespace Callstack {
+  /**
+   * The toolbar commands and registry for the callstack.
+   */
+  // export interface ICommands {
+  //   /**
+  //    * The command registry.
+  //    */
+  //   registry: CommandRegistry;
+
+  //   /**
+  //    * The pause/continue command ID.
+  //    */
+  //   continue: string;
+
+  //   /**
+  //    * The terminate command ID.
+  //    */
+  //   terminate: string;
+
+  //   /**
+  //    * The next / stepOver command ID.
+  //    */
+  //   next: string;
+
+  //   /**
+  //    * The stepIn command ID.
+  //    */
+  //   stepIn: string;
+
+  //   /**
+  //    * The stepOut command ID.
+  //    */
+  //   stepOut: string;
+
+  //   /**
+  //    * The evaluate command ID.
+  //    */
+  //   evaluate: string;
+  // }
+
+  /**
+   * Instantiation options for `Callstack`.
+   */
+  export interface IOptions extends Panel.IOptions {
+    /**
+     * The toolbar commands interface for the callstack.
+     */
+    // commands: ICommands;
+
+    /**
+     * The model for the callstack.
+     */
+    model: CallstackModel;
+
+    /**
+     * The application language translator
+     */
+    translator?: ITranslator;
+  }
+}

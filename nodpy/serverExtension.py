@@ -1,14 +1,14 @@
 import json
 import logging
 import os
+import sys
+import time
 from jupyter_server.serverapp import ServerApp
 from jupyter_server.extension.application import ExtensionApp
 import orjson
 from traitlets.traitlets import Bool, Unicode
 import base64
 import asyncio
-
-from nodpy.routes import setup_route_handlers
 
 _log = logging.getLogger(__name__)
 
@@ -17,41 +17,6 @@ _log = logging.getLogger(__name__)
 # import time
 
 
-# class Watcher(object):
-#     running = True
-#     refresh_delay_secs = 1
-
-#     # Constructor
-#     def __init__(self, dir_to_watch, call_func_on_change=None):
-#         self.dir_to_watch: str = dir_to_watch
-#         self.call_func_on_change = call_func_on_change
-#         self.dir_list_cache: list[str] = [""]
-
-#     # Look for changes
-#     def look(self):
-#         dirlist = set(os.listdir(self.dir_to_watch))
-#         if len(dirlist.symmetric_difference(set(self.dir_list_cache))) > 0:
-#             # File has changed, so do something...
-#             _log.info("File changed")
-#             if self.call_func_on_change is not None:
-#                 self.call_func_on_change(dirlist)
-#         self.dir_list_cache = dirlist
-
-#     # Keep watching in a loop
-#     def watch(self):
-#         while self.running:
-#             try:
-#                 # Look for changes
-#                 time.sleep(self.refresh_delay_secs)
-#                 self.look()
-#             except KeyboardInterrupt:
-#                 print("\nDone")
-#                 break
-#             except FileNotFoundError:
-#                 # Action on file not found
-#                 pass
-#             except:
-#                 print("Unhandled error: %s" % sys.exc_info()[0])
 import json
 
 from jupyter_server.base.handlers import APIHandler
@@ -80,14 +45,12 @@ class HelloRouteHandler(APIHandler):
 
 class Nod(ExtensionApp):
     name = "Nod"
-    is_active = Bool(
+    active = Bool(
         False,
         help="Whether to activate Nod front end. Should only be set from the nod library",
     ).tag(config=True)
 
-    info = Unicode(
-        "", help="JSON Payload passed to Nod Jupyter Extension. Do not pass manually"
-    ).tag(config=True)
+    connection_dir = Unicode("", help="Nod Connection Directory").tag(config=True)
 
     # connection_dir = Unicode("", help="Directory for Nod Connection Files").tag(
     #     config=True
@@ -109,9 +72,9 @@ class Nod(ExtensionApp):
         web_app = self.serverapp.web_app  # type: ignore
         settings = web_app.settings
         page_config = settings.setdefault("page_config_data", {})
-        page_config["nod_active"] = self.is_active
-        page_config["nod_info"] = self.info
-        _log.info("Settings!")
+        page_config["nod_active"] = self.active
+        page_config["nod_connection_dir"] = self.connection_dir
+        _log.info(self.connection_dir)
 
     # def _load_jupyter_server_extension(self, serverapp):  # type: ignore
     #     """Registers the API handler to receive HTTP requests from the frontend extension.
@@ -121,8 +84,8 @@ class Nod(ExtensionApp):
     #     server_app: jupyterlab.labapp.LabApp
     #         JupyterLab application instance
     #     """
-    #     # super()._load
-    #     setup_route_handlers(serverapp.web_app)
+    #     super()._load
+    #     # setup_route_handlers(serverapp.web_app)
     #     name = "nodpy"
     #     serverapp.log.info(f"Registered {name} server extension")
 
@@ -130,13 +93,13 @@ class Nod(ExtensionApp):
     #     self,
     #     serverapp: ServerApp,
     # ):
-    #     # watch_file = "my_file.txt"
+    #     watch_file = "my_file.txt"
     #     # info_decoded = base64.b64decode(self.info).decode("utf-8")
     #     # _log.info("infodecoded")
     #     # _log.info(info_decoded)
     #     # info_dict = orjson.loads(info_decoded)
     #     # info_dict.get("")
-    #     # watcher = Watcher(watch_file)  # simple
+    #     watcher = Watcher(watch_file)
     #     _log.info("serverext connection dir")
     #     _log.info(self.connection_dir)
     #     watcher = Watcher(self.connection_dir, self.dir_changed_callback)

@@ -68,10 +68,11 @@ export class NodQuitButton
     }
 }
 
-export function addToolbarButtons(sessionContextDialogs: ISessionContextDialogs, toolbarRegistry: IToolbarWidgetRegistry) {
+export function addToolbarButtons() {
     nodState.Instance().app.docRegistry.addWidgetExtension('Notebook', new NodExportButton());
     nodState.Instance().app.docRegistry.addWidgetExtension('Notebook', new NodQuitButton());
-
+}
+export function disableKernelSwitching(sessionContextDialogs: ISessionContextDialogs, toolbarRegistry: IToolbarWidgetRegistry) {
     sessionContextDialogs.selectKernel = () => { return Promise.resolve() }
     toolbarRegistry.addFactory<NotebookPanel>('Notebook', 'kernelName', panel => {
         return new ToolbarButton({
@@ -84,4 +85,3 @@ export function addToolbarButtons(sessionContextDialogs: ISessionContextDialogs,
     }
     );
 }
-

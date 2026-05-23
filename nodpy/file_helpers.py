@@ -15,6 +15,9 @@ from typing import List, Optional
 from libcst import Module
 from jupytext.formats import long_form_one_format  # type: ignore
 import libcst as cst
+import sys
+from _pydevd_bundle.pydevd_xml import frame_vars_to_xml
+from IPython.core.getipython import get_ipython
 
 
 def writeNotebook(program_info: ProgramInfo) -> ProgramInfo:
@@ -31,11 +34,18 @@ def writeNotebook(program_info: ProgramInfo) -> ProgramInfo:
         "file_extension": ".py",
     }
     notebook.metadata["kernelspec"] = {
-        "display_name": "Python 3 (ipykernel)",
+        "display_name": "Nod",
         "language": "python",
-        "name": "python3",
+        "name": "nod",
     }
-    jupytext.write(notebook, program_info.notebook_file, fmt=".ipynb")
+    jupytext.write(
+        notebook,
+        os.path.join(
+            program_info.connection_dir,
+            os.path.relpath(program_info.notebook_file, program_info.connection_dir),
+        ),
+        fmt=".ipynb",
+    )
     content = jupytext.writes(
         notebook, version=nbformat.NO_CONVERT, fmt=long_form_one_format("ipynb")
     )
@@ -58,6 +68,9 @@ class ProgramInfo:
     relative_source_file: str = ""  # rel path of original .py file
     connection_dir: str = ""
     notebook_content: str = ""
+    cli_arguments: str = ""
+    function_name: str = ""
+    frame_xml: str = ""
 
 
 def makeProgramInfo(
@@ -67,13 +80,15 @@ def makeProgramInfo(
 ) -> ProgramInfo:
     rel_source_file = os.path.relpath(stackFrame.filename, os.getcwd())
     tempFileStem = os.path.join(
-        pm.hiddenDir,
+        pm.connection_dir,
         Path(rel_source_file if rel_source_file else "nod").stem + str(uuid.uuid1()),
     )
     tempNotebook = tempFileStem + ".ipynb"
 
+    # print(sys.argv)
     if stackFrame.function == "<module>":
         no_position_source_lines = module.code.splitlines(True)
+
         return writeNotebook(
             ProgramInfo(
                 function_body_position=CodeRange(
@@ -87,8 +102,11 @@ def makeProgramInfo(
                 text_below=[],
                 source_file=stackFrame.filename,
                 connection_dir=pm.connection_dir,
-                notebook_file=tempNotebook,
+                notebook_file=os.path.relpath(tempNotebook, os.getcwd()),
                 relative_source_file=rel_source_file,
+                cli_arguments=" ".join(sys.argv),
+                function_name="<module>",
+                frame_xml=frame_vars_to_xml(frame_f_locals=stackFrame.frame.f_locals),
             )
         )
 
@@ -119,7 +137,10 @@ def makeProgramInfo(
         relative_source_file=rel_source_file,
         source_file=stackFrame.filename,
         connection_dir=pm.connection_dir,
-        notebook_file=tempNotebook,
+        notebook_file=os.path.relpath(tempNotebook, os.getcwd()),
+        cli_arguments=" ".join(sys.argv),
+        function_name=stackFrame.function,
+        frame_xml=frame_vars_to_xml(frame_f_locals=stackFrame.frame.f_locals),
     )
     return writeNotebook(info)
 
@@ -132,7 +153,7 @@ class PathManager:
     connection_dir: str
     tempFileStem: str
 
-    def __init__(self):
+    def __init__(self, clear=True):
         self.hiddenDir = os.path.join(os.getcwd(), ".nod")
         os.makedirs(self.hiddenDir, exist_ok=True)
 
@@ -147,7 +168,7 @@ class PathManager:
         # TODO - check if file, if so, delete
 
         self.connection_dir = os.path.join(self.hiddenDir, "connection")
-        if os.path.exists(self.connection_dir):
+        if os.path.exists(self.connection_dir) and clear:
             shutil.rmtree(self.connection_dir)
         os.makedirs(self.connection_dir, exist_ok=True)
 

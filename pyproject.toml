@@ -28,6 +28,8 @@ dependencies = [
     "orjson",
     "libcst",
     "nbformat",
+    "debugpy",
+    "pydevd"
 ]
 dynamic = ["version", "description", "authors", "urls", "keywords"]
 
@@ -42,6 +44,8 @@ test = [
     "pytest-cov",
     "pytest-jupyter[server]>=0.6.0"
 ]
+[project.scripts]
+nod = "nodpy.nod_cli:app"
 
 [project.entry-points."jupyter_client.kernel_provisioners"]
 nod-provisioner = "nodpy:nodProvisioner"

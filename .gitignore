@@ -11,6 +11,7 @@ nodpy/labextension
 # Version file is handled by hatchling
 nodpy/_version.py
 
+**/*.ipynb
 # Integration tests
 ui-tests/test-results/
 ui-tests/playwright-report/

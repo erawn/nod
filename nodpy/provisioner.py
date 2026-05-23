@@ -9,8 +9,9 @@ import re
 import signal
 import subprocess
 import sys
+import time
 from types import NoneType
-
+from jupyter_client import kernelspec
 from jupyter_client.manager import KernelManager
 from typing import Any
 import psutil  # type: ignore
@@ -19,6 +20,7 @@ from jupyter_client.provisioning.provisioner_base import (
     KernelProvisionerBase,
     KernelProvisionerMeta,
 )
+import jupyter_core
 
 # from nod.datastore import StartingVariables
 from jupyter_client import find_connection_file
@@ -41,6 +43,43 @@ regex = re.compile(r".*kernel-(.{2,8})\.json")
 #     0
 # ]  # max(pid_filenames, key=os.path.getctime)
 # return latest_connection_filename
+
+
+class Watcher(object):
+    running = True
+    refresh_delay_secs = 1
+
+    # Constructor
+    def __init__(self, dir_to_watch, call_func_on_change=None):
+        self.dir_to_watch: str = dir_to_watch
+        self.call_func_on_change = call_func_on_change
+        self.dir_list_cache: list[str] = [""]
+
+    # Look for changes
+    def look(self):
+        dirlist = set(os.listdir(self.dir_to_watch))
+        if len(dirlist.symmetric_difference(set(self.dir_list_cache))) > 0:
+            # File has changed, so do something...
+            _log.info("File changed")
+            if self.call_func_on_change is not None:
+                self.call_func_on_change(dirlist)
+        self.dir_list_cache = list(dirlist)
+
+    # Keep watching in a loop
+    def watch(self):
+        while self.running:
+            try:
+                # Look for changes
+                time.sleep(self.refresh_delay_secs)
+                self.look()
+            except KeyboardInterrupt:
+                print("\nDone")
+                break
+            except FileNotFoundError:
+                # Action on file not found
+                pass
+            except:
+                print("Unhandled error: %s" % sys.exc_info()[0])
 
 
 class NodProvisionerMeta(type(KernelProvisionerBase)):  # type: ignore[misc]
@@ -95,6 +134,7 @@ class nodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
     async def post_launch(self, **kwargs):
         _log.info("PROVISIONER POST LAUNCH KERNEL")
         manager: KernelManager = self.parent
+
         # if not manager.ready.done():
         #     manager.ready.set_result(None)
         # if not manager._ready.done():
@@ -105,14 +145,21 @@ class nodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
         # manager.session.
         if manager.has_kernel:
             _log.info("HAS KERNEL")
-
+        _log.info(manager.kernel_name)
+        if manager.kernel_spec is not None:
+            _log.info("display_name")
+            _log.info(manager.kernel_spec.display_name)
+        #     manager.kernel_spec.display_name = "Nod"
+        # manager.kernel_name = "Nod"
         _log.info("OWNS KERNEL %s", str(manager.owns_kernel))
         return
 
     async def launch_kernel(self, cmd, **kwargs):
         _log.info("PROVISIONER LAUNCH KERNEL")
         # _log.info("LAUNCH KERNEL")
-        # _log.info(cmd, kwargs)
+        _log.info("launch info")
+        _log.info(cmd)
+        # _log.info(kwargs)
         # self.process = Popen(
         #     [sys.executable, "-c", cmd, "--existing", self.connection_file],
         #     stdout=PIPE,
@@ -120,14 +167,19 @@ class nodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
         #     close_fds=(sys.platform != "win32"),
         #     **kwargs,
         # )
+        # manager: KernelManager = self.parent
         connection_dir = os.path.join(os.getcwd(), ".nod", "connection")
         _log.info("Connection Dir Path: %s", connection_dir)
         connection_filenames = os.listdir(connection_dir)
         pid_filenames = list(filter(regex.match, connection_filenames))
         if len(pid_filenames) > 1:
             _log.warning("Found Multiple Kernel Files in Nod Connection Folder")
+        if len(pid_filenames) == 0:
+            raise  # TODO
         self.connection_file = os.path.join(connection_dir, pid_filenames[0])
         _log.info("Connection File Path: %s", self.connection_file)
+
+        # self.watcher = Watcher(connection_dir, )
 
         match = regex.match(os.path.basename(self.connection_file))
         if match is None:
@@ -139,12 +191,13 @@ class nodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
             self.pid = pid
         else:
             # TODO Raise error
-            return
+            # return
+            raise RuntimeError("No Nod Kernel Available")
         with open(self.connection_file) as f:
             file_info = json.load(f)
 
         file_info["key"] = file_info["key"].encode()
-
+        file_info["kernel_name"] = "Nod"
         _log.info("connection file: " + str(file_info))
         self.restarting = False
         pgid = None
@@ -154,6 +207,7 @@ class nodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
             except OSError:
                 pass
         self.pgid = pgid
+        self.kernel_spec.display_name = "Nod"
         self.cwd = kwargs.get("cwd", pathlib.Path.cwd())
         _log.info("KERNEL ID %s", self.kernel_id)
         return file_info
@@ -207,9 +261,9 @@ class nodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
     async def poll(self):
         # _log.info("PROVISIONER POLL")
         # # """Poll the provisioner."""
-        if self.restarting:
-            _log.info("PROVISIONER POLL 0")
-            return 0
+        # if self.restarting:
+        #     _log.info("PROVISIONER POLL 0")
+        #     return 0
 
         ret = 0
         if self.process:
@@ -262,7 +316,7 @@ class nodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
         #     manager._ready.set_result(None)
         if (
             signum == signal.SIGINT and sys.platform == "win32"
-        ):  # type:ignore[unreachable]
+        ):  # type: ignore[unreachable]
             from jupyter_client.win_interrupt import send_interrupt
 
             send_interrupt(self.process.win32_interrupt_event)  # type: ignore
@@ -290,7 +344,7 @@ class nodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
         """Kill the provisioner and optionally restart."""
         _log.info("PROVISIONER KILL" + str(restart))
         if self.process:
-            if hasattr(signal, "SIGKILL"):  # type:ignore[unreachable]
+            if hasattr(signal, "SIGKILL"):  # type: ignore[unreachable]
                 # If available, give preference to signalling the process-group over `kill()`.
                 try:
                     self.restarting = True
@@ -310,14 +364,16 @@ class nodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
         """Terminate the provisioner and optionally restart."""
         _log.info("PROVISIONER TERM" + str(restart))
         if self.process:
-            if hasattr(signal, "SIGTERM"):  # type:ignore[unreachable]
+            if hasattr(signal, "SIGTERM"):  # type: ignore[unreachable]
                 # If available, give preference to signalling the process group over `terminate()`.
                 try:
                     manager: KernelManager = self.parent
+
                     if not manager.ready.done():
                         manager.ready.set_result(1)
-                    if not manager._ready.done():
-                        manager._ready.set_result(1)
+                    if manager._ready:
+                        if not manager._ready.done():
+                            manager._ready.set_result(1)
                     return
                 except OSError:
                     pass
@@ -326,7 +382,7 @@ class nodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
             # except OSError as e:
             #     nodProvisioner._tolerate_no_process(e)
 
-    async def cleanup(self, restart):
+    async def cleanup(self, restart=False):
         _log.info("PROVISIONER CLEANUP" + str(restart))
         # try:
         #     manager: KernelManager = self.parent

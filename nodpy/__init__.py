@@ -140,6 +140,7 @@ def compare_identifiers(
 #     for key, val in kwargs.items():
 #         logStore.logs.append(dict(key=val))
 #         print(key, val)
+# def nodConfig():
 
 
 def nodPrint(
@@ -249,10 +250,8 @@ def notebook(
         for stackFrame in relevant_stack_frames
     ]
 
-    pprint(stack_info)
-
     program_info = stack_info[0]
-    _log.info(stack_info)
+    # _log.info(stack_info)
     jsonInfo = orjson.dumps(stack_info)
     # _log.info("Program Info JSON: " + str(jsonInfo))
 
@@ -291,8 +290,8 @@ def notebook(
     with open(connection_file) as f:
         info_str = f.read()
         info = orjson.loads(info_str)
-        # info["kernel_name"] = "nod"
-        # info["display_name"] = "nod_display"
+        info["kernel_name"] = "Nod"
+        info["display_name"] = "Nod"
         # info["language"] = "python"
         # info["metadata"] = {
         #     "kernel_provisioner": {"provisioner_name": "nod-provisioner"}
@@ -306,91 +305,40 @@ def notebook(
     nod_connection_file = os.path.join(pm.connection_dir, Path(connection_file).name)
     shutil.copy(connection_file, nod_connection_file)
 
-    # _log.warning(jsonInfo)
+    with open(os.path.join(pm.connection_dir, "nodInfo.json"), "x") as f:
+        f.write(jsonInfo.decode("utf-8"))
 
-    ## RUNNING NOTEBOOK
-    cmd = (
-        "jupyter lab"
-        + " "
-        + "--KernelProvisionerFactory.default_provisioner_name=nod-provisioner"
-        + " "
-        + "--ContentsManager.allow_hidden=True"
-        + " "
-        + "--ServerApp.allow_external_kernels=True"
-        + " "
-        # + "--ServerApp.kernel_manager_class=nod.kernelmanager.NodMappingKernelManager"
-        # + " "
-        + "--ServerApp.websocket_ping_interval=0"
-        + " "
-        + "--ServerApp.websocket_ping_timeout=0"
-        + " "
-        # + "--ServerApp.external_connection_dir="
-        # + os.path.join(hiddenDir, "kernel")
-        # + " "
-        # + "--AsyncMultiKernelManager.use_pending_kernels=True"
-        # + " "
-        + "--LabServerApp.log_level=INFO"
-        + " "
-        + "--LabApp.log_level=INFO"
-        + " "
-        + "--ExtensionApp.log_level=INFO"
-        + " "
-        + "--Application.log_level=INFO"
-        + " "
-        # + "--KernelSpecManager.kernel_dirs=['"
-        # + connection_dir
-        # + "']"
-        + " "
-        + "--notebook-dir"
-        + " "
-        + os.path.dirname(notebook_call.filename)
-        + " "
-        + "--Nod.is_active=True"
-        + " "
-        # + "--Nod.connection_dir="
-        # + connection_dir
-        # + " "
-        + "--Nod.info="
-        + base64.b64encode(jsonInfo).decode("utf-8")
-        + " "
-        # + "--ServerApp.jpserver_extensions=\"{'nod': True}\""
-        # + " "
-        + program_info.notebook_file
-    )
-    # _log.info(cmd)
-    args = shlex.split(cmd)
-    # _log.info("Notebook Args: " + str(args))
     if not DRY_RUN:
         nb_env = os.environ.copy()
         nb_env["JUPYTER_RUNTIME_DIR"] = pm.connection_dir
-        notebookProcess = subprocess.Popen(args, env=nb_env)
-        app.nod_notebook_process = notebookProcess  # type: ignore
+        # notebookProcess = subprocess.Popen(args, env=nb_env)
+        # app.nod_notebook_process = notebookProcess  # type: ignore
 
-    def close_notebook():
-        import os
-        import signal
+    # def close_notebook():
+    #     import os
+    #     import signal
 
-        notebookProcess.terminate()  # type: ignore
-        pid = os.getpid()
-        pgid = os.getpgid(pid)
-        # Prefer process-group over process
-        # but only if the kernel is the leader of the process group
-        if pgid and pgid == pid and hasattr(os, "killpg"):
-            try:
-                _log.warning("KERNEL KILLPG")
-                os.killpg(pgid, signal.SIGTERM)
-            except OSError:
-                _log.warning("KERNEL KILLP Error")
-                os.kill(pid, signal.SIGTERM)
-                raise
-        else:
-            _log.warning("KERNEL KILLP")
-            os.kill(pid, signal.SIGTERM)
+    #     notebookProcess.terminate()  # type: ignore
+    #     pid = os.getpid()
+    #     pgid = os.getpgid(pid)
+    #     # Prefer process-group over process
+    #     # but only if the kernel is the leader of the process group
+    #     if pgid and pgid == pid and hasattr(os, "killpg"):
+    #         try:
+    #             _log.warning("KERNEL KILLPG")
+    #             os.killpg(pgid, signal.SIGTERM)
+    #         except OSError:
+    #             _log.warning("KERNEL KILLP Error")
+    #             os.kill(pid, signal.SIGTERM)
+    #             raise
+    #     else:
+    #         _log.warning("KERNEL KILLP")
+    #         os.kill(pid, signal.SIGTERM)
 
-        _log.warning("KERNEL PROCESS KILL")
+    #     _log.warning("KERNEL PROCESS KILL")
 
     if not DRY_RUN:
-        atexit.register(close_notebook)
+        # atexit.register(close_notebook)
         app.start()
 
     # notebookProcess.kill()

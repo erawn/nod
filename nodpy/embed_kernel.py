@@ -99,7 +99,7 @@ class nodKernel(IPythonKernel):
         _log.info("NODKERNEL CALL SHUTDOWN")
         _log.info(restart)
         reset(self.shell)
-        return dict(status="ok", restart=restart)
+        return dict(status="ok", restart=False)
 
     def _send_interrupt_children(self):
         _log.info("KERNEL INTERRUPT")
@@ -231,7 +231,7 @@ def embed_kernel(module=None, local_ns=None, **kwargs):
             sys.modules[app.kernel.shell._orig_sys_modules_main_name] = main
     app.abs_connection_file
     # load the calling scope if not given
-    (caller_module, caller_locals) = extract_module_locals(1)
+    caller_module, caller_locals = extract_module_locals(1)
     if module is None:
         module = caller_module
     if local_ns is None:
@@ -240,7 +240,7 @@ def embed_kernel(module=None, local_ns=None, **kwargs):
     app.kernel.user_module = module
     assert isinstance(local_ns, dict)
     app.kernel.user_ns = local_ns
-    app.shell.set_completer_frame()  # type:ignore[union-attr]
+    app.shell.set_completer_frame()  # type: ignore[union-attr]
     # print("Starting IPKernel with NS:")
     # print(local_ns)
     # os.environ["NOD_IPYTHON_CONNECTION_FILE"] = "test"

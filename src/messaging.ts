@@ -13,6 +13,19 @@ import { IExecuteReplyMsg, IExecuteRequestMsg } from '@jupyterlab/services/lib/k
 import { URLExt } from '@jupyterlab/coreutils';
 import { showDialog } from '@jupyterlab/apputils';
 import { Widget } from '@lumino/widgets';
+import { nodSchema } from './types';
+
+export function getNodInfo() {
+    const contentsManager = nodState.Instance().contentsManager
+    contentsManager.get(contentsManager.normalize(nodState.Instance().connection_dir + "/nodInfo.json"), { type: 'file', format: 'base64', content: true })
+        .then(file => {
+            const jsonObj = JSON.parse(atob(file.content))
+            const schema = nodSchema.parse(jsonObj)
+            console.log(schema)
+            nodState.Instance().pythonInfo = schema
+            nodState.Instance().status = 'active'
+        })
+}
 
 export function requestExecute(code: string): IShellFuture<IExecuteRequestMsg, IExecuteReplyMsg> | null {
     const kernel = nodState.Instance().tracker.currentWidget?.sessionContext?.session?.kernel;
@@ -107,10 +120,12 @@ export async function exitSession() {
 }
 
 export function writeChange() {
-
-
-    const children = nodState.Instance().tracker.currentWidget?.content.widgets
-    const indent = nodState.Instance().currentFrame.indent
+    const instance = nodState.Instance()
+    if (instance.currentFrame === null) {
+        return
+    }
+    const children = instance.tracker.currentWidget?.content.widgets
+    const indent = instance.currentFrame.indent
     if (children === undefined) {
         return
     }
@@ -125,17 +140,17 @@ export function writeChange() {
 
     console.log('path', nodState.Instance().tracker.currentWidget?.context.path)
     const contentsManager = nodState.Instance().contentsManager
-    const sourceFile = contentsManager.normalize(nodState.Instance().currentFrame.relative_source_file)
+    const sourceFile = contentsManager.normalize(instance.currentFrame.relative_source_file)
     console.log("sourcefile", sourceFile)
 
     //TODO: Rewrite this --- pass in top text and bottom text at start so we can't run into alignment, overwriting issues like this.
     contentsManager.get(sourceFile, { type: "file", content: true }).then(original => {
-
-        let lines = (original.content as string).split(/\r?\n/)
-        const editPos = nodState.Instance().currentFrame.function_body_position
-        if (editPos === undefined) {
+        const instance = nodState.Instance()
+        if (instance.currentFrame === null) {
             return
         }
+        let lines = (original.content as string).split(/\r?\n/)
+        const editPos = instance.currentFrame.function_body_position
         console.log("LINES", lines)
         console.log("EDITPOS", editPos)
         const topContent = lines.slice(0, editPos?.start.line - 1).join('\n')

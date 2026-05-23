@@ -1,35 +1,47 @@
 import {
   ILabShell,
   JupyterFrontEnd,
-  JupyterFrontEndPlugin
+  JupyterFrontEndPlugin,
+  LabShell
 } from '@jupyterlab/application';
 
 import {
   INotebookTracker,
 } from '@jupyterlab/notebook';
-
 import { ISettingRegistry } from '@jupyterlab/settingregistry';
+import { AccordionPanel } from '@lumino/widgets';
 import {
   Contents,
   IContentsManager,
+  IManager,
+  ISessionManager,
+  KernelManager,
 } from '@jupyterlab/services'
 import { nodState } from './state';
+import { addCommands } from './commands';
+import { addToolbarButtons, disableKernelSwitching } from './buttons';
+import { CodeViewers } from './codeViewers';
+import { getNodInfo, requestDebug } from './messaging';
+import { requestAPI } from './request';
+// import { createCallstackSidebar, NodSidebar } from './sidebar';
 import { PageConfig } from '@jupyterlab/coreutils';
 import { IMainMenu } from '@jupyterlab/mainmenu';
-import { ITranslator } from '@jupyterlab/translation';
-import { addCommands } from './commands';
-import { ICommandPalette, ISessionContextDialogs, IToolbarWidgetRegistry } from '@jupyterlab/apputils';
-import { addToolbarButtons } from './buttons';
+import { ITranslator, nullTranslator } from '@jupyterlab/translation';
+import { XMLParser } from 'fast-xml-parser'
+import { Dialog, ICommandPalette, ISessionContextDialogs, IToolbarWidgetRegistry, SessionContext, SessionContextDialogs, showDialog, showErrorMessage } from '@jupyterlab/apputils';
+
 import {
   IConsoleTracker
 } from '@jupyterlab/console';
-import { nodSchema } from './types';
-import { CodeViewers } from './codeViewers';
-import { buildIcon } from '@jupyterlab/ui-components';
+import { INodStackFrame, nodSchema } from './types';
+import { IDocumentManager } from '@jupyterlab/docmanager';
 import { IDebugger } from '@jupyterlab/debugger';
-import { requestDebug } from './messaging';
-import { requestAPI } from './request';
-import { NodSidebar } from './sidebar';
+import { check } from 'zod';
+import { bugIcon, buildIcon, SidePanel } from '@jupyterlab/ui-components';
+import { Callstack } from './callstack'
+import { CallstackModel } from './callstack/model';
+import { ca } from 'zod/v4/locales';
+// import { VariablesBodyTree } from 'side';
 /**
  * Initialization data for the nod extension.
  */
@@ -50,7 +62,8 @@ const plugin: JupyterFrontEndPlugin<void> = {
     ISessionContextDialogs,
     ICommandPalette,
     IConsoleTracker,
-    IDebugger
+    IDebugger,
+    IDocumentManager,
   ],
   optional: [ISettingRegistry],
   activate: (app: JupyterFrontEnd,
@@ -64,7 +77,8 @@ const plugin: JupyterFrontEndPlugin<void> = {
     sessionContextDialogs: ISessionContextDialogs,
     palette: ICommandPalette,
     consoleTracker: IConsoleTracker,
-    debug: IDebugger,
+    debuggerService: IDebugger,
+    docManager: IDocumentManager,
   ) => {
     const isActive = PageConfig.getOption('nod_active');
     console.log("nod_active", isActive)
@@ -72,45 +86,196 @@ const plugin: JupyterFrontEndPlugin<void> = {
       console.log("Nod extension loaded, but not called from a nod() call, deactivating")
       return
     }
-
     console.log('JupyterLab extension nod is activated!');
+    const connection_dir = PageConfig.getOption('nod_connection_dir')
+    console.log("connection_dir", connection_dir)
+    nodState.Instance(notebookTracker, app, contentsManager, translator, connection_dir) // initialize singleton with tracker
+    app.docRegistry.addWidgetExtension('Notebook', new CodeViewers());
+    // disableKernelSwitching(sessionContextDialogs, toolbarRegistry)
+    addCommands(mainMenu, translator, palette, consoleTracker)
+    addToolbarButtons()
 
 
-    const info = PageConfig.getOption('nod_info') //.slice(1); //Bytestring has "b" in front of it
-    console.log("INFO")
-    console.log(info)
-    console.log(atob(info))
-    const jsonObj = JSON.parse(atob(info))
-    const schema = nodSchema.parse(jsonObj)
-    // nodState.Instance().pythonInfo = schema
+    class NodSidebar extends SidePanel {
+      /**
+       * Instantiate a new Debugger.Sidebar
+       *
+       * @param options The instantiation options for a Debugger.Sidebar
+       */
+      constructor(options: { translator: ITranslator, service: IDebugger, model: CallstackModel }) {
+        const translator = options.translator || nullTranslator;
+        super({ translator });
+        this.id = 'jp-debugger-sidebar';
+        this.title.icon = bugIcon;
+        this.addClass('jp-DebuggerSidebar');
 
-    nodState.Instance(notebookTracker, app, contentsManager, schema, translator) // initialize singleton with tracker
-    nodState.Instance().status = 'active'
-    const widget = new NodSidebar({ translator });
-    widget.title.icon = buildIcon;
-    widget.title.caption = 'Nod Stack';
-    widget.id = 'jp-nod-inspector';
-    app.shell.add(widget, 'left', { type: 'Debugger' });
-    widget.show() //TODO 
-    notebookTracker.activeCellChanged.connect((tracker, panel) => {
-      requestAPI<any>('hello', app.serviceManager.serverSettings)
-        .then(data => {
-          // console.log(data);
-        })
-        .catch(reason => {
-          console.error(
-            `The jupyterlab_examples_server server extension appears to be missing.\n${reason}`
-          );
+        this.content.addClass('jp-DebuggerSidebar-body');
+        (this.content as AccordionPanel).expand(0)
+        const model = options.model
+        const callstack = new Callstack({
+          // commands: callstackCommands,
+          model: callStackModel,
+          translator
         });
-      const future = requestDebug('nod_info')
-      console.log('updated')
-      if (future) {
-        future.onReply = async msg => {
-          // const jsonObj = JSON.parse(atob(msg.content.body))
-          // console.log(jsonObj)
+        // const tree = new VariablesBodyTree({
+        //   model,
+        //   service,
+        //   commands,
+        //   translator
+        // });
+
+        this.addWidget(callstack);
+      }
+    }
+    const callStackModel = new CallstackModel({});
+    const sidebar = new NodSidebar({ translator, service: debuggerService, model: callStackModel })
+    nodState.Instance().app.shell.add(sidebar, 'left', { type: 'Debugger', rank: 400, });
+
+    callStackModel.currentFrameChanged.connect((model, frame) => {
+      if (frame?.id !== undefined) {
+        nodState.Instance().currentFrameIndex = frame?.id
+        docManager.openOrReveal(nodState.Instance().currentFrame.notebook_file, 'default', { name: "nod" })
+      }
+    })
+
+    app.serviceManager.kernels.runningChanged.connect((manager, model) => {
+      console.log('running changed')
+      checkKernelStatus()
+    })
+    app.started.then(() => {
+      console.log('started')
+      docManager.closeAll()
+    })
+    app.restored.then(() => {
+      // console.log('restored')
+      // (app.shell as LabShell).updateConfig({ hiddenMode: 'display' })
+      if (app.serviceManager.kernelspecs.specs?.default) {
+        (sidebar.content as AccordionPanel).expand(0)
+        app.serviceManager.kernelspecs.specs.default = 'nod'
+      }
+
+      const manager = app.serviceManager.kernels
+      for (const kernel of Array.from(manager.running())) {
+        if (kernel.name !== 'nod') {
+          manager.shutdown(kernel.id)
+        }
+      }
+      checkKernelStatus()
+
+      sidebar.show();
+      (app.shell as LabShell).expandLeft()
+    })
+
+    nodState.Instance().statusChanged.connect((state, status) => {
+      if (status === 'active') {
+        console.log("Nod ACTIVE")
+        // contentsManager.normalize(nodState.Instance().connection_dir + "/nodInfo.json")
+        console.log(state.currentFrame.notebook_file)
+        docManager.openOrReveal(state.currentFrame.notebook_file, 'default', { name: "nod" })
+        const options = {
+          ignoreAttributes: false,
+          attributeNamePrefix: "@_",
+        };
+        const parser2 = new XMLParser(options);
+        const parsed = state.pythonInfo?.map((frame, index) => {
+          return parser2.parse(frame.frame_xml);
+
+        })
+        const frames = state.pythonInfo?.map((frame, index) => {
+          return ({ id: index, name: frame.function_name, source: { path: frame.source_file, name: frame.relative_source_file }, scope: { name: frame.function_name, variables: [{ name: 'a', value: '10' }] } } as INodStackFrame)
+        })
+
+        console.log('parsed', parsed)
+        if (frames) {
+          callStackModel.frames = frames
         }
       }
     })
+
+    var dialogID = ""
+    function checkKernelStatus() {
+      const manager = app.serviceManager.kernels
+      console.log("check kernel status")
+      console.log(Array.from(manager.running()))
+      const nodKernel = Array.from(manager.running()).find(val => val.name === "nod" && val.execution_state && (['idle', 'busy'].includes(val.execution_state)))
+      console.log(nodKernel)
+      if (nodKernel !== undefined) {
+        console.log("Found Nod Kernel")
+        const idSearch = Dialog.tracker.find(dialog => dialog.id === dialogID)
+        if (idSearch !== undefined) {
+          idSearch.resolve()
+        }
+        dialogID = ""
+        getNodInfo()
+        return nodKernel
+      } else {
+        if (dialogID === "") {
+          const dialog = new Dialog({
+            title: "Waiting for Nod Kernel...",
+            body: "Call notebook() from a Python file in the same directory",
+            buttons: [Dialog.okButton({ label: "Refresh" })]
+          });
+          dialogID = dialog.id
+          nodState.Instance().status = 'inactive'
+          dialog.launch().then(() => {
+            manager.refreshRunning()
+            app.serviceManager.kernelspecs.refreshSpecs()
+            for (const name in app.serviceManager.kernelspecs.specs?.kernelspecs) {
+              const spec = app.serviceManager.kernelspecs.specs?.kernelspecs[name]!;
+              if (spec.display_name === 'Nod') {
+                try {
+                  app.serviceManager.kernels.startNew(spec)
+                }
+                catch (e) {
+                  console.log(e)
+                }
+              }
+            }
+            checkKernelStatus()
+          });
+        }
+      }
+    }
+
+    console.log(Array.from(app.serviceManager.kernels.running()))
+    console.log(app.serviceManager.kernelspecs.specs?.kernelspecs)
+
+
+
+
+
+    // console.log("INFO")
+    // console.log(info)
+    // console.log(atob(info))
+
+
+
+
+
+    // notebookTracker.activeCellChanged.connect((tracker, panel) => {
+    //   requestAPI<any>('hello', app.serviceManager.serverSettings)
+    //     .then(data => {
+    //       // console.log(data);
+    //     })
+    //     .catch(reason => {
+    //       console.error(
+    //         `The jupyterlab_examples_server server extension appears to be missing.\n${reason}`
+    //       );
+    //     });
+    //   const future = requestDebug('nod_info')
+    //   console.log('updated')
+    //   if (future) {
+    //     future.onReply = async msg => {
+    //       // const jsonObj = JSON.parse(atob(msg.content.body))
+    //       // console.log(jsonObj)
+    //     }
+    //   }
+    // })
+    // console.log(nodState.Instance().currentFrame)
+
+
+
+    // END CURRENT
 
     // notebookTracker.widgetAdded.connect((tracker, panel) => {
     //   console.log(panel.sessionContext.kernelPreference)
@@ -137,10 +302,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
 
     // })
     // console.log("Kernelspecs", kernelSpec.specs?.kernelspecs)
-    console.log(nodState.Instance().currentFrame)
-    addToolbarButtons(sessionContextDialogs, toolbarRegistry)
-    addCommands(mainMenu, translator, palette, consoleTracker)
-    app.docRegistry.addWidgetExtension('Notebook', new CodeViewers());
+
     // const languageInfo = {
     //   name: "python",
     //   version: "3.14.3",
@@ -320,4 +482,3 @@ const plugin: JupyterFrontEndPlugin<void> = {
 }
 
 export default plugin;
-

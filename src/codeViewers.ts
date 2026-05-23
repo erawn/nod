@@ -37,10 +37,10 @@ export class CodeViewers implements DocumentRegistry.IWidgetExtension<
         panel: NotebookPanel,
         context: DocumentRegistry.IContext<INotebookModel>
     ): IDisposable {
-
-        const header = makeCodeViewer(panel, NOD_HEADER_CLASS);
-        const func = makeCodeViewer(panel, NOD_FUNC_CLASS);
-        const footer = makeCodeViewer(panel, NOD_FOOTER_CLASS);
+        const currentFrame = nodState.Instance().currentFrame
+        const header = makeCodeViewer(panel, currentFrame, NOD_HEADER_CLASS);
+        const func = makeCodeViewer(panel, currentFrame, NOD_FUNC_CLASS);
+        const footer = makeCodeViewer(panel, currentFrame, NOD_FOOTER_CLASS);
 
         panel.revealed.then(() => {
             if (nodState.Instance().isMainFile(panel)) {
@@ -60,13 +60,17 @@ export class CodeViewers implements DocumentRegistry.IWidgetExtension<
         });
     }
 }
-export function makeCodeViewer(panel: NotebookPanel, className: 'jp-nod-Footer' | 'jp-nod-Header' | 'jp-nod-Function') {
+export function makeCodeViewer(panel: NotebookPanel, currentFrame: nodState["currentFrame"], className: 'jp-nod-Footer' | 'jp-nod-Header' | 'jp-nod-Function') {
     let source = ""
     let editor
-    const currentFrame = nodState.Instance().currentFrame
     switch (className) {
         case NOD_HEADER_CLASS:
             source = currentFrame.text_above.join('').split('\\n').join('\n')
+            if (source.startsWith('\n')) {
+                source = source.slice(source.indexOf('\n'))
+            }
+            editor = makeCodeViewerWidget(className, source)
+            return editor
         case NOD_FOOTER_CLASS:
             source = currentFrame.text_below.join('').split('\\n').join('\n')
             if (source.startsWith('\n')) {
