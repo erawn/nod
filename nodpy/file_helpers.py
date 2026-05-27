@@ -10,13 +10,14 @@ from nbformat import NotebookNode
 import nbformat
 from nodpy.ast_tools import FunctionFinder, NodFinder
 from libcst.metadata import CodePosition, CodeRange
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Optional
 from libcst import Module
 from jupytext.formats import long_form_one_format  # type: ignore
 import libcst as cst
 import sys
-from _pydevd_bundle.pydevd_xml import frame_vars_to_xml
+
+# from _pydevd_bundle.pydevd_xml import frame_vars_to_xml
 from IPython.core.getipython import get_ipython
 
 
@@ -63,6 +64,7 @@ class ProgramInfo:
     text_body: List[str]
     text_above: List[str]
     text_below: List[str]
+    index: int
     notebook_file: str = ""  # rel path of generated .ipynb file
     source_file: str = ""  # abs path of original .py file
     relative_source_file: str = ""  # rel path of original .py file
@@ -70,11 +72,12 @@ class ProgramInfo:
     notebook_content: str = ""
     cli_arguments: str = ""
     function_name: str = ""
-    frame_xml: str = ""
+    frame_xml: list[str] = field(default_factory=list)
 
 
 def makeProgramInfo(
     stackFrame: FrameInfo,
+    index: int,
     module: Module,
     pm: PathManager,
 ) -> ProgramInfo:
@@ -100,13 +103,14 @@ def makeProgramInfo(
                 text_body=no_position_source_lines,
                 text_above=[],
                 text_below=[],
+                index=index,
                 source_file=stackFrame.filename,
                 connection_dir=pm.connection_dir,
                 notebook_file=os.path.relpath(tempNotebook, os.getcwd()),
                 relative_source_file=rel_source_file,
                 cli_arguments=" ".join(sys.argv),
                 function_name="<module>",
-                frame_xml=frame_vars_to_xml(frame_f_locals=stackFrame.frame.f_locals),
+                frame_xml=list(stackFrame.frame.f_locals.keys()),
             )
         )
 
@@ -134,13 +138,14 @@ def makeProgramInfo(
                 func_end + 11, len(source_lines) - 1
             )
         ],
+        index=index,
         relative_source_file=rel_source_file,
         source_file=stackFrame.filename,
         connection_dir=pm.connection_dir,
         notebook_file=os.path.relpath(tempNotebook, os.getcwd()),
         cli_arguments=" ".join(sys.argv),
         function_name=stackFrame.function,
-        frame_xml=frame_vars_to_xml(frame_f_locals=stackFrame.frame.f_locals),
+        frame_xml=list(stackFrame.frame.f_locals.keys()),
     )
     return writeNotebook(info)
 

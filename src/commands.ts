@@ -1,12 +1,13 @@
 import { IMainMenu } from "@jupyterlab/mainmenu";
 import { ITranslator } from "@jupyterlab/translation";
 import { nodState } from "./state";
-import { exitSession, writeChange } from "./messaging";
+import { exitSession, requestDebug, writeChange } from "./messaging";
 import { ICommandPalette, showDialog, Dialog, } from "@jupyterlab/apputils";
 import {
     IConsoleTracker,
 } from '@jupyterlab/console';
 import { checkIcon } from "@jupyterlab/ui-components";
+import { requestAPI } from "./request";
 export namespace nodCommands {
     export const changeKernel = 'nod:changeKernel';
     export const clearAllOutputs = 'nod:clearAllOutputs';
@@ -172,6 +173,79 @@ export function addCommands(mainMenu: IMainMenu, translator: ITranslator, palett
         },
         isEnabled
     });
+    //     commands.addCommand(nodCommands.restart, {
+    //         label: trans.__('Restart Kernel'),
+    //         describedBy: {
+    //             args: {
+    //                 type: 'object',
+    //                 properties: {
+    //                     activate: {
+    //                         type: 'boolean',
+    //                         description: trans.__('Restart Kernel')
+    //                     }
+    //                 }
+    //             }
+    //         },
+    //         execute: args => {
+    //             // console.log("Restarting Notebook")
+    //             // requestAPI<any>('hello', app.serviceManager.serverSettings)
+    //             //     .then(data => {
+    //             //         // console.log(data);
+    //             //     })
+    //             //     .catch(reason => {
+    //             //         console.error(
+    //             //             `The jupyterlab_examples_server server extension appears to be missing.\n${reason}`
+    //             //         );
+    //             //     });
+    //             // const future = requestDebug('nod_info')
+    //             // console.log('updated')
+    //             // if (future) {
+    //             //     future.onReply = async msg => {
+    //             //         // const jsonObj = JSON.parse(atob(msg.content.body))
+    //             //         // console.log(jsonObj)
+    //             //     }
+    //             // }
+    //         })
+    //     return showDialog({
+    //         title: trans.__('Shut Down Nod Session?'),
+    //         body: trans.__(
+    //             'Are you sure you want to close the Nod Session?'
+    //         ),
+    //         buttons: [
+    //             Dialog.cancelButton({
+    //                 ariaLabel: trans.__('Cancel console Shut Down'),
+    //             }),
+    //             Dialog.warnButton({
+    //                 ariaLabel: trans.__('Exit Without Saving'),
+    //                 label: 'Shut Down Without Saving'
+    //             }),
+    //             Dialog.okButton({
+    //                 ariaLabel: trans.__('Export and Shut Down'),
+    //                 label: 'Export and Shut Down'
+    //             })
+    //         ]
+    //     }).then(result => {
+    //         console.log(result)
+    //         if (result.button.accept) {
+    //             if (result.button.label === 'Export and Shut Down') {
+    //                 writeChange()
+    //             }
+    //             exitSession()
+    //             return commands
+    //                 .execute('console:shutdown', { activate: false })
+    //                 .then(() => {
+    //                     nodState.Instance().tracker.currentWidget?.dispose()
+    //                     return true;
+    //                 });
+    //         } else {
+    //             return false;
+    //         }
+    //     });
+    // },
+    // isEnabled
+    //     });
+
+
     const category = "Nod";
     [nodCommands.exitNotebook, nodCommands.exportNotebook].forEach((cmd: string) => palette.addItem({ command: cmd, category }))
 
@@ -196,11 +270,11 @@ export function addCommands(mainMenu: IMainMenu, translator: ITranslator, palett
     //     isEnabled,
     //     rank: 0,
     // });
-    // mainMenu.kernelMenu.kernelUsers.restartKernel.add({
-    //     id: CommandIDs.restart,
-    //     isEnabled,
-    //     rank: 0,
-    // });
+    mainMenu.kernelMenu.kernelUsers.restartKernel.add({
+        id: nodCommands.restart,
+        isEnabled,
+        rank: 0,
+    });
     // mainMenu.kernelMenu.kernelUsers.shutdownKernel.add({
     //     id: CommandIDs.shutdown,
     //     isEnabled,

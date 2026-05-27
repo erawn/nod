@@ -11,8 +11,22 @@ from ipykernel.ipkernel import IPythonKernel
 from IPython.core.interactiveshell import InteractiveShell
 import orjson
 from IPython.core.extensions import ExtensionManager
+from IPython.core.getipython import get_ipython
+from inspect import FrameInfo
+from typing import List, cast
 
 _log = logging.getLogger(__name__)
+
+
+# def loadFrame(frame_id: FrameIdentifiers, stack: list[inspect.FrameInfo]):
+#     frame_info: inspect.FrameInfo = next(
+#         (fr for fr in stack if compare_identifiers(frame_id, fr)), None
+#     )
+#     shell: InteractiveShell = get_ipython()
+#     if shell is None:
+#         return
+#     shell.push(frame_info.frame.locals)
+#     shell.push(frame_info.frame.globals)
 
 
 def reset(shell: InteractiveShell, new_session=True, aggressive=False):
@@ -64,7 +78,7 @@ def reset(shell: InteractiveShell, new_session=True, aggressive=False):
     if aggressive and not hasattr(shell, "_sys_modules_keys"):
         print("Cannot restore sys.module, no snapshot")
     elif aggressive:
-        print("culling sys module...")
+        # print("culling sys module...")
         current_keys = set(sys.modules.keys())
         for k in current_keys - shell._sys_modules_keys:
             if k.startswith("multiprocessing"):
@@ -159,6 +173,35 @@ class nodKernel(IPythonKernel):
                 "command": msg["command"],
                 "body": encoded,
             }
+        match msg["command"]:
+            case "nod_switch":
+                # _log.info("Kernel: Switching Frame to")
+                # _log.info(msg)
+                if hasattr(self, "relevant_stack_frames"):
+                    self.relevant_stack_frames = cast(
+                        List[FrameInfo], self.relevant_stack_frames  # type: ignore
+                    )
+                    stackIndex = cast(int, msg["arguments"]["stackIndex"])
+                    # _log.info(stackIndex)
+                    newStackFrame = self.relevant_stack_frames[stackIndex]
+                    if self.shell is not None:
+                        reset(self.shell, True, True)
+                        self.shell.user_ns.update(newStackFrame.frame.f_locals)
+                        self.shell.user_global_ns.update(newStackFrame.frame.f_globals)
+                        self.shell.user_ns_hidden.update(newStackFrame.frame.f_builtins)
+                        # _log.info("locals")
+                        # _log.info(newStackFrame.frame.f_locals.keys())
+                        # _log.info("globals")
+                        # _log.info(newStackFrame.frame.f_globals.keys())
+                        # _log.info("builtins")
+                        # _log.info(newStackFrame.frame.f_builtins.keys())
+                    return {
+                        "type": "response",
+                        "request_seq": msg["seq"],
+                        "success": True,
+                        "command": msg["command"],
+                    }
+
         return await super().do_debug_request(msg)
 
     async def shutdown_request(self, stream, ident, parent):

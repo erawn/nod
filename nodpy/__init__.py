@@ -53,7 +53,8 @@ from .datastore import LogStore
 from inspect import FrameInfo, Traceback
 from types import FrameType, TracebackType
 from jupytext.formats import long_form_one_format  # type: ignore
-from .provisioner import nodProvisioner
+
+from .provisioner import NodProvisioner
 
 if TYPE_CHECKING:
     # False at run time, only for type checker
@@ -92,14 +93,6 @@ def compare_identifiers(
         and frame_info.filename == frame_id.filename
     )
 
-
-# def loadFrame(frame_id: FrameIdentifiers, stack: list[FrameInfo]):
-#     frame_info: FrameInfo = next((fr for fr in stack if compare_identifiers(frame_id,fr)), None)
-#     shell: InteractiveShell = get_ipython()
-#     if shell is None:
-#         return
-#     shell.push(frame_info.frame.locals)
-#     shell.push(frame_info.frame.globals)
 
 # def loadState(frame_identifier:FrameIdentifiers, state:dict[dict]):
 #     frame_id = frame_identifier.get_id()
@@ -210,10 +203,11 @@ def notebook(
 
     def find_notebook_func(frame: inspect.FrameInfo):
         if frame.code_context is None:
-            raise RuntimeError
+            # raise RuntimeError
+            return False
 
         for line in frame.code_context:
-            if line.find("notebook()") > 0:
+            if line.find("notebook(") > 0:  # TODO replace with regex
                 return True
         return False
 
@@ -246,8 +240,8 @@ def notebook(
             module_sources.update({stackFrame.filename: cst.parse_module(program_text)})
 
     stack_info = [
-        makeProgramInfo(stackFrame, module_sources[stackFrame.filename], pm)
-        for stackFrame in relevant_stack_frames
+        makeProgramInfo(stackFrame, index, module_sources[stackFrame.filename], pm)
+        for index, stackFrame in enumerate(relevant_stack_frames)
     ]
 
     program_info = stack_info[0]
@@ -261,9 +255,11 @@ def notebook(
     #     "get_ipython().push(__STARTINGVARIABLES)",
     # ]
     # c.InteractiveShellApp.hide_initial_ns = False
+    # c.HistoryManager.hist_file = ":memory:"
 
     # STARTING STATE
     startingVariables = {}
+    # TODO check deep copy, throw warning or add display for failures
     if deep_copy:
         startingVariables.update(copy.deepcopy(notebook_call.frame.f_globals))
         startingVariables.update(copy.deepcopy(notebook_call.frame.f_locals))
@@ -272,13 +268,17 @@ def notebook(
         startingVariables.update(notebook_call.frame.f_locals)
 
     scope = {
-        "__NODINFO": program_info,
-        "__NODSTACK": relevant_stack_frames,
+        # "__NODINFO": program_info,
+        # "__NODSTACK": relevant_stack_frames,
     }
     scope.update(startingVariables)
     app = embed_kernel(
         local_ns=scope, config=c, no_stdout=False, no_stderr=False, quiet=False
     )
+    # app.shell.user_ns.update(newStackFrame.frame.f_locals)
+    # self.shell.user_global_ns.update(newStackFrame.frame.f_globals)
+    # self.shell.user_ns_hidden.update(newStackFrame.frame.f_builtins)
+    app.kernel.relevant_stack_frames = relevant_stack_frames
     # app.shell.push(startingVariables)
     # app.kernel.startingVariables = startingVariables  # set this value in order to reset variables on kernel restart
 

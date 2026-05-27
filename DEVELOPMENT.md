@@ -24,12 +24,20 @@ COMMANDS
 
 NOTES:
 - cant watch connection dir from server, because we can't trigger a client update from server
+- run python program from provisioner now that we can pass the command to it --- it can just manage the process like its a kernel? 
+- still have to find the kernel proper, but restart can now just restart the entire python process, just gotta relook for new connection file to pop up -- gotta wait for this to happen if the program takes a minute 
 
-TODO
+TODO 
 - remove file bar 
 - Make nod cli that has command 
-- add tree view to side bar now that we have xml
-- parse HTML? or will it render automatically?
+- Give user a way to send a signal to the python program (aka specify how program should be restarted, pass this to provisioner)
+- Add config type to nodConfig (e.g. forward, copy, no-copy)
+- Display variables for each call stack in green/red depending on whether they’re problematic, display warnings 
+- Add to NodConfig how the program should be restarted — (i.e. allowed to finish or interrupted, and if interrupted, with what signal). Obv smart defaults are our friend here. 
+- Change tracker --- which cells are unedited 
+- final preview of exported code?
+
+
 - mode order -- 1. just do forward eval, 2. deep-copy for expensive programs, 3. adult-mode.
     - how to switch modes? notebook() args? 
 - figure out why jupytext isn't respecting the kernelinfo metadata, so that we can restart the notebook without switching to normal python kernel
@@ -44,13 +52,28 @@ TODO
 - convert system to background runner - look for incoming kernel files and update UI to match 
     - Watch for changes + update
 - Maybe have the current NOD Instance notebook be undeleteable and a different color? 
-- Stack frame viewer + navigator 
-- Nod log right sidebar 
+
 - Logging system 
 - Force re-runs on export (manual? How to trigger from nb?)
-- Linked editing on all nod-logged stack frames? 
+
 - Auto install kernel file 
 
+NOD Log Todo
+- Nod log right sidebar 
+- Linked editing on all nod-logged stack frames? 
+
+Nod log
+- Look for cycles in taint analysis 
+- Fallback — compare outputs of each log session, if on forward eval they change, raise a big warning
+- Argument isn’t that we’re inventing map, or array programming, but that once we focus on how notebooks let us reify dynamic parts of our program, we can let you do things for free that would normally require totally rewriting your program (aka applying a statement on one variable to an array of values) 
+https://pyre-check.org/docs/pysa-basics/ 
+
+
+Decorator vs imbedded — decorator gives clear points for taint analysis, doesn’t let us leverage the user logic though. 
+
+Inter-function, the sources and sinks are anything referenced in the body, and the sinks 
+
+Will the taint analysis catch things like for loops tho? If not, this would be an argument to use a decorator instead
 
 
 

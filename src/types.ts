@@ -8,6 +8,7 @@ export const nodSchema = z.array(z.object({
     text_body: z.array(z.string()),
     text_above: z.array(z.string()),
     text_below: z.array(z.string()),
+    index: z.number(),
     notebook_file: z.string(),
     source_file: z.string(),
     relative_source_file: z.string(),
@@ -15,7 +16,7 @@ export const nodSchema = z.array(z.object({
     notebook_content: z.string(),
     cli_arguments: z.string(),
     function_name: z.string(),
-    frame_xml: z.string()
+    frame_xml: z.array(z.string())
 }))
 export type nodSchema = z.infer<typeof nodSchema>
 

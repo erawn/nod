@@ -20,6 +20,7 @@ from jupyter_client.provisioning.provisioner_base import (
     KernelProvisionerBase,
     KernelProvisionerMeta,
 )
+from traitlets.traitlets import Bool, Unicode
 import jupyter_core
 
 # from nod.datastore import StartingVariables
@@ -86,13 +87,16 @@ class NodProvisionerMeta(type(KernelProvisionerBase)):  # type: ignore[misc]
     pass
 
 
-class nodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
+class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
     # """
     # A Kernel Provisioner that re-uses an existing kernel.
     # The kernel connection file is fetched as the latest
     # modified connection file.
     # """
-
+    cli_cmd = Unicode(
+        "",
+        help="User Command To Execute Python Program",
+    ).tag(config=True)
     restarting = False
 
     async def get_provisioner_info(self) -> dict[str, Any]:
@@ -167,7 +171,8 @@ class nodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
         #     close_fds=(sys.platform != "win32"),
         #     **kwargs,
         # )
-        # manager: KernelManager = self.parent
+        _log.warning("Provisioner:CLICMD")
+        _log.warning(self.cli_cmd)
         connection_dir = os.path.join(os.getcwd(), ".nod", "connection")
         _log.info("Connection Dir Path: %s", connection_dir)
         connection_filenames = os.listdir(connection_dir)

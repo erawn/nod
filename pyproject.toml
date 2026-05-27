@@ -48,7 +48,7 @@ test = [
 nod = "nodpy.nod_cli:app"
 
 [project.entry-points."jupyter_client.kernel_provisioners"]
-nod-provisioner = "nodpy:nodProvisioner"
+NodProvisioner = "nodpy:NodProvisioner"
 
 [tool.hatch.version]
 source = "nodejs"
@@ -100,3 +100,8 @@ before-build-python = ["jlpm clean:all"]
 
 [tool.check-wheel-contents]
 ignore = ["W002"]
+
+[tool.uv.workspace]
+members = [
+    "nod",
+]

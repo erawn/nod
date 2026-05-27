@@ -44,7 +44,7 @@ export function requestExecute(code: string): IShellFuture<IExecuteRequestMsg, I
 
 }
 
-export function requestDebug(msg: string): IControlFuture<KernelMessage.IDebugRequestMsg, KernelMessage.IDebugReplyMsg> | null {
+export function requestDebug(cmd: string, stackIndex: number): IControlFuture<KernelMessage.IDebugRequestMsg, KernelMessage.IDebugReplyMsg> | null {
     const kernel = nodState.Instance().tracker.currentWidget?.sessionContext?.session?.kernel;
     if (!kernel) {
         return null
@@ -52,8 +52,8 @@ export function requestDebug(msg: string): IControlFuture<KernelMessage.IDebugRe
     const message = {
         type: "request" as "request",
         seq: 0,
-        command: msg,
-        arguments: {}
+        command: cmd,
+        arguments: { stackIndex }
     }
     const future = kernel.requestDebug(message);
     return future

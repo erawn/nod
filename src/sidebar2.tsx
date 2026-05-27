@@ -1,101 +1,39 @@
-// import { ITranslator, nullTranslator } from '@jupyterlab/translation';
-// import { bugIcon, getTreeItemElement, PanelWithToolbar, searchIcon, SidePanel } from '@jupyterlab/ui-components';
-// import { ReactWidget } from '@jupyterlab/ui-components';
-// import React, { useCallback, useEffect, useMemo, useState } from 'react';
-// import { nodState } from './state';
-// import { buildIcon } from '@jupyterlab/ui-components';
-// import { Debugger, IDebugger } from '@jupyterlab/debugger';
-// import { ArrayExt } from '@lumino/algorithm';
+// // Copyright (c) Jupyter Development Team.
+// // Distributed under the terms of the Modified BSD License.
+// /* eslint-disable @typescript-eslint/no-explicit-any */
+
+// import type { ITranslator } from '@jupyterlab/translation';
+// import { nullTranslator } from '@jupyterlab/translation';
+
+// import {
+//     getTreeItemElement,
+//     ReactWidget,
+//     searchIcon
+// } from '@jupyterlab/ui-components';
+
 // import { Button, TreeItem, TreeView } from '@jupyter/react-components';
-// import { convertType } from '@jupyterlab/debugger/lib/panels/variables';
-// import type { DebugProtocol } from '@vscode/debugprotocol';
+
+// import { ArrayExt } from '@lumino/algorithm';
+
 // import type { CommandRegistry } from '@lumino/commands';
-// // export function createNode(): HTMLElement {
-// //     const span = document.createElement('span');
-// //     span.textContent = 'My custom header';
-// //     return span;
-// // }
-// // export function createCallstackSidebar(debuggerService: IDebugger) {
-// //     const translator = nodState.Instance().translator
-// //     const widget = new NodSidebar({ translator: translator, service: debuggerService });
-// //     widget.title.icon = buildIcon;
-// //     widget.title.caption = 'Nod Stack';
-// //     widget.id = 'jp-nod-inspector';
-// //     nodState.Instance().app.shell.add(widget, 'left', { type: 'Debugger', rank: 300, });
-// // }
 
-// export class NodSidebar extends SidePanel {
-//     /**
-//      * Instantiate a new Debugger.Sidebar
-//      *
-//      * @param options The instantiation options for a Debugger.Sidebar
-//      */
-//     constructor(options: { translator: ITranslator, service: IDebugger }) {
-//         const translator = options.translator || nullTranslator;
-//         super({ translator });
-//         this.id = 'jp-debugger-sidebar';
-//         this.title.icon = bugIcon;
-//         this.addClass('jp-DebuggerSidebar');
+// import type { DebugProtocol } from '@vscode/debugprotocol';
 
-//         this.content.addClass('jp-DebuggerSidebar-body');
+// import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
-//         const widget = new frameStack({ translator: translator, service: options.service })
+// // import { convertType } from '.';
 
+// import { Debugger } from '@jupyterlab/debugger
 
-//         this.addWidget(widget);
-//     }
-// }
+// import type { IDebugger } from '@jupyterlab/debugger';
 
-// class frameStack extends PanelWithToolbar {
-//     private _tree: VariablesBodyTree;
-//     constructor(options: { translator: ITranslator, service: IDebugger }) {
-//         super();
-//         const translator = nullTranslator;
-//         const trans = translator.load('jupyterlab');
-//         this.title.label = trans.__('NOD Callstack_test');
-//         this.toolbar.addClass('jp-DebuggerVariables-toolbar');
-//         this.toolbar.node.setAttribute('aria-label', trans.__('NOD Callstack toolbar'));
-//         this._tree = new VariablesBodyTree({ translator: translator, model: options.service.model.variables, service: options.service, commands: nodState.Instance().app.commands });
+// import type { VariablesModel } from '@jupyterlab/debugger/lib/panels/variables/model';
+// import { convertType } from '@jupyterlab/debugger/lib/panels/variables';
 
-//         this.addWidget(this._tree);
-//         this.addClass('jp-DebuggerVariables');
-//     }
-// }
-
-
-// namespace VariablesBodyTree {
-//     /**
-//      * Instantiation options for `VariablesBodyTree`.
-//      */
-//     export interface IOptions {
-//         /**
-//          * The variables model.
-//          */
-//         model: IDebugger.Model.IVariables;
-//         /**
-//         //  * The debugger service.
-//         //  */
-//         service: IDebugger;
-//         /**
-//         //  * The commands registry.
-//         //  */
-//         commands: CommandRegistry;
-//         /**
-//          * The application language translator
-//          */
-//         translator?: ITranslator;
-//     }
-// }
-
+// /**
+//  * The body for tree of variables.
+//  */
 // export class VariablesBodyTree extends ReactWidget {
-
-//     private _frame = '';
-//     private _frames: IDebugger.IScope[] = [];
-//     protected model: IDebugger.Model.IVariables;
-//     private _commands: CommandRegistry;
-//     private _filter = new Set<string>();
-//     private _service: IDebugger;
-//     private _translator: ITranslator | undefined;
 //     /**
 //      * Instantiate a new Body for the tree of variables.
 //      *
@@ -106,36 +44,30 @@
 //         this._commands = options.commands;
 //         this._service = options.service;
 //         this._translator = options.translator;
+
 //         const model = (this.model = options.model);
+//         model.changed.connect
 //         // model.changed.connect(this._updateScopes, this);
 
 //         this.addClass('jp-DebuggerVariables-body');
-//     }
-//     updateScopes(frames: IDebugger.IScope[]): void {
-//         if (ArrayExt.shallowEqual(this._frames, frames)) {
-//             return;
-//         }
-//         this._frames = frames;
-//         this.update();
 //     }
 
 //     /**
 //      * Render the VariablesBodyTree.
 //      */
 //     render(): JSX.Element {
-//         // const scope =
-//         //   this._scopes.find(scope => scope.name === this._scope) ?? this._scopes[0];
+//         const scope =
+//             this._scopes.find(scope => scope.name === this._scope) ?? this._scopes[0];
 
 //         const handleSelectVariable = (variable: IDebugger.IVariable) => {
 //             this.model.selectedVariable = variable;
 //         };
 
-//         // if (scope?.name !== 'Globals') {
-//         //   this.addClass('jp-debuggerVariables-local');
-//         // } else {
-//         //   this.removeClass('jp-debuggerVariables-local');
-//         // }
-//         const scope = this._frames.find(scope => scope.name === this._frame) ?? this._frames[0]
+//         if (scope?.name !== 'Globals') {
+//             this.addClass('jp-debuggerVariables-local');
+//         } else {
+//             this.removeClass('jp-debuggerVariables-local');
+//         }
 
 //         return scope ? (
 //             <>
@@ -155,6 +87,43 @@
 //             <div></div>
 //         );
 //     }
+
+//     /**
+//      * Set the variable filter list.
+//      */
+//     set filter(filter: Set<string>) {
+//         this._filter = filter;
+//         this.update();
+//     }
+
+//     /**
+//      * Set the current scope
+//      */
+//     set scope(scope: string) {
+//         this._scope = scope;
+//         this.update();
+//     }
+
+//     /**
+//      * Update the scopes and the tree of variables.
+//      *
+//      * @param model The variables model.
+//      */
+//     private _updateScopes(model: VariablesModel): void {
+//         if (ArrayExt.shallowEqual(this._scopes, model.scopes)) {
+//             return;
+//         }
+//         this._scopes = model.scopes;
+//         this.update();
+//     }
+
+//     protected model: IDebugger.Model.IVariables;
+//     private _commands: CommandRegistry;
+//     private _scope = '';
+//     private _scopes: IDebugger.IScope[] = [];
+//     private _filter = new Set<string>();
+//     private _service: IDebugger;
+//     private _translator: ITranslator | undefined;
 // }
 
 // interface IVariablesBranchProps {
@@ -174,6 +143,7 @@
 //      */
 //     handleSelectVariable?: (variable: IDebugger.IVariable) => void;
 // }
+
 // /**
 //  * A React component to display a list of variables.
 //  *
@@ -214,6 +184,7 @@
 //         </>
 //     );
 // };
+
 // /**
 //  * VariableComponent properties
 //  */
@@ -436,3 +407,30 @@
 //         </TreeItem>
 //     );
 // };
+
+// /**
+//  * A namespace for VariablesBodyTree `statics`.
+//  */
+// namespace VariablesBodyTree {
+//     /**
+//      * Instantiation options for `VariablesBodyTree`.
+//      */
+//     export interface IOptions {
+//         /**
+//          * The variables model.
+//          */
+//         model: IDebugger.Model.IVariables;
+//         /**
+//          * The debugger service.
+//          */
+//         service: IDebugger;
+//         /**
+//          * The commands registry.
+//          */
+//         commands: CommandRegistry;
+//         /**
+//          * The application language translator
+//          */
+//         translator?: ITranslator;
+//     }
+// }

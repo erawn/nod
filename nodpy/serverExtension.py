@@ -1,6 +1,8 @@
 import json
 import logging
 import os
+import shlex
+import subprocess
 import sys
 import time
 from jupyter_server.serverapp import ServerApp
@@ -22,14 +24,44 @@ import json
 from jupyter_server.base.handlers import APIHandler
 from jupyter_server.utils import url_path_join
 import tornado
+from typing import cast
 
 
-class HelloRouteHandler(APIHandler):
+class NodServerRouteHandler(APIHandler):
     # The following decorator should be present on all verb methods (head, get, post,
     # patch, put, delete, options) to ensure only authorized user can request the
     # Jupyter server
     @tornado.web.authenticated
     def get(self):
+        self.finish(
+            json.dumps(
+                {
+                    "data": (
+                        "Hello, world!"
+                        " This is the '/nodpy/hello' endpoint."
+                        " Try visiting me in your browser!"
+                    ),
+                }
+            )
+        )
+
+
+class RestartRouteHandler(APIHandler):
+    # The following decorator should be present on all verb methods (head, get, post,
+    # patch, put, delete, options) to ensure only authorized user can request the
+    # Jupyter server
+    @tornado.web.authenticated
+    def get(self):
+        _log.info("Nod Server: Restart Program")
+        _log.info(self.settings.get("Nod"))
+        nodServer = self.settings.get("Nod")
+        if nodServer is not None and hasattr(nodServer, "user_program_process"):
+            nodProcess = nodServer.user_program_process
+            nodServer = cast(Nod, nodServer)
+            if nodProcess is not None:
+                nodProcess = cast(subprocess.Popen[bytes], nodProcess)
+                # nodProcess.terminate()
+            nodServer.runUserProgram(nodServer.cli_cmd)
         self.finish(
             json.dumps(
                 {
@@ -49,6 +81,10 @@ class Nod(ExtensionApp):
         False,
         help="Whether to activate Nod front end. Should only be set from the nod library",
     ).tag(config=True)
+    cli_cmd = Unicode(
+        "",
+        help="User Command To Execute Python Program",
+    ).tag(config=True)
 
     connection_dir = Unicode("", help="Nod Connection Directory").tag(config=True)
 
@@ -60,11 +96,25 @@ class Nod(ExtensionApp):
     # def dir_changed_callback(self, dir_list):
     #     _log.info("DIR CHANGED")
     #     _log.info(dir_list)
+    def runUserProgram(self, cmd: str):
+        env = os.environ.copy()
+        self.user_program_process = subprocess.Popen(
+            args=cmd,
+            env=env,
+            shell=True,
+            # stdin=subprocess.PIPE, stdout=subprocess.PIPE
+        )
+        # self.user_program_process.wait()
+
     def initialize_handlers(self):
         host_pattern = ".*$"
         base_url = self.serverapp.web_app.settings["base_url"]  # type: ignore
-        hello_route_pattern = url_path_join(base_url, "nodpy", "hello")
-        handlers = [(hello_route_pattern, HelloRouteHandler)]
+        nod_route_pattern = url_path_join(base_url, "nodpy", "hello")
+        restart_route_pattern = url_path_join(base_url, "nodpy", "restart")
+        handlers = [
+            (nod_route_pattern, NodServerRouteHandler),
+            (restart_route_pattern, RestartRouteHandler),
+        ]
         self.handlers.extend(handlers)
 
     def initialize_settings(self):
@@ -74,7 +124,11 @@ class Nod(ExtensionApp):
         page_config = settings.setdefault("page_config_data", {})
         page_config["nod_active"] = self.active
         page_config["nod_connection_dir"] = self.connection_dir
-        _log.info(self.connection_dir)
+        info_decoded = base64.b64decode(self.cli_cmd).decode("utf-8")
+        self.cli_cmd = info_decoded
+        page_config["cli_cmd"] = self.cli_cmd
+        _log.warning(self.cli_cmd)
+        self.runUserProgram(self.cli_cmd)
 
     # def _load_jupyter_server_extension(self, serverapp):  # type: ignore
     #     """Registers the API handler to receive HTTP requests from the frontend extension.

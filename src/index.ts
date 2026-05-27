@@ -41,6 +41,7 @@ import { bugIcon, buildIcon, SidePanel } from '@jupyterlab/ui-components';
 import { Callstack } from './callstack'
 import { CallstackModel } from './callstack/model';
 import { ca } from 'zod/v4/locales';
+import { IDebugReplyMsg } from '@jupyterlab/services/lib/kernel/messages';
 // import { VariablesBodyTree } from 'side';
 /**
  * Initialization data for the nod extension.
@@ -135,6 +136,14 @@ const plugin: JupyterFrontEndPlugin<void> = {
       if (frame?.id !== undefined) {
         nodState.Instance().currentFrameIndex = frame?.id
         docManager.openOrReveal(nodState.Instance().currentFrame.notebook_file, 'default', { name: "nod" })
+        //TODO Update state to new frame, send debug refresh
+        console.log("Switching to frame ", frame?.id)
+        const future = requestDebug("nod_switch", frame?.id)
+        if (future !== null) {
+          future.onReply = async msg => {
+            console.log("DEBUG RESPONSE", msg)
+          }
+        }
       }
     })
 
@@ -145,6 +154,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
     app.started.then(() => {
       console.log('started')
       docManager.closeAll()
+      //TODO close all besides the ones we want to open?
     })
     app.restored.then(() => {
       // console.log('restored')
@@ -176,16 +186,16 @@ const plugin: JupyterFrontEndPlugin<void> = {
           ignoreAttributes: false,
           attributeNamePrefix: "@_",
         };
-        const parser2 = new XMLParser(options);
-        const parsed = state.pythonInfo?.map((frame, index) => {
-          return parser2.parse(frame.frame_xml);
+        // const parser2 = new XMLParser(options);
+        // const parsed = state.pythonInfo?.map((frame, index) => {
+        //   return parser2.parse(frame.frame_xml);
 
-        })
+        // })
         const frames = state.pythonInfo?.map((frame, index) => {
           return ({ id: index, name: frame.function_name, source: { path: frame.source_file, name: frame.relative_source_file }, scope: { name: frame.function_name, variables: [{ name: 'a', value: '10' }] } } as INodStackFrame)
         })
 
-        console.log('parsed', parsed)
+        // console.log('parsed', parsed)
         if (frames) {
           callStackModel.frames = frames
         }
@@ -253,24 +263,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
 
 
     // notebookTracker.activeCellChanged.connect((tracker, panel) => {
-    //   requestAPI<any>('hello', app.serviceManager.serverSettings)
-    //     .then(data => {
-    //       // console.log(data);
-    //     })
-    //     .catch(reason => {
-    //       console.error(
-    //         `The jupyterlab_examples_server server extension appears to be missing.\n${reason}`
-    //       );
-    //     });
-    //   const future = requestDebug('nod_info')
-    //   console.log('updated')
-    //   if (future) {
-    //     future.onReply = async msg => {
-    //       // const jsonObj = JSON.parse(atob(msg.content.body))
-    //       // console.log(jsonObj)
-    //     }
-    //   }
-    // })
+
     // console.log(nodState.Instance().currentFrame)
 
 
