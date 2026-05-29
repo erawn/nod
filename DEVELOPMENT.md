@@ -28,7 +28,9 @@ NOTES:
 - still have to find the kernel proper, but restart can now just restart the entire python process, just gotta relook for new connection file to pop up -- gotta wait for this to happen if the program takes a minute 
 
 TODO 
-- remove file bar 
+- install kernel automatically 
+    - install in the local env folder 
+- change stack frame when different notebook selected 
 - Make nod cli that has command 
 - Give user a way to send a signal to the python program (aka specify how program should be restarted, pass this to provisioner)
 - Add config type to nodConfig (e.g. forward, copy, no-copy)
@@ -36,6 +38,9 @@ TODO
 - Add to NodConfig how the program should be restarted — (i.e. allowed to finish or interrupted, and if interrupted, with what signal). Obv smart defaults are our friend here. 
 - Change tracker --- which cells are unedited 
 - final preview of exported code?
+- make other frames read only after edit
+- multiple returns --- we need a magic which will stop execution of the cell 
+- convert notebook export with jupytext back to pylight 
 
 
 - mode order -- 1. just do forward eval, 2. deep-copy for expensive programs, 3. adult-mode.
@@ -52,7 +57,9 @@ TODO
 - convert system to background runner - look for incoming kernel files and update UI to match 
     - Watch for changes + update
 - Maybe have the current NOD Instance notebook be undeleteable and a different color? 
-
+- JupyterHub Integration? 
+- if the python program is being run as a subprocess, we can set an enviornment variable for the connection directory 
+- add restart time to nodConfig
 - Logging system 
 - Force re-runs on export (manual? How to trigger from nb?)
 

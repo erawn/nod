@@ -14,6 +14,7 @@ from IPython.core.extensions import ExtensionManager
 from IPython.core.getipython import get_ipython
 from inspect import FrameInfo
 from typing import List, cast
+from ipykernel.zmqshell import ZMQInteractiveShell
 
 _log = logging.getLogger(__name__)
 
@@ -107,7 +108,24 @@ class nodKernel(IPythonKernel):
     def __init__(self, **kwargs):
         """Initialize the kernel."""
         super().__init__(**kwargs)
+
         # _log.info("NODKERNEL INIT")
+
+        # kernel_ask_exit = self.shell.ask_exit
+
+        # def nod_exit():
+        #     _log.info("NOD EXIT")
+        #     self
+        #     kernel_ask_exit()
+
+        # self.shell.ask_exit = nod_exit
+
+    def close(self):
+        print("CLOSE")
+        _log.info("CLOSE")
+        super().close(self)
+        print("CLOSE")
+        _log.info("CLOSE")
 
     def do_shutdown(self, restart):
         _log.info("NODKERNEL CALL SHUTDOWN")

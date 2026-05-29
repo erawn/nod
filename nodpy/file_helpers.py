@@ -163,7 +163,8 @@ class PathManager:
         os.makedirs(self.hiddenDir, exist_ok=True)
 
         self.archiveDir = os.path.join(self.hiddenDir, "archive")
-        os.makedirs(self.archiveDir, exist_ok=True)
+        if not os.path.exists(self.archiveDir):
+            os.makedirs(self.archiveDir, exist_ok=True)
 
         self.notebook_checkpoints = os.path.join(self.hiddenDir, ".ipynb_checkpoints")
         os.makedirs(self.notebook_checkpoints, exist_ok=True)
@@ -192,16 +193,16 @@ class PathManager:
                     )
 
         os.rmdir(self.notebook_checkpoints)
-
+        # TODO -- files aren't getting archived
         file_names = os.listdir(self.hiddenDir)
         for file_name in file_names:
-            if os.path.isfile(os.path.join(self.hiddenDir, file_name)):
-                if os.path.exists(os.path.join(self.archiveDir, file_name)):
+            hidden_file = os.path.join(self.hiddenDir, file_name)
+            archive_file = os.path.join(self.archiveDir, file_name)
+            if os.path.isfile(hidden_file):
+                if os.path.exists(archive_file):
                     os.replace(
-                        os.path.join(self.hiddenDir, file_name),
-                        os.path.join(self.archiveDir, file_name),
+                        hidden_file,
+                        archive_file,
                     )
                 else:
-                    shutil.move(
-                        os.path.join(self.hiddenDir, file_name), self.archiveDir
-                    )
+                    shutil.move(hidden_file, archive_file)

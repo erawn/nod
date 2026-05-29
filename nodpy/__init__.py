@@ -273,7 +273,7 @@ def notebook(
     }
     scope.update(startingVariables)
     app = embed_kernel(
-        local_ns=scope, config=c, no_stdout=False, no_stderr=False, quiet=False
+        local_ns=scope, config=c, no_stdout=False, no_stderr=False, quiet=True
     )
     # app.shell.user_ns.update(newStackFrame.frame.f_locals)
     # self.shell.user_global_ns.update(newStackFrame.frame.f_globals)
@@ -340,6 +340,9 @@ def notebook(
     if not DRY_RUN:
         # atexit.register(close_notebook)
         app.start()
+        app.reset_io()
+        # TODO nonlocal promote
+        # switch back to first frame
 
     # notebookProcess.kill()
 

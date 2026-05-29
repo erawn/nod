@@ -27,6 +27,7 @@ dependencies = [
     "jupytext",
     "orjson",
     "libcst",
+    "typer",
     "nbformat",
     "debugpy",
     "pydevd"
