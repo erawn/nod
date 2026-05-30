@@ -55,6 +55,12 @@ from types import FrameType, TracebackType
 from jupytext.formats import long_form_one_format  # type: ignore
 
 from .provisioner import NodProvisioner
+from .ip_plugin import (
+    load_ipython_extension,
+    unload_ipython_extension,
+)
+
+__all__ = ["load_ipython_extension", "unload_ipython_extension"]
 
 if TYPE_CHECKING:
     # False at run time, only for type checker
@@ -290,8 +296,8 @@ def notebook(
     with open(connection_file) as f:
         info_str = f.read()
         info = orjson.loads(info_str)
-        info["kernel_name"] = "Nod"
-        info["display_name"] = "Nod"
+        info["kernel_name"] = "nod"
+        info["display_name"] = "nod"
         # info["language"] = "python"
         # info["metadata"] = {
         #     "kernel_provisioner": {"provisioner_name": "nod-provisioner"}

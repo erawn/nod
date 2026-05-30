@@ -31,7 +31,6 @@ TODO
 - install kernel automatically 
     - install in the local env folder 
 - change stack frame when different notebook selected 
-- Make nod cli that has command 
 - Give user a way to send a signal to the python program (aka specify how program should be restarted, pass this to provisioner)
 - Add config type to nodConfig (e.g. forward, copy, no-copy)
 - Display variables for each call stack in green/red depending on whether they’re problematic, display warnings 
@@ -41,7 +40,9 @@ TODO
 - make other frames read only after edit
 - multiple returns --- we need a magic which will stop execution of the cell 
 - convert notebook export with jupytext back to pylight 
-
+    - server extension should handle this
+- glob pattern on module include
+- nod on exception https://ipython.readthedocs.io/en/stable/interactive/magics.html#magic-pdb 
 
 - mode order -- 1. just do forward eval, 2. deep-copy for expensive programs, 3. adult-mode.
     - how to switch modes? notebook() args? 

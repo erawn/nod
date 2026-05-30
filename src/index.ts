@@ -21,7 +21,7 @@ import { nodState } from './state';
 import { addCommands } from './commands';
 import { addToolbarButtons, disableKernelSwitching } from './buttons';
 import { CodeViewers } from './codeViewers';
-import { getNodInfo, requestDebug } from './messaging';
+import { getNodInfo, launchNodKernel, requestDebug } from './messaging';
 import { requestAPI } from './request';
 // import { createCallstackSidebar, NodSidebar } from './sidebar';
 import { PageConfig } from '@jupyterlab/coreutils';
@@ -96,6 +96,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
     addCommands(mainMenu, translator, palette, consoleTracker)
     addToolbarButtons()
 
+    var dialogID = ""
 
     class NodSidebar extends SidePanel {
       /**
@@ -147,22 +148,68 @@ const plugin: JupyterFrontEndPlugin<void> = {
       }
     })
 
+
+
+    function kernelWaitDialog() {
+      if (nodState.Instance().status == 'active') {
+        return
+      }
+      if (dialogID === "") {
+        const dialog = new Dialog({
+          title: "Waiting for Nod Kernel...",
+          body: "Call notebook() from a Python file in the same directory",
+          buttons: [Dialog.okButton({ label: "Refresh" })]
+        });
+        dialogID = dialog.id
+        dialog.launch().then(() => {
+          checkKernelStatus()
+        });
+      }
+    }
+    // var running = false
+    function checkKernelStatus() {
+      console.log("Check Kernel Status")
+      const manager = nodState.Instance().app.serviceManager.kernels
+      const nodKernel = Array.from(manager.running())
+        .find(val =>
+          val.name === "nod" &&
+          val.execution_state &&
+          (['idle', 'busy'].includes(val.execution_state)))
+      if (nodKernel !== undefined) {
+        console.log("Found Nod Kernel")
+        const idSearch = Dialog.tracker.find(dialog => dialog.id === dialogID)
+        if (idSearch !== undefined) {
+          idSearch.resolve()
+        }
+        dialogID = ""
+        getNodInfo()
+      } else {
+        console.log("setting to inactive")
+        nodState.Instance().status = 'inactive'
+        launchNodKernel()
+        kernelWaitDialog()
+      }
+    }
+
+
     app.serviceManager.kernels.runningChanged.connect((manager, model) => {
       console.log('running changed')
       checkKernelStatus()
+      // console.log(nodKernel)
+
     })
     app.started.then(() => {
       console.log('started')
       docManager.closeAll()
+      sidebar.activate()
       //TODO close all besides the ones we want to open?
     })
     app.restored.then(() => {
       // console.log('restored')
       // (app.shell as LabShell).updateConfig({ hiddenMode: 'display' })
-      if (app.serviceManager.kernelspecs.specs?.default) {
-        (sidebar.content as AccordionPanel).expand(0)
-        app.serviceManager.kernelspecs.specs.default = 'nod'
-      }
+      // if (app.serviceManager.kernelspecs.specs?.default) {
+      //   app.serviceManager.kernelspecs.specs.default = 'nod'
+      // }
 
       const manager = app.serviceManager.kernels
       for (const kernel of Array.from(manager.running())) {
@@ -170,10 +217,9 @@ const plugin: JupyterFrontEndPlugin<void> = {
           manager.shutdown(kernel.id)
         }
       }
-      checkKernelStatus()
-
-      sidebar.show();
-      (app.shell as LabShell).expandLeft()
+      checkKernelStatus();
+      (app.shell as LabShell).activateById(sidebar.id);
+      (sidebar.content as AccordionPanel).expand(0)
     })
 
     nodState.Instance().statusChanged.connect((state, status) => {
@@ -194,58 +240,14 @@ const plugin: JupyterFrontEndPlugin<void> = {
         const frames = state.pythonInfo?.map((frame, index) => {
           return ({ id: index, name: frame.function_name, source: { path: frame.source_file, name: frame.relative_source_file }, scope: { name: frame.function_name, variables: [{ name: 'a', value: '10' }] } } as INodStackFrame)
         })
-
-        // console.log('parsed', parsed)
         if (frames) {
           callStackModel.frames = frames
         }
       }
     })
 
-    var dialogID = ""
-    function checkKernelStatus() {
-      const manager = app.serviceManager.kernels
-      console.log("check kernel status")
-      console.log(Array.from(manager.running()))
-      const nodKernel = Array.from(manager.running()).find(val => val.name === "nod" && val.execution_state && (['idle', 'busy'].includes(val.execution_state)))
-      console.log(nodKernel)
-      if (nodKernel !== undefined) {
-        console.log("Found Nod Kernel")
-        const idSearch = Dialog.tracker.find(dialog => dialog.id === dialogID)
-        if (idSearch !== undefined) {
-          idSearch.resolve()
-        }
-        dialogID = ""
-        getNodInfo()
-        return nodKernel
-      } else {
-        if (dialogID === "") {
-          const dialog = new Dialog({
-            title: "Waiting for Nod Kernel...",
-            body: "Call notebook() from a Python file in the same directory",
-            buttons: [Dialog.okButton({ label: "Refresh" })]
-          });
-          dialogID = dialog.id
-          nodState.Instance().status = 'inactive'
-          dialog.launch().then(() => {
-            manager.refreshRunning()
-            app.serviceManager.kernelspecs.refreshSpecs()
-            for (const name in app.serviceManager.kernelspecs.specs?.kernelspecs) {
-              const spec = app.serviceManager.kernelspecs.specs?.kernelspecs[name]!;
-              if (spec.display_name === 'Nod') {
-                try {
-                  app.serviceManager.kernels.startNew(spec)
-                }
-                catch (e) {
-                  console.log(e)
-                }
-              }
-            }
-            checkKernelStatus()
-          });
-        }
-      }
-    }
+
+
 
     console.log(Array.from(app.serviceManager.kernels.running()))
     console.log(app.serviceManager.kernelspecs.specs?.kernelspecs)

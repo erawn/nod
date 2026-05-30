@@ -15,6 +15,22 @@ import { showDialog } from '@jupyterlab/apputils';
 import { Widget } from '@lumino/widgets';
 import { nodSchema } from './types';
 
+export function launchNodKernel() {
+    const app = nodState.Instance().app
+    app.serviceManager.kernelspecs.refreshSpecs()
+    for (const name in app.serviceManager.kernelspecs.specs?.kernelspecs) {
+        const spec = app.serviceManager.kernelspecs.specs?.kernelspecs[name]!;
+        if (spec.display_name === 'nod') {
+            try {
+                app.serviceManager.kernels.startNew(spec)
+            }
+            catch (e) {
+                console.log(e)
+            }
+        }
+    }
+}
+
 export function getNodInfo() {
     const contentsManager = nodState.Instance().contentsManager
     contentsManager.get(contentsManager.normalize(nodState.Instance().connection_dir + "/nodInfo.json"), { type: 'file', format: 'base64', content: true })

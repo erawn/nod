@@ -35,7 +35,7 @@ def writeNotebook(program_info: ProgramInfo) -> ProgramInfo:
         "file_extension": ".py",
     }
     notebook.metadata["kernelspec"] = {
-        "display_name": "Nod",
+        "display_name": "nod",
         "language": "python",
         "name": "nod",
     }

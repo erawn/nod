@@ -240,51 +240,12 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
 
     async def pre_launch(self, **kwargs):
         _log.info("PROVISIONER PRELAUNCH")
-        # self.parent._owns_kernel = False
-        # kwargs = await KernelProvisionerBase.pre_launch(self, **kwargs)
-
-        # km: KernelManager = self.parent
-        # if km:
-        #     km.shell_port = file_info["shell_port"]
-        #     km.iopub_port = file_info["iopub_port"]
-        #     km.stdin_port = file_info["stdin_port"]
-        #     km.hb_port = file_info["hb_port"]
-        #     km.control_port = file_info["control_port"]
-        # else:
-        #     _log.info("NO KERNEL MANAGER")
-
-        # self.connection_info = km.get_connection_info
-        # km = self.parent
-        # if km:
-        #     # build the Popen cmd
-        #     extra_arguments = kwargs.pop("extra_arguments", [])
-        #     kernel_cmd = km.format_kernel_cmd(
-        #         extra_arguments=extra_arguments
-        #     )  # This needs to remain here for b/c
-
-        #     kwargs = await super().pre_launch(**kwargs)
-        #     kwargs.setdefault("cmd", None)
-        #     return kwargs
-        # else:
-        _log.info("prelaunch")
-        _log.info(kwargs)
         python_cmd = shlex.split(base64.b64decode(self.cli_cmd).decode("utf-8"))
         extra_arguments = kwargs.pop("extra_arguments", [])
         kwargs.pop("cmd", None)
         kernel_cmd = python_cmd + extra_arguments
-        # _log.info("Provisioner:CLICMD_DECODE")
-        # _log.info(python_cmd)
         final_cmd = await super().pre_launch(cmd=kernel_cmd, **kwargs)
-        # _log.info("FINAL COMMAND")
-        # _log.info(final_cmd_
         return final_cmd
-        # KERNELPROVISIONERBASE
-        # env = kwargs.pop("env", os.environ).copy()
-        # env.update(self.__apply_env_substitutions(env))
-        # self._finalize_env(env)
-        # kwargs["env"] = env
-        # kwargs.setdefault("cmd", None)
-        # return kwargs
 
     def get_most_recent_connection_file(
         self, connection_dir: str
@@ -380,7 +341,7 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
                 file_info = json.load(f)
 
             file_info["key"] = file_info["key"].encode()
-            file_info["kernel_name"] = "Nod"
+            file_info["kernel_name"] = "nod"
             self.nod_info.file_info = file_info
             _log.info("connection file_info: " + str(file_info))
 
@@ -391,7 +352,7 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
                     self.nod_info.kernel_pgid = kernel_pgid
                 except OSError:
                     pass
-            self.kernel_spec.display_name = "Nod"
+            self.kernel_spec.display_name = "nod"
             _log.info("KERNEL ID %s", self.kernel_id)
             return file_info
 
@@ -413,8 +374,6 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
         if manager.kernel_spec is not None:
             _log.info("display_name")
             _log.info(manager.kernel_spec.display_name)
-        #     manager.kernel_spec.display_name = "Nod"
-        # manager.kernel_name = "Nod"
         _log.info("OWNS KERNEL %s", str(manager.owns_kernel))
         return
 
