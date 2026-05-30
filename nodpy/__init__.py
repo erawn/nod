@@ -38,12 +38,14 @@ import uuid
 from pathlib import Path
 import libcst as cst
 from libcst.display import dump
+
+from nodpy.ip_plugin import returnTransformer
 from .serverExtension import Nod
 from libcst.metadata import CodePosition, CodeRange
 from libcst.metadata import PositionProvider, ParentNodeProvider
 from IPython.core.interactiveshell import InteractiveShell
 from dataclasses import dataclass
-from typing import List, Literal, TYPE_CHECKING, IO, Any
+from typing import List, Literal, TYPE_CHECKING, IO, Any, cast
 from IPython.core.getipython import get_ipython
 from ipykernel.connect import get_connection_info
 from .embed_kernel import embed_kernel
@@ -53,14 +55,8 @@ from .datastore import LogStore
 from inspect import FrameInfo, Traceback
 from types import FrameType, TracebackType
 from jupytext.formats import long_form_one_format  # type: ignore
-
+from IPython.terminal.interactiveshell import TerminalInteractiveShell
 from .provisioner import NodProvisioner
-from .ip_plugin import (
-    load_ipython_extension,
-    unload_ipython_extension,
-)
-
-__all__ = ["load_ipython_extension", "unload_ipython_extension"]
 
 if TYPE_CHECKING:
     # False at run time, only for type checker
@@ -281,6 +277,9 @@ def notebook(
     app = embed_kernel(
         local_ns=scope, config=c, no_stdout=False, no_stderr=False, quiet=True
     )
+
+    shell = cast(TerminalInteractiveShell, app.shell)
+    shell.ast_transformers.append(returnTransformer())
     # app.shell.user_ns.update(newStackFrame.frame.f_locals)
     # self.shell.user_global_ns.update(newStackFrame.frame.f_globals)
     # self.shell.user_ns_hidden.update(newStackFrame.frame.f_builtins)
@@ -320,31 +319,31 @@ def notebook(
         # notebookProcess = subprocess.Popen(args, env=nb_env)
         # app.nod_notebook_process = notebookProcess  # type: ignore
 
-    # def close_notebook():
-    #     import os
-    #     import signal
+    def close_notebook():
+        import os
+        import signal
 
-    #     notebookProcess.terminate()  # type: ignore
-    #     pid = os.getpid()
-    #     pgid = os.getpgid(pid)
-    #     # Prefer process-group over process
-    #     # but only if the kernel is the leader of the process group
-    #     if pgid and pgid == pid and hasattr(os, "killpg"):
-    #         try:
-    #             _log.warning("KERNEL KILLPG")
-    #             os.killpg(pgid, signal.SIGTERM)
-    #         except OSError:
-    #             _log.warning("KERNEL KILLP Error")
-    #             os.kill(pid, signal.SIGTERM)
-    #             raise
-    #     else:
-    #         _log.warning("KERNEL KILLP")
-    #         os.kill(pid, signal.SIGTERM)
+        # notebookProcess.terminate()  # type: ignore
+        # pid = os.getpid()
+        # pgid = os.getpgid(pid)
+        # # Prefer process-group over process
+        # # but only if the kernel is the leader of the process group
+        # if pgid and pgid == pid and hasattr(os, "killpg"):
+        #     try:
+        #         _log.warning("KERNEL KILLPG")
+        #         os.killpg(pgid, signal.SIGTERM)
+        #     except OSError:
+        #         _log.warning("KERNEL KILLP Error")
+        #         os.kill(pid, signal.SIGTERM)
+        #         raise
+        # else:
+        #     _log.warning("KERNEL KILLP")
+        #     os.kill(pid, signal.SIGTERM)
 
-    #     _log.warning("KERNEL PROCESS KILL")
+        _log.warning("NOTEBOOK AT EXIT")
 
     if not DRY_RUN:
-        # atexit.register(close_notebook)
+        atexit.register(close_notebook)
         app.start()
         app.reset_io()
         # TODO nonlocal promote

@@ -8,12 +8,14 @@ import { nodState } from './state';
 import {
     Contents,
 } from '@jupyterlab/services'
-import { IControlFuture, IShellFuture } from '@jupyterlab/services/lib/kernel/kernel';
+import { IControlFuture, IKernelConnection, IShellFuture } from '@jupyterlab/services/lib/kernel/kernel';
 import { IExecuteReplyMsg, IExecuteRequestMsg } from '@jupyterlab/services/lib/kernel/messages';
 import { URLExt } from '@jupyterlab/coreutils';
 import { showDialog } from '@jupyterlab/apputils';
 import { Widget } from '@lumino/widgets';
 import { nodSchema } from './types';
+
+var launching: boolean = false
 
 export function launchNodKernel() {
     const app = nodState.Instance().app
@@ -21,12 +23,19 @@ export function launchNodKernel() {
     for (const name in app.serviceManager.kernelspecs.specs?.kernelspecs) {
         const spec = app.serviceManager.kernelspecs.specs?.kernelspecs[name]!;
         if (spec.display_name === 'nod') {
-            try {
-                app.serviceManager.kernels.startNew(spec)
+            if (!launching && nodState.Instance().status !== 'active') {
+                try {
+                    launching = true
+                    app.serviceManager.kernels.startNew(spec).then((value) => {
+                        launching = false
+                    })
+                    break
+                }
+                catch (e) {
+                    console.log(e)
+                }
             }
-            catch (e) {
-                console.log(e)
-            }
+
         }
     }
 }
