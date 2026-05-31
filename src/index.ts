@@ -16,12 +16,14 @@ import {
   IManager,
   ISessionManager,
   KernelManager,
+  KernelMessage,
+  Session,
 } from '@jupyterlab/services'
 import { nodState } from './state';
 import { addCommands } from './commands';
 import { addToolbarButtons, disableKernelSwitching } from './buttons';
 import { CodeViewers } from './codeViewers';
-import { getNodInfo, launchNodKernel, requestDebug } from './messaging';
+import { getNodInfo, getNodKernel, requestDebug } from './messaging';
 import { requestAPI } from './request';
 // import { createCallstackSidebar, NodSidebar } from './sidebar';
 import { PageConfig } from '@jupyterlab/coreutils';
@@ -42,6 +44,7 @@ import { Callstack } from './callstack'
 import { CallstackModel } from './callstack/model';
 import { ca } from 'zod/v4/locales';
 import { IDebugReplyMsg } from '@jupyterlab/services/lib/kernel/messages';
+import { stat } from 'node:fs';
 // import { VariablesBodyTree } from 'side';
 /**
  * Initialization data for the nod extension.
@@ -65,6 +68,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
     IConsoleTracker,
     IDebugger,
     IDocumentManager,
+    ISessionManager
   ],
   optional: [ISettingRegistry],
   activate: (app: JupyterFrontEnd,
@@ -80,6 +84,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
     consoleTracker: IConsoleTracker,
     debuggerService: IDebugger,
     docManager: IDocumentManager,
+    sessionManager: Session.IManager
   ) => {
     const isActive = PageConfig.getOption('nod_active');
     console.log("nod_active", isActive)
@@ -129,9 +134,51 @@ const plugin: JupyterFrontEndPlugin<void> = {
         this.addWidget(callstack);
       }
     }
+    notebookTracker.activeCellChanged.connect(() => {
+      console.log(Array.from(nodState.Instance().app.serviceManager.kernels.running()))
+    })
     const callStackModel = new CallstackModel({});
     const sidebar = new NodSidebar({ translator, service: debuggerService, model: callStackModel })
     nodState.Instance().app.shell.add(sidebar, 'left', { type: 'Debugger', rank: 400, });
+
+    // notebookTracker.currentChanged.connect((tracker,notebookPanel) => {
+
+    //   tracker.widgetAdded
+    // })
+
+    //Embedded Terminal can only be exited via SIGQUIT or a 'quit' message
+    notebookTracker.currentChanged.connect((tracker, notebookPanel) => {
+      console.log("CURRENT CHANGED")
+      if (notebookPanel) {
+        console.log("opening notebook", Array.from(app.serviceManager.kernels.running()).map(kernel => console.log(kernel.execution_state)))
+        notebookPanel.sessionContext.kernelPreference = { autoStartDefault: false, id: nodState.Instance().nodKernelId };
+      }
+
+      notebookPanel?.sessionContext.statusChanged.connect(async (context, status) => {
+        console.log("STATUS CHANGED", status)
+        if (status == 'restarting') {
+          // const sessionManager = context.sessionManager
+          // console.log("RESTARTING ALL")
+          // await sessionManager.refreshRunning();
+          // const content: KernelMessage.IExecuteRequestMsg['content'] = {
+          //   code: 'quit',
+          //   silent: true,
+          //   store_history: false
+          // };
+          // await Promise.resolve(context.session?.kernel?.requestExecute(content));
+          // await Promise.all(
+          //   [...sessionManager.running()].filter(model => model.name === 'nod').map(model => sessionManager.shutdown(model.id))
+          // );
+          await sessionManager.refreshRunning();
+          // Array.from(app.serviceManager).forEach(session => {
+          //   session.
+          // })
+
+          nodState.Instance().status == 'inactive'
+          checkKernelStatus()
+        }
+      })
+    })
 
     callStackModel.currentFrameChanged.connect((model, frame) => {
       if (frame?.id !== undefined) {
@@ -147,8 +194,6 @@ const plugin: JupyterFrontEndPlugin<void> = {
         }
       }
     })
-
-
 
     function kernelWaitDialog() {
       if (nodState.Instance().status == 'active') {
@@ -176,17 +221,19 @@ const plugin: JupyterFrontEndPlugin<void> = {
           val.execution_state &&
           (['idle', 'busy'].includes(val.execution_state)))
       if (nodKernel !== undefined) {
-        console.log("Found Nod Kernel")
+        console.log("REFRESHING NOD STATE Found Nod Kernel")
         const idSearch = Dialog.tracker.find(dialog => dialog.id === dialogID)
         if (idSearch !== undefined) {
           idSearch.resolve()
         }
         dialogID = ""
+        // docManager.closeAll()
+        sidebar.activate()
         getNodInfo()
       } else {
         console.log("setting to inactive")
         nodState.Instance().status = 'inactive'
-        launchNodKernel()
+        getNodKernel()
         kernelWaitDialog()
       }
     }
@@ -196,6 +243,10 @@ const plugin: JupyterFrontEndPlugin<void> = {
       console.log('running changed')
       checkKernelStatus()
       // console.log(nodKernel)
+
+      if (app.serviceManager.kernels.running()) {
+
+      }
 
     })
     app.started.then(() => {
@@ -211,23 +262,37 @@ const plugin: JupyterFrontEndPlugin<void> = {
       //   app.serviceManager.kernelspecs.specs.default = 'nod'
       // }
 
-      const manager = app.serviceManager.kernels
-      for (const kernel of Array.from(manager.running())) {
-        if (kernel.name !== 'nod') {
-          manager.shutdown(kernel.id)
-        }
-      }
+      // const manager = app.serviceManager.kernels
+      // for (const kernel of Array.from(manager.running())) {
+      //   if (kernel.name !== 'nod') {
+      //     manager.shutdown(kernel.id)
+      //   }
+      // }
       checkKernelStatus();
       (app.shell as LabShell).activateById(sidebar.id);
       (sidebar.content as AccordionPanel).expand(0)
     })
 
-    nodState.Instance().statusChanged.connect((state, status) => {
+    nodState.Instance().statusChanged.connect(async (state, status) => {
       if (status === 'active') {
         console.log("Nod ACTIVE")
         // contentsManager.normalize(nodState.Instance().connection_dir + "/nodInfo.json")
         console.log(state.currentFrame.notebook_file)
-        docManager.openOrReveal(state.currentFrame.notebook_file, 'default', { name: "nod" })
+        await state.app.serviceManager.kernels.refreshRunning()
+        const nodKernel = Array.from(state.app.serviceManager.kernels.running())
+          .find(val =>
+            val.name === "nod" &&
+            val.execution_state &&
+            (['idle', 'busy'].includes(val.execution_state)))
+
+        if (nodKernel) {
+          docManager.openOrReveal(state.currentFrame.notebook_file, 'default', { name: "nod" }, {}, { id: nodKernel.id })
+
+        } else {
+          docManager.openOrReveal(state.currentFrame.notebook_file, 'default', { name: "nod" }, {}, {})
+
+        }
+
         const options = {
           ignoreAttributes: false,
           attributeNamePrefix: "@_",

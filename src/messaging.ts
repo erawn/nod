@@ -16,18 +16,19 @@ import { Widget } from '@lumino/widgets';
 import { nodSchema } from './types';
 
 var launching: boolean = false
-
-export function launchNodKernel() {
+async function launchNodKernel() {
     const app = nodState.Instance().app
-    app.serviceManager.kernelspecs.refreshSpecs()
     for (const name in app.serviceManager.kernelspecs.specs?.kernelspecs) {
         const spec = app.serviceManager.kernelspecs.specs?.kernelspecs[name]!;
         if (spec.display_name === 'nod') {
             if (!launching && nodState.Instance().status !== 'active') {
                 try {
                     launching = true
-                    app.serviceManager.kernels.startNew(spec).then((value) => {
+                    console.log("Launching Nod Kernel")
+                    await app.serviceManager.kernels.startNew(spec).then((connection) => {
                         launching = false
+                        nodState.Instance().nodKernelId = connection.model.id
+                        console.log(" LAUNCHNODKERNEL: Started Up New Nod!")
                     })
                     break
                 }
@@ -35,9 +36,38 @@ export function launchNodKernel() {
                     console.log(e)
                 }
             }
-
         }
     }
+}
+export async function getNodKernel() {
+    const app = nodState.Instance().app
+    await app.serviceManager.kernelspecs.refreshSpecs()
+    const kernelManager = app.serviceManager.kernels
+    await kernelManager.refreshRunning()
+    console.log(Array.from(kernelManager.running()))
+    const oldKernelId = nodState.Instance().nodKernelId
+    const oldNodKernel = Array.from(kernelManager.running())
+        .find(val =>
+            val.name === "nod" &&
+            val.id === oldKernelId &&
+            val.execution_state &&
+            (['idle', 'busy', 'starting', 'connected', 'connecting', 'restarting'].includes(val.execution_state)))
+    if (oldNodKernel) {
+
+    } else {
+        const existingNodKernel = Array.from(kernelManager.running())
+            .find(val =>
+                val.name === "nod" &&
+                val.execution_state &&
+                (['idle', 'busy', 'starting', 'connected', 'connecting', 'restarting'].includes(val.execution_state)))
+        if (existingNodKernel) {
+            nodState.Instance().nodKernelId = existingNodKernel.id
+        } else {
+            await launchNodKernel()
+        }
+    }
+    return nodState.Instance().nodKernelId
+
 }
 
 export function getNodInfo() {

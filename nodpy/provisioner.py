@@ -140,11 +140,10 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
         #     _log.info("PROVISIONER POLL 0")
         #     return 0
         ret = 0
-        if self.nod_info.kernel_process:
-            if self.nod_info.kernel_process.is_running():
-                # _log.info("PROVISIONER POLL NONE")
-                return None
-        _log.info("PROVISIONER POLL 0")
+        if self.nod_info.python_process:
+            ret = self.nod_info.python_process.poll()
+        else:
+            _log.info(f"{self.kernel_id} Poll: Ret : {ret}")
         return ret
 
     async def wait(self):
@@ -260,7 +259,7 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
             _log.warning("Found Multiple Kernel Files in Nod Connection Folder")
         if len(pid_filenames) > 0:
             connection_file = os.path.join(connection_dir, pid_filenames[0])
-            _log.info("Connection File Path: %s", connection_file)
+            # _log.info("Connection File Path: %s", connection_file)
             match = regex.match(os.path.basename(connection_file))
             if match is None:
                 raise  # TODO
@@ -270,46 +269,42 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
         return None, None
 
     async def launch_kernel(self, cmd, **kwargs):
-        _log.info("PROVISIONER LAUNCH KERNEL")
+        _log.info(f"{self.kernel_id} PROVISIONER LAUNCH KERNEL")
         _log.info(cmd)
 
         # return existing kernel if its still running
         connection_dir = os.path.join(os.getcwd(), ".nod", "connection")
         connection_file, pid = self.get_most_recent_connection_file(connection_dir)
-        if connection_file is not None and pid is not None:
-            _log.info("Found Existing Connection File")
-            if psutil.pid_exists(pid):
-                kernel_process = psutil.Process(pid)
-                _log.info("EXISTING KERNEL IS_RUNNING")
-                _log.info(kernel_process.is_running())
-                _log.info("EXISTING KERNEL has_process")
-                _log.info(self.has_process)
-                if kernel_process.is_running() and self.has_process:
-                    _log.info("Returning Existing Kernel Info")
-                    return self.nod_info.file_info
-            _log.info("Bad Connection File")
+        # if connection_file is not None and pid is not None:
+        #     _log.info("Found Existing Connection File")
+        #     if psutil.pid_exists(pid):
+        #         kernel_process = psutil.Process(pid)
+        #         # _log.info("EXISTING KERNEL IS_RUNNING")
+        #         # _log.info(kernel_process.is_running())
+        #         # _log.info("EXISTING KERNEL has_process")
+        #         # _log.info(self.has_process)
+        #         if kernel_process.is_running() and self.has_process:
+        #             _log.info("Returning Existing Kernel Info")
+        #             return self.nod_info.file_info
+        #     _log.info("Bad Connection File")
         async with self.nod_info.starting_lock:
-            _log.info("PROVISIONER AQUIRED LOCK")
-
+            _log.info(f"{self.kernel_id} PROVISIONER AQUIRED LOCK")
             # check again once we've acquired the lock
-            connection_dir = os.path.join(os.getcwd(), ".nod", "connection")
-            connection_file, pid = self.get_most_recent_connection_file(connection_dir)
-            if connection_file is not None and pid is not None:
-                _log.info("Found Existing Connection File")
-                if psutil.pid_exists(pid):
-                    kernel_process = psutil.Process(pid)
-                    _log.info("EXISTING KERNEL IS_RUNNING")
-                    _log.info(kernel_process.is_running())
-                    _log.info("EXISTING KERNEL has_process")
-                    _log.info(self.has_process)
-                    if kernel_process.is_running() and self.has_process:
-                        _log.info("Returning Existing Kernel Info")
-                        return self.nod_info.file_info
-                _log.info("Bad Connection File")
-            _log.info("Starting Python Program")
+            # connection_dir = os.path.join(os.getcwd(), ".nod", "connection")
+            # connection_file, pid = self.get_most_recent_connection_file(connection_dir)
+            # if connection_file is not None and pid is not None:
+            #     _log.info("Found Existing Connection File")
+            #     if psutil.pid_exists(pid):
+            #         kernel_process = psutil.Process(pid)
+            if (
+                self.nod_info.kernel_process
+                and self.nod_info.kernel_process.is_running()
+            ):
+                _log.info("Returning Existing Kernel Info")
+                return self.nod_info.file_info
             # Launch Python Command
             launch_time = time.time()
-            _log.info("Launching Kernel at Time")
+            _log.info(f"{self.kernel_id} Launching Kernel at Time")
             _log.info(launch_time)
             # _log.info("Full Cmd and Scrubbed_Kwargs")
             # _log.info(cmd)
@@ -317,11 +312,11 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
             self.cwd = (
                 pathlib.Path.cwd()
             )  # don't change cwd to connection folder  #kwargs.get("cwd", pathlib.Path.cwd())
-            _log.info("CWD")
-            _log.info(self.cwd)
+            _log.info(f"{self.kernel_id} CWD")
+            # _log.info(self.cwd)
             _log.info(pathlib.Path.cwd())
             scrubbed_kwargs = LocalProvisioner._scrub_kwargs(kwargs)
-            _log.info(scrubbed_kwargs.pop("cwd", None))
+            scrubbed_kwargs.pop("cwd", None)
             self.nod_info.python_process = launch_kernel(
                 cmd, **scrubbed_kwargs, cwd=str(pathlib.Path.cwd())
             )
@@ -341,15 +336,18 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
                 or ((os.path.getmtime(connection_file) - launch_time) < -1)
                 or not psutil.pid_exists(pid)
             ):
-                try:
-                    _log.info(os.path.getmtime(connection_file))
-                    _log.info(launch_time)
-                    _log.info((os.path.getmtime(connection_file) - launch_time))
-                    _log.info(((os.path.getmtime(connection_file) - launch_time) < -1))
-                    _log.info(psutil.pid_exists(pid))
-                except:
-                    pass
-                await asyncio.sleep(0.5)
+                # try:
+                #     _log.info(os.path.getmtime(connection_file))
+                #     _log.info(launch_time)
+                #     _log.info((os.path.getmtime(connection_file) - launch_time))
+                #     _log.info(((os.path.getmtime(connection_file) - launch_time) < -1))
+                #     _log.info(psutil.pid_exists(pid))
+                # except:
+                #     pass
+                _log.info(
+                    f"PIDEXISTS: {psutil.pid_exists(pid)}, PID: {pid} CONNECTION_FILE_IS_NEWER: {((os.path.getmtime(connection_file) - launch_time) < -1)}, {self.kernel_id}"
+                )
+                await asyncio.sleep(5)
                 connection_file, pid = self.get_most_recent_connection_file(
                     connection_dir
                 )
@@ -365,7 +363,23 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
             file_info["key"] = file_info["key"].encode()
             file_info["kernel_name"] = "nod"
             self.nod_info.file_info = file_info
-            # _log.info("connection file_info: " + str(file_info))
+            km: KernelManager = self.parent
+            if km:
+                km.shell_port = file_info["shell_port"]
+                km.iopub_port = file_info["iopub_port"]
+                km.stdin_port = file_info["stdin_port"]
+                km.hb_port = file_info["hb_port"]
+                km.control_port = file_info["control_port"]
+                km.session.key = file_info["key"]
+                km.session.signature_scheme = file_info["signature_scheme"]
+                km.kernel_name = file_info["kernel_name"]
+                km.ip = file_info["ip"]
+                km.transport = file_info["transport"]
+
+                self._connection_file_written = False
+                km.write_connection_file()
+            else:
+                _log.info("NO KERNEL MANAGER")
 
             kernel_pgid = None
             if hasattr(os, "getpgid"):
@@ -375,7 +389,21 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
                 except OSError:
                     pass
             self.kernel_spec.display_name = "nod"
-            _log.info("KERNEL ID %s", self.kernel_id)
+            _log.info(
+                f"LAUNCHED KERNEL {self.kernel_id}, {self.nod_info.kernel_process}"
+            )
+            manager: KernelManager = self.parent
+            if os.path.exists(manager.connection_file):
+                with open(manager.connection_file, "r") as f:
+                    old_file_info = json.load(f)
+                    _log.info(f"Existing Connection File: {old_file_info}")
+                # with open(manager.connection_file, "w") as f:
+                #     f.write(file_info)
+            # os.remove(manager.connection_file)
+            # manager._connection_file_written = False
+            manager.load_connection_file(connection_file)
+            _log.info(f" KM CONNECTION INFO {manager.get_connection_info()}")
+            _log.info("connection file_info: " + str(file_info))
             return file_info
 
     async def post_launch(self, **kwargs):
@@ -390,13 +418,13 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
         # self._connect_control_socket()
         # self.session.send(self._control_socket, msg)
         # manager.session.
-        if manager.has_kernel:
-            _log.info("HAS KERNEL")
-        _log.info(manager.kernel_name)
-        if manager.kernel_spec is not None:
-            _log.info("display_name")
-            _log.info(manager.kernel_spec.display_name)
-        _log.info("OWNS KERNEL %s", str(manager.owns_kernel))
+        # if manager.has_kernel:
+        #     _log.info("HAS KERNEL")
+        # _log.info(manager.kernel_name)
+        # if manager.kernel_spec is not None:
+        #     _log.info("display_name")
+        #     _log.info(manager.kernel_spec.display_name)
+        # _log.info("OWNS KERNEL %s", str(manager.owns_kernel))
         return
 
     # async def shutdown_requested(self, restart: bool = False) -> None:
@@ -425,7 +453,7 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
 
     async def cleanup(self, restart=False):
         _log.info("PROVISIONER CLEANUP" + str(restart))
-        self.nod_info.__class__._instances.clear()
+        # self.nod_info.__class__._instances.clear()
 
     @staticmethod
     def _tolerate_no_process(os_error: OSError) -> None:

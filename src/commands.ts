@@ -8,6 +8,7 @@ import {
 } from '@jupyterlab/console';
 import { checkIcon } from "@jupyterlab/ui-components";
 import { requestAPI } from "./request";
+import { KernelMessage } from "@jupyterlab/services";
 export namespace nodCommands {
     export const changeKernel = 'nod:changeKernel';
     export const clearAllOutputs = 'nod:clearAllOutputs';
@@ -80,6 +81,7 @@ export function addCommands(mainMenu: IMainMenu, translator: ITranslator, palett
 
     // });
     function isEnabled(): boolean {
+        return true
         return nodState.Instance().status === 'active'
     };
     commands.addCommand(nodCommands.toggleForExport, {
@@ -173,77 +175,76 @@ export function addCommands(mainMenu: IMainMenu, translator: ITranslator, palett
         },
         isEnabled
     });
-    //     commands.addCommand(nodCommands.restart, {
-    //         label: trans.__('Restart Kernel'),
-    //         describedBy: {
-    //             args: {
-    //                 type: 'object',
-    //                 properties: {
-    //                     activate: {
-    //                         type: 'boolean',
-    //                         description: trans.__('Restart Kernel')
-    //                     }
-    //                 }
-    //             }
-    //         },
-    //         execute: args => {
-    //             // console.log("Restarting Notebook")
-    //             // requestAPI<any>('hello', app.serviceManager.serverSettings)
-    //             //     .then(data => {
-    //             //         // console.log(data);
-    //             //     })
-    //             //     .catch(reason => {
-    //             //         console.error(
-    //             //             `The jupyterlab_examples_server server extension appears to be missing.\n${reason}`
-    //             //         );
-    //             //     });
-    //             // const future = requestDebug('nod_info')
-    //             // console.log('updated')
-    //             // if (future) {
-    //             //     future.onReply = async msg => {
-    //             //         // const jsonObj = JSON.parse(atob(msg.content.body))
-    //             //         // console.log(jsonObj)
-    //             //     }
-    //             // }
-    //         })
-    //     return showDialog({
-    //         title: trans.__('Shut Down Nod Session?'),
-    //         body: trans.__(
-    //             'Are you sure you want to close the Nod Session?'
-    //         ),
-    //         buttons: [
-    //             Dialog.cancelButton({
-    //                 ariaLabel: trans.__('Cancel console Shut Down'),
-    //             }),
-    //             Dialog.warnButton({
-    //                 ariaLabel: trans.__('Exit Without Saving'),
-    //                 label: 'Shut Down Without Saving'
-    //             }),
-    //             Dialog.okButton({
-    //                 ariaLabel: trans.__('Export and Shut Down'),
-    //                 label: 'Export and Shut Down'
-    //             })
-    //         ]
-    //     }).then(result => {
-    //         console.log(result)
-    //         if (result.button.accept) {
-    //             if (result.button.label === 'Export and Shut Down') {
-    //                 writeChange()
-    //             }
-    //             exitSession()
-    //             return commands
-    //                 .execute('console:shutdown', { activate: false })
-    //                 .then(() => {
-    //                     nodState.Instance().tracker.currentWidget?.dispose()
-    //                     return true;
-    //                 });
-    //         } else {
-    //             return false;
-    //         }
-    //     });
-    // },
-    // isEnabled
-    //     });
+    commands.addCommand(nodCommands.restart, {
+        label: trans.__('Restart Kernel'),
+        describedBy: {
+            args: {
+                type: 'object',
+                properties: {
+                    activate: {
+                        type: 'boolean',
+                        description: trans.__('Restart Kernel')
+                    }
+                }
+            }
+        },
+        execute: args => {
+            console.log("Restarting Notebook")
+            // requestAPI<any>('hello', app.serviceManager.serverSettings)
+            //     .then(data => {
+            //         // console.log(data);
+            //     })
+            //     .catch(reason => {
+            //         console.error(
+            //             `The jupyterlab_examples_server server extension appears to be missing.\n${reason}`
+            //         );
+            //     });
+            const content: KernelMessage.IExecuteRequestMsg['content'] = {
+                code: 'quit',
+                silent: true,
+                store_history: false
+            };
+            // const future = requestDebug('nod_info')
+            // console.log('updated')
+            // if (future) {
+            //     future.onReply = async msg => {
+            //         // const jsonObj = JSON.parse(atob(msg.content.body))
+            //         // console.log(jsonObj)
+            //     }
+            // }
+            return showDialog({
+                title: trans.__('Shut Down Nod Session?'),
+                body: trans.__(
+                    'Are you sure you want to restart the Nod Session?'
+                ),
+                buttons: [
+                    Dialog.cancelButton({
+                        ariaLabel: trans.__('Cancel Restart'),
+                    }),
+                    Dialog.okButton({
+                        ariaLabel: trans.__('Restart Notebook'),
+                        label: 'Restart Nod Session'
+                    })
+                ]
+            }).then(async result => {
+                console.log(result)
+
+                if (result.button.accept) {
+                    try {
+                        await Promise.all([
+                            nodState.Instance().app.serviceManager.sessions.shutdownAll(),
+                            nodState.Instance().app.serviceManager.terminals.shutdownAll()
+                        ]);
+                    } catch (e) {
+                        // Do nothing
+                        console.log(`Failed to shutdown sessions and terminals: ${e}`);
+                    }
+                    await Promise.resolve(nodState.Instance().tracker.currentWidget?.sessionContext.session?.kernel?.requestExecute(content));
+                }
+            });
+        },
+        isEnabled
+    });
 
 
     const category = "Nod";

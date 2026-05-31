@@ -26,7 +26,9 @@ NOTES:
 - cant watch connection dir from server, because we can't trigger a client update from server
 - run python program from provisioner now that we can pass the command to it --- it can just manage the process like its a kernel? 
 - still have to find the kernel proper, but restart can now just restart the entire python process, just gotta relook for new connection file to pop up -- gotta wait for this to happen if the program takes a minute 
-
+- reconcile connection files --- might not be returning something I need to from launch_kernel, or the dummy processes are returning the wrong thing.
+-- why isn't connection info being rewritten during reset?? 
+    --alternatively, set the kernels of all the other notebooks to the existing kernel
 TODO 
 - install kernel automatically 
     - install in the local env folder 

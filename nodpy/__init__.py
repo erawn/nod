@@ -69,6 +69,8 @@ _log.setLevel(logging.INFO)
 
 DRY_RUN = False
 
+DEBUG: bool = True
+
 
 @dataclass
 class FrameIdentifiers:
@@ -275,7 +277,7 @@ def notebook(
     }
     scope.update(startingVariables)
     app = embed_kernel(
-        local_ns=scope, config=c, no_stdout=False, no_stderr=False, quiet=True
+        local_ns=scope, config=c, no_stdout=False, no_stderr=False, quiet=(not DEBUG)
     )
 
     shell = cast(TerminalInteractiveShell, app.shell)
@@ -315,35 +317,35 @@ def notebook(
 
     if not DRY_RUN:
         nb_env = os.environ.copy()
-        nb_env["JUPYTER_RUNTIME_DIR"] = pm.connection_dir
+        # nb_env["JUPYTER_RUNTIME_DIR"] = pm.connection_dir
         # notebookProcess = subprocess.Popen(args, env=nb_env)
         # app.nod_notebook_process = notebookProcess  # type: ignore
 
-    def close_notebook():
-        import os
-        import signal
+    # def close_notebook():
+    #     import os
+    #     import signal
 
-        # notebookProcess.terminate()  # type: ignore
-        # pid = os.getpid()
-        # pgid = os.getpgid(pid)
-        # # Prefer process-group over process
-        # # but only if the kernel is the leader of the process group
-        # if pgid and pgid == pid and hasattr(os, "killpg"):
-        #     try:
-        #         _log.warning("KERNEL KILLPG")
-        #         os.killpg(pgid, signal.SIGTERM)
-        #     except OSError:
-        #         _log.warning("KERNEL KILLP Error")
-        #         os.kill(pid, signal.SIGTERM)
-        #         raise
-        # else:
-        #     _log.warning("KERNEL KILLP")
-        #     os.kill(pid, signal.SIGTERM)
+    # notebookProcess.terminate()  # type: ignore
+    # pid = os.getpid()
+    # pgid = os.getpgid(pid)
+    # # Prefer process-group over process
+    # # but only if the kernel is the leader of the process group
+    # if pgid and pgid == pid and hasattr(os, "killpg"):
+    #     try:
+    #         _log.warning("KERNEL KILLPG")
+    #         os.killpg(pgid, signal.SIGTERM)
+    #     except OSError:
+    #         _log.warning("KERNEL KILLP Error")
+    #         os.kill(pid, signal.SIGTERM)
+    #         raise
+    # else:
+    #     _log.warning("KERNEL KILLP")
+    #     os.kill(pid, signal.SIGTERM)
 
-        _log.warning("NOTEBOOK AT EXIT")
+    # _log.warning("NOTEBOOK AT EXIT")
 
     if not DRY_RUN:
-        atexit.register(close_notebook)
+        # atexit.register(close_notebook)
         app.start()
         app.reset_io()
         # TODO nonlocal promote

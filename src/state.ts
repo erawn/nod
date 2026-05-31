@@ -40,6 +40,7 @@ export class nodState {
     private _connection_dir: string
     private _statusChanged = new Signal<this, pluginStatus>(this);
     private _currentFrameChanged = new Signal<this, number>(this);
+    private _nodKernelId: string = ""
     public isMainFile(panel: NotebookPanel) {
         return this.pythonInfo ? this.pythonInfo[this._currentFrame].notebook_file.includes(panel.context.path) : null
     }
@@ -65,6 +66,19 @@ export class nodState {
             this._statusChanged.emit(status)
         }
         this._status = status
+    }
+    get nodKernelId() {
+        return this._nodKernelId
+    }
+    set nodKernelId(kernelId: string) {
+        if (this._nodKernelId !== kernelId) {
+            const panel = this._notebookTracker.currentWidget
+            if (panel)
+                panel.sessionContext.kernelPreference = { autoStartDefault: false, id: kernelId };
+
+            this._app
+        }
+        this._nodKernelId = kernelId
     }
     get status() {
         return this._status
