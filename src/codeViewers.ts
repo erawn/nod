@@ -26,6 +26,24 @@ const NOD_VIEWER_CLASS = 'jp-nod-viewer'
 const NOD_HEADER_CLASS = 'jp-nod-Header'
 const NOD_FOOTER_CLASS = 'jp-nod-Footer'
 const NOD_FUNC_CLASS = 'jp-nod-Function'
+
+function addCodeViewers(panel: NotebookPanel) {
+    const innerPanel = panel.node.getElementsByClassName('jp-WindowedPanel-inner')[0] as HTMLElement;
+    const parentNode = innerPanel.parentElement
+    const currentFrame = nodState.Instance().getFrameFromPath(panel.context.path)
+    if (currentFrame) {
+        const header = makeCodeViewer(panel, currentFrame, NOD_HEADER_CLASS);
+        const func = makeCodeViewer(panel, currentFrame, NOD_FUNC_CLASS);
+        const footer = makeCodeViewer(panel, currentFrame, NOD_FOOTER_CLASS);
+        console.log("is panel revealed?", panel.isRevealed)
+        if (parentNode) {
+            Widget.attach(header, parentNode, innerPanel)
+            Widget.attach(func, parentNode, innerPanel)
+            Widget.attach(footer, parentNode)
+        }
+    }
+
+}
 export class CodeViewers implements DocumentRegistry.IWidgetExtension<
     NotebookPanel,
     INotebookModel
@@ -37,30 +55,67 @@ export class CodeViewers implements DocumentRegistry.IWidgetExtension<
         panel: NotebookPanel,
         context: DocumentRegistry.IContext<INotebookModel>
     ): IDisposable {
-        const currentFrame = nodState.Instance().currentFrame
-        const header = makeCodeViewer(panel, currentFrame, NOD_HEADER_CLASS);
-        const func = makeCodeViewer(panel, currentFrame, NOD_FUNC_CLASS);
-        const footer = makeCodeViewer(panel, currentFrame, NOD_FOOTER_CLASS);
-
-        panel.revealed.then(() => {
-            if (nodState.Instance().isMainFile(panel)) {
-                const innerPanel = panel.node.getElementsByClassName('jp-WindowedPanel-inner')[0] as HTMLElement;
-                const parentNode = innerPanel.parentElement
-                if (parentNode) {
-                    Widget.attach(header, parentNode, innerPanel)
-                    Widget.attach(func, parentNode, innerPanel)
-                    Widget.attach(footer, parentNode)
+        console.log("panel created", panel.context.path)
+        if (nodState.Instance().status !== 'active') {
+            nodState.Instance().statusChanged.connect((state, status) => {
+                if (status === 'active') {
+                    if (panel.isAttached) {
+                        addCodeViewers(panel)
+                    } else {
+                        panel.revealed.then(() => { addCodeViewers(panel) })
+                    }
                 }
             }
-        })
+            )
+        } else {
+            if (panel.isAttached) {
+                addCodeViewers(panel)
+            } else {
+                panel.revealed.then(() => { addCodeViewers(panel) })
+            }
+        }
+
+        // if (panel.isAttached) {
+        //     addCodeViewers(panel)
+        // } else {
+        //     panel.revealed.then(() => { addCodeViewers(panel) })
+        // }
         return new DisposableDelegate(() => {
-            header.dispose()
-            footer.dispose()
-            func.dispose()
+            // header.dispose()
+            // footer.dispose()
+            // func.dispose()
         });
+
+        // if (panel.isRevealed) {
+        //     console.log("panel ISrevealed:", panel.context.path)
+        //     if (nodState.Instance().isNodFile(panel)) {
+        //         console.log("IS Main File!")
+        //         addCodeViewers(panel)
+        //     } else {
+        //         console.log("NOT Main File!")
+        //     }
+        // } else {
+        //     panel.revealed.then(() => {
+        //         console.log("panel revealed:", panel.context.path)
+        //         if (nodState.Instance().isNodFile(panel)) {
+        //             console.log("IS Main File!")
+        //             const innerPanel = panel.node.getElementsByClassName('jp-WindowedPanel-inner')[0] as HTMLElement;
+        //             const parentNode = innerPanel.parentElement
+        //             if (parentNode) {
+        //                 Widget.attach(header, parentNode, innerPanel)
+        //                 Widget.attach(func, parentNode, innerPanel)
+        //                 Widget.attach(footer, parentNode)
+        //             }
+        //         } else {
+        //             console.log("NOT Main File!")
+        //         }
+        //     })
+        // }
+
+
     }
 }
-export function makeCodeViewer(panel: NotebookPanel, currentFrame: nodState["currentFrame"], className: 'jp-nod-Footer' | 'jp-nod-Header' | 'jp-nod-Function') {
+export function makeCodeViewer(panel: NotebookPanel, currentFrame: NonNullable<nodState["currentFrame"]>, className: 'jp-nod-Footer' | 'jp-nod-Header' | 'jp-nod-Function') {
     let source = ""
     let editor
     switch (className) {

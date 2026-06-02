@@ -14,6 +14,57 @@ import { URLExt } from '@jupyterlab/coreutils';
 import { showDialog } from '@jupyterlab/apputils';
 import { Widget } from '@lumino/widgets';
 import { nodSchema } from './types';
+import { IDocumentManager } from '@jupyterlab/docmanager';
+
+
+
+
+export async function openNotebookWithNodKernel(notebookFile: string, docManager: IDocumentManager) {
+    const state = nodState.Instance()
+    // docManager.openOrReveal(notebookFile, 'default', { name: "nod" })
+    const normalized = docManager.services.contents.normalize(notebookFile);
+    await state.app.serviceManager.kernels.refreshRunning()
+    const nodKernelId = await getNodKernel()
+    // const existingNotebook = docManager.findWidget(normalized)
+    // if (existingNotebook) {
+    //     docManager.contextForWidget(existingNotebook).
+    // }
+    const existingNotebook = state.tracker.find(panel => panel.context.sessionContext.path === notebookFile)
+    if (existingNotebook) {
+        console.log("Existing Notebook with Path", existingNotebook)
+        // existingNotebook.activate()
+        // const existingKernelID = existingNotebook.context.sessionContext.session?.kernel?.id
+        // const kernel = nodKernels.find((kernel) => kernel.id === existingKernelID)
+        // if (nodKernels.length > 0 && kernel) {
+        //     // console.log("Opening Existing File", )
+        //     // docManager.openOrReveal(notebookFile, 'default', { name: "nod" })
+        // }
+        // existingNotebook.sessionContext.dispose()
+        console.log("Existing Kernel ID", existingNotebook.sessionContext.session?.id)
+        console.log("New NOD Kernel", nodKernelId)
+        existingNotebook.sessionContext.kernelPreference = { autoStartDefault: false, id: nodKernelId, shutdownOnDispose: false };
+        // existingNotebook.sessionContext.initialize().then(() => existingNotebook.context.sessionContext.sessionManager.connectTo())
+
+        state.app.shell.activateById(existingNotebook.id)
+        // docManager.openOrReveal(existingNotebook.context.path)
+        // docManager.openOrReveal(normalized, 'default', { name: "nod" }, {}, { id: nodKernelId })
+        // state.app.listPlugins
+    }
+    else {
+        console.log("opening", normalized)
+        //nodKernels.sort((a, b) => a.last_activity - b.last_activity)
+        // const nodKernel = nodKernels[0]
+        console.log("opening new with id", nodKernelId)
+
+        docManager.openOrReveal(normalized, 'default', { name: "nod" }, {}, { id: nodKernelId })
+
+        // } else {
+        //     docManager.openOrReveal(normalized, 'default', { name: "nod" }, {}, {})
+        // }
+        // }
+    }
+
+}
 
 var launching: boolean = false
 async function launchNodKernel() {
@@ -28,9 +79,9 @@ async function launchNodKernel() {
                     await app.serviceManager.kernels.startNew(spec).then((connection) => {
                         launching = false
                         nodState.Instance().nodKernelId = connection.model.id
-                        console.log(" LAUNCHNODKERNEL: Started Up New Nod!")
+                        console.log(" LAUNCHNODKERNEL: Started Up New Nod!", connection.model.id)
                     })
-                    break
+                    return nodState.Instance().nodKernelId
                 }
                 catch (e) {
                     console.log(e)
@@ -41,9 +92,9 @@ async function launchNodKernel() {
 }
 export async function getNodKernel() {
     const app = nodState.Instance().app
-    await app.serviceManager.kernelspecs.refreshSpecs()
+    // await app.serviceManager.kernelspecs.refreshSpecs()
     const kernelManager = app.serviceManager.kernels
-    await kernelManager.refreshRunning()
+    // await kernelManager.refreshRunning()
     console.log(Array.from(kernelManager.running()))
     const oldKernelId = nodState.Instance().nodKernelId
     const oldNodKernel = Array.from(kernelManager.running())
@@ -63,7 +114,11 @@ export async function getNodKernel() {
         if (existingNodKernel) {
             nodState.Instance().nodKernelId = existingNodKernel.id
         } else {
-            await launchNodKernel()
+            await launchNodKernel().then((id => {
+                if (id) {
+                    return id
+                }
+            }))
         }
     }
     return nodState.Instance().nodKernelId
@@ -77,8 +132,10 @@ export function getNodInfo() {
             const jsonObj = JSON.parse(atob(file.content))
             const schema = nodSchema.parse(jsonObj)
             console.log(schema)
-            nodState.Instance().pythonInfo = schema
-            nodState.Instance().status = 'active'
+            if (nodState.Instance().status !== 'active') {
+                nodState.Instance().pythonInfo = schema
+                nodState.Instance().status = 'active'
+            }
         })
 }
 
@@ -179,8 +236,12 @@ export function writeChange() {
     if (instance.currentFrame === null) {
         return
     }
+    const currentFrame = instance.currentFrame
+    if (currentFrame === undefined) {
+        return
+    }
     const children = instance.tracker.currentWidget?.content.widgets
-    const indent = instance.currentFrame.indent
+    const indent = currentFrame.indent
     if (children === undefined) {
         return
     }
@@ -195,7 +256,7 @@ export function writeChange() {
 
     console.log('path', nodState.Instance().tracker.currentWidget?.context.path)
     const contentsManager = nodState.Instance().contentsManager
-    const sourceFile = contentsManager.normalize(instance.currentFrame.relative_source_file)
+    const sourceFile = contentsManager.normalize(currentFrame.relative_source_file)
     console.log("sourcefile", sourceFile)
 
     //TODO: Rewrite this --- pass in top text and bottom text at start so we can't run into alignment, overwriting issues like this.
@@ -205,7 +266,7 @@ export function writeChange() {
             return
         }
         let lines = (original.content as string).split(/\r?\n/)
-        const editPos = instance.currentFrame.function_body_position
+        const editPos = currentFrame.function_body_position
         console.log("LINES", lines)
         console.log("EDITPOS", editPos)
         const topContent = lines.slice(0, editPos?.start.line - 1).join('\n')

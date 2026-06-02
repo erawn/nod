@@ -36,23 +36,35 @@ export class nodState {
     private _app: JupyterFrontEnd<JupyterFrontEnd.IShell, "desktop" | "mobile">
     private _contentsManager: Contents.IManager
     private _translator: ITranslator
-    private _currentFrame: number = 0
+    private _currentFrameIndex: number = 0
     private _connection_dir: string
     private _statusChanged = new Signal<this, pluginStatus>(this);
     private _currentFrameChanged = new Signal<this, number>(this);
     private _nodKernelId: string = ""
-    public isMainFile(panel: NotebookPanel) {
-        return this.pythonInfo ? this.pythonInfo[this._currentFrame].notebook_file.includes(panel.context.path) : null
+    public isNodFile(panel: NotebookPanel) {
+        const frame = this.getFrameFromPath(panel.context.path)
+        console.log("Is Nod File frame:", frame)
+        if (frame) {
+            return true
+        }
+        return false //this.pythonInfo ? this.pythonInfo[this._currentFrame].notebook_file.includes(panel.context.path) : null
+    }
+    public getFrameFromPath(path: string) {
+        return this.pythonInfo?.find((frame) => frame.notebook_file.includes(path))
+    }
+    get currentFrameIndex() {
+        return this._currentFrameIndex
+    }
+
+    set currentFrameIndex(currentFrameIndex: number) {
+        if (this._currentFrameIndex !== currentFrameIndex) {
+            this._currentFrameIndex = currentFrameIndex
+            this._currentFrameChanged.emit(currentFrameIndex)
+        }
     }
     get currentFrame() {
-        return this.pythonInfo![this._currentFrame]
-    }
-    set currentFrameIndex(currentFrame: number) {
-        if (this._currentFrame !== currentFrame) {
-            this._currentFrame = currentFrame
-            this._currentFrameChanged.emit(currentFrame)
-        }
-        this._currentFrame = currentFrame
+        if (this.pythonInfo)
+            return this.pythonInfo[this._currentFrameIndex]
     }
     get currentFrameChanged(): ISignal<this, number> {
         return this._currentFrameChanged;

@@ -9,6 +9,7 @@ import type { IDebugger, IDebuggerDisplayRegistry } from '@jupyterlab/debugger';
 import type { INotebookTracker } from '@jupyterlab/notebook';
 import type { IConsoleTracker } from '@jupyterlab/console';
 import { INodStackFrame } from '../types';
+import { nodState } from '../state';
 /**
  * A model for a callstack.
  */
@@ -29,18 +30,22 @@ export class CallstackModel implements IDebugger.Model.ICallstack {
   /**
    * Set the frames.
    */
-  set frames(newFrames: INodStackFrame[]) {
+  setFrames(newFrames: INodStackFrame[], currentFrameIndex: number) {
     this._state = newFrames;
-    const currentFrameId =
-      this.frame !== null ? Private.getFrameId(this.frame) : '';
-    const frame = newFrames.find(
-      frame => Private.getFrameId(frame) === currentFrameId
-    );
-    // Default to the first frame if the previous one can't be found.
-    // Otherwise keep the current frame selected.
-    if (!frame) {
-      this.frame = newFrames[0];
-    }
+    // const currentFrameId =
+    //   this.frame !== null ? Private.getFrameId(this.frame) : '';
+    // const frame = newFrames.find(
+    //   frame => Private.getFrameId(frame) === currentFrameId
+    // );
+    // // Default to the first frame if the previous one can't be found.
+    // // Otherwise keep the current frame selected.
+    // if (!frame) {
+    //   this.frame = newFrames[];
+    // }
+    console.log(currentFrameIndex)
+    console.log(newFrames)
+    this.frame = newFrames[currentFrameIndex]
+    console.log("newselectedframe", this.frame)
     this._framesChanged.emit(newFrames);
   }
 

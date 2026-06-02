@@ -62,9 +62,10 @@ const FramesComponent = ({
       setFrames(model.frames);
     };
     model.framesChanged.connect(updateFrames);
-
+    model.currentFrameChanged.connect(updateFrames)
     return (): void => {
       model.framesChanged.disconnect(updateFrames);
+      model.currentFrameChanged.disconnect(updateFrames)
     };
   }, [model]);
 

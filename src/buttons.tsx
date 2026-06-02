@@ -33,7 +33,7 @@ export class NodExportButton
             tooltip: 'Export Code',
             label: 'Export Code',
         })
-        if (nodState.Instance().isMainFile(panel)) {
+        if (nodState.Instance().isNodFile(panel)) {
             panel.toolbar.insertItem(9, 'export', button);
         }
         return new DisposableDelegate(() => {
@@ -59,7 +59,7 @@ export class NodQuitButton
             tooltip: 'Exit Nod Session',
             label: 'Exit Nod Session',
         })
-        if (nodState.Instance().isMainFile(panel)) {
+        if (nodState.Instance().isNodFile(panel)) {
             panel.toolbar.insertItem(9, 'exit', button);
         }
         return new DisposableDelegate(() => {
