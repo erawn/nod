@@ -10,8 +10,11 @@ import {
 import { ITranslator } from '@jupyterlab/translation';
 import type { ISignal } from '@lumino/signaling';
 import { Signal } from '@lumino/signaling';
+import { ReadOnlyHeader } from "./readOnlyHeader";
+import { MainAreaWidget } from "@jupyterlab/apputils";
 export type pluginStatus = 'active' | 'inactive' | 'unset';
 export class nodState {
+
 
     private static _instance: nodState
 
@@ -22,6 +25,7 @@ export class nodState {
         this._contentsManager = contents
         this._translator = translator
         this._connection_dir = connection_dir
+        this._readOnlyHeader = new ReadOnlyHeader()
     }
 
     public static Instance(tracker?: INotebookTracker, app?: JupyterFrontEnd<JupyterFrontEnd.IShell, "desktop" | "mobile">, contents?: Contents.IManager, translator?: ITranslator, connection_dir?: string): nodState {
@@ -41,6 +45,8 @@ export class nodState {
     private _statusChanged = new Signal<this, pluginStatus>(this);
     private _currentFrameChanged = new Signal<this, number>(this);
     private _nodKernelId: string = ""
+    private _lockNotebookId: string = ""
+    private _readOnlyHeader: ReadOnlyHeader
     public isNodFile(panel: NotebookPanel) {
         const frame = this.getFrameFromPath(panel.context.path)
         console.log("Is Nod File frame:", frame)
@@ -51,6 +57,46 @@ export class nodState {
     }
     public getFrameFromPath(path: string) {
         return this.pythonInfo?.find((frame) => frame.notebook_file.includes(path))
+    }
+    public lock(lockPanel: NotebookPanel) {
+        this._lockNotebookId = lockPanel.id
+        this.tracker.forEach(panel => {
+            if (panel.id !== lockPanel.id) {
+                panel.content.widgets.forEach(cell => cell.model.setMetadata("editable", false))
+                if (!panel.contentHeader.contains(this._readOnlyHeader)) {
+                    console.log('adding widget')
+                    this._readOnlyHeader.setHidden(false)
+                    const widget = this._app.shell.currentWidget;
+                    if (widget instanceof MainAreaWidget) {
+                        widget.contentHeader.addWidget(this._readOnlyHeader)
+                    }
+                    panel.contentHeader.addWidget(this._readOnlyHeader);
+                }
+            }
+        })
+        this._readOnlyHeader.setHidden(false)
+
+    }
+    public unlock() {
+        this._lockNotebookId = ""
+        this._readOnlyHeader.setHidden(true)
+        this.tracker.forEach(panel => {
+            panel.content.widgets.forEach(cell => cell.model.setMetadata("editable", true))
+            // if (panel.contentHeader.contains(this._readOnlyHeader)) {
+            //     panel.contentHeader.widgets.find()
+            // }
+
+
+        })
+    }
+    get readOnlyHeader(): ReadOnlyHeader {
+        return this._readOnlyHeader
+    }
+    get notebookLockId(): string {
+        return this._lockNotebookId
+    }
+    get locked(): boolean {
+        return this._lockNotebookId === ""
     }
     get currentFrameIndex() {
         return this._currentFrameIndex

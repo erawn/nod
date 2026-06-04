@@ -44,9 +44,9 @@ def main(
         # + " "
         # + "--ServerApp.kernel_manager_class=nod.kernelmanager.NodMappingKernelManager"
         # + " "
-        + "--ServerApp.websocket_ping_interval=0"
-        + " "
-        + "--ServerApp.websocket_ping_timeout=0"
+        # + "--ServerApp.websocket_ping_interval=0"
+        # + " "
+        # + "--ServerApp.websocket_ping_timeout=0"
         + " "
         # + "--ServerApp.external_connection_dir="
         # + os.path.join(hiddenDir, "kernel")

@@ -21,9 +21,12 @@ import sys
 from IPython.core.getipython import get_ipython
 
 
-def writeNotebook(program_info: ProgramInfo) -> ProgramInfo:
+def writeNotebook(
+    program_info: ProgramInfo,
+) -> ProgramInfo:
     notebook: NotebookNode = jupytext.reads(
-        "".join(program_info.text_body), fmt=long_form_one_format("py:light")
+        "".join(program_info.text_body),
+        fmt=long_form_one_format(f"py:{program_info.fmt}"),
     )
     notebook.metadata["language_info"] = {
         "name": "python",
@@ -73,6 +76,7 @@ class ProgramInfo:
     cli_arguments: str = ""
     function_name: str = ""
     frame_xml: list[str] = field(default_factory=list)
+    fmt: typing.Literal["light", "percent"] = "light"
 
 
 def makeProgramInfo(
@@ -80,6 +84,7 @@ def makeProgramInfo(
     index: int,
     module: Module,
     pm: PathManager,
+    fmt: typing.Literal["light", "percent"],
 ) -> ProgramInfo:
     rel_source_file = os.path.relpath(stackFrame.filename, os.getcwd())
     tempFileStem = os.path.join(
@@ -111,6 +116,7 @@ def makeProgramInfo(
                 cli_arguments=" ".join(sys.argv),
                 function_name="<module>",
                 frame_xml=list(stackFrame.frame.f_locals.keys()),
+                fmt=fmt,
             )
         )
 
@@ -146,6 +152,7 @@ def makeProgramInfo(
         cli_arguments=" ".join(sys.argv),
         function_name=stackFrame.function,
         frame_xml=list(stackFrame.frame.f_locals.keys()),
+        fmt=fmt,
     )
     return writeNotebook(info)
 

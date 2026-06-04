@@ -85,10 +85,12 @@ async function launchNodKernel() {
                 }
                 catch (e) {
                     console.log(e)
+                    return undefined
                 }
             }
         }
     }
+    return undefined
 }
 export async function getNodKernel() {
     const app = nodState.Instance().app
@@ -104,7 +106,7 @@ export async function getNodKernel() {
             val.execution_state &&
             (['idle', 'busy', 'starting', 'connected', 'connecting', 'restarting'].includes(val.execution_state)))
     if (oldNodKernel) {
-
+        //  app.serviceManager.kernelspecs.specs?.kernelspecs
     } else {
         const existingNodKernel = Array.from(kernelManager.running())
             .find(val =>
@@ -114,11 +116,8 @@ export async function getNodKernel() {
         if (existingNodKernel) {
             nodState.Instance().nodKernelId = existingNodKernel.id
         } else {
-            await launchNodKernel().then((id => {
-                if (id) {
-                    return id
-                }
-            }))
+            const id = await launchNodKernel()
+            return id
         }
     }
     return nodState.Instance().nodKernelId

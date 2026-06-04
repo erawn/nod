@@ -30,7 +30,7 @@ import { PageConfig } from '@jupyterlab/coreutils';
 import { IMainMenu } from '@jupyterlab/mainmenu';
 import { ITranslator, nullTranslator } from '@jupyterlab/translation';
 import { XMLParser } from 'fast-xml-parser'
-import { Dialog, ICommandPalette, ISessionContextDialogs, IToolbarWidgetRegistry, SessionContext, SessionContextDialogs, showDialog, showErrorMessage } from '@jupyterlab/apputils';
+import { Dialog, ICommandPalette, ISessionContextDialogs, IToolbarWidgetRegistry, MainAreaWidget, SessionContext, SessionContextDialogs, showDialog, showErrorMessage } from '@jupyterlab/apputils';
 
 import {
   IConsoleTracker
@@ -113,6 +113,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
 
     notebookTracker.currentChanged.connect((tracker, notebookPanel) => {
       console.log("CURRENT CHANGED")
+      const inst = nodState.Instance()
       if (notebookPanel) {
         console.log("kernel statuses", Array.from(app.serviceManager.kernels.running()).map(kernel => console.log(kernel.execution_state)))
         notebookPanel.sessionContext.kernelPreference = { autoStartDefault: false, id: nodState.Instance().nodKernelId, shutdownOnDispose: false };
@@ -123,7 +124,28 @@ const plugin: JupyterFrontEndPlugin<void> = {
           if (newIndex !== undefined)
             nodState.Instance().currentFrameIndex = newIndex
         }
+        console.log("locked", inst.locked)
+        if (nodState.Instance().locked) {
+          if (notebookPanel.id !== nodState.Instance().notebookLockId) {
+            notebookPanel.content.widgets.forEach(cell => cell.model.setMetadata("editable", false))
+            if (!notebookPanel.contentHeader.contains(inst.readOnlyHeader)) {
+              console.log('adding widget')
+              notebookPanel.contentHeader.addWidget(inst.readOnlyHeader);
+              const widget = app.shell.currentWidget;
+              if (widget instanceof MainAreaWidget) {
+                widget.contentHeader.addWidget(inst.readOnlyHeader)
+              }
+            }
+            inst.readOnlyHeader.setHidden(false)
+
+          } else {
+            inst.readOnlyHeader.setHidden(true)
+          }
+        } else {
+          inst.readOnlyHeader.setHidden(true)
+        }
       }
+
 
       notebookPanel?.sessionContext.statusChanged.connect((context, status) => {
         console.log("STATUS CHANGED", status)
@@ -172,6 +194,33 @@ const plugin: JupyterFrontEndPlugin<void> = {
       }
     })
 
+    notebookTracker.currentChanged.connect((tracker, panel) => {
+      console.log('current Changed')
+      if (panel) {
+        // panel.content.modelContentChanged.connect(() => {
+        //   console.log("model content changed")
+        // })
+        // panel.content.stateChanged.connect(() => {
+        //   console.log("state changed")
+        // })
+        // panel.model?.sharedModel.changed.connect((notebook, change) => {
+        //   console.log(notebook, change)
+        // })
+        // panel.model?.contentChanged.connect(() => {
+        //   console.log("content changed")
+        // })
+        panel.content.model?.cells.changed.connect((cellList, changeArgs) => {
+          if (panel.isRevealed) { //this means its a user-edit
+            console.log("user changed cells", cellList, changeArgs, panel.isRevealed)
+            nodState.Instance().lock(panel)
+
+          }
+        })
+      }
+
+    })
+
+
     function kernelWaitDialog() {
       if (nodState.Instance().status == 'active') {
         return
@@ -184,36 +233,35 @@ const plugin: JupyterFrontEndPlugin<void> = {
         });
         dialogID = dialog.id
         dialog.launch().then(() => {
-          checkKernelStatus()
+          checkKernelStatus(false)
         });
       }
     }
 
-    function checkKernelStatus() {
+    function checkKernelStatus(recurse: boolean = true) {
       console.log("Check Kernel Status")
 
       const manager = nodState.Instance().app.serviceManager.kernels
       manager.refreshRunning().then(() => {
-        const nodKernel = Array.from(manager.running())
-          .find(val =>
-            val.name === "nod" &&
-            val.execution_state &&
-            (['idle', 'busy'].includes(val.execution_state)))
-        if (nodKernel !== undefined) {
-          console.log("REFRESHING NOD STATE Found Nod Kernel")
-          const idSearch = Dialog.tracker.find(dialog => dialog.id === dialogID)
-          if (idSearch !== undefined) {
-            idSearch.resolve()
+        const nodKernel = getNodKernel().then((id) => {
+          if (id === undefined) {
+            console.log("setting to inactive")
+            nodState.Instance().status = 'inactive'
+            if (recurse)
+              kernelWaitDialog()
+            getNodKernel() //TODO Loop update
+          } else {
+            console.log("REFRESHING NOD STATE Found Nod Kernel")
+            const idSearch = Dialog.tracker.find(dialog => dialog.id === dialogID)
+            if (idSearch !== undefined) {
+              idSearch.resolve()
+            }
+            dialogID = ""
+            // docManager.closeAll()
+            sidebar.activate()
+            getNodInfo()
           }
-          dialogID = ""
-          // docManager.closeAll()
-          sidebar.activate()
-          getNodInfo()
-        } else {
-          console.log("setting to inactive")
-          nodState.Instance().status = 'inactive'
-          getNodKernel().then((id) => kernelWaitDialog())
-        }
+        })
       })
     }
 

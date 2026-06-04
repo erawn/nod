@@ -345,7 +345,7 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
                 # except:
                 #     pass
                 _log.info(
-                    f"PIDEXISTS: {psutil.pid_exists(pid)}, PID: {pid} CONNECTION_FILE_IS_NEWER: {((os.path.getmtime(connection_file) - launch_time) < -1)}, {self.kernel_id}"
+                    f"PIDEXISTS: {psutil.pid_exists(pid or -1)}, PID: {pid} CONNECTION_FILE_IS_NEWER: {((os.path.getmtime(connection_file) - launch_time) < -1)}, {self.kernel_id}"
                 )
                 await asyncio.sleep(5)
                 connection_file, pid = self.get_most_recent_connection_file(

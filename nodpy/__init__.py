@@ -13,6 +13,7 @@ import base64
 import inspect
 from pprint import pprint
 import shutil
+import types
 
 import jupytext  # type: ignore
 from nbformat import NotebookNode
@@ -21,6 +22,7 @@ import orjson
 import shlex
 import sys
 import copy
+import signal
 import re
 import tempfile
 import typing
@@ -29,7 +31,6 @@ import ipykernel
 # from jupyter_client import KernelProvisionerBase
 import os
 import logging
-import traceback as tb
 import json
 import os
 import subprocess
@@ -38,7 +39,7 @@ import uuid
 from pathlib import Path
 import libcst as cst
 from libcst.display import dump
-
+from IPython.core.error import UsageError
 from nodpy.ip_plugin import returnTransformer
 from .serverExtension import Nod
 from libcst.metadata import CodePosition, CodeRange
@@ -57,6 +58,10 @@ from types import FrameType, TracebackType
 from jupytext.formats import long_form_one_format  # type: ignore
 from IPython.terminal.interactiveshell import TerminalInteractiveShell
 from .provisioner import NodProvisioner
+from enum import Enum, IntEnum
+from .ip_plugin import nodReturn
+from IPython.core.interactiveshell import ExecutionResult
+import traceback
 
 if TYPE_CHECKING:
     # False at run time, only for type checker
@@ -173,27 +178,72 @@ def nodPrint(
         pass
 
 
+# class Signals(IntEnum):
+#     SIGINT: int
+#     SIGKILL: int
+#     SIGTERM: int
+
+
+# _SIGNUM = typing.Union[int, Signals]
+_fmt: typing.Literal["light", "percent"] = "light"
+_modules: list[str] = []
+_how_restart: typing.Union[typing.Literal["continue"], int] = "continue"
+_dangerously_bypass_readonly: bool = False
+
+
+def nodConfig(
+    fmt: typing.Literal["light", "percent"] = "light",
+    modules: list[str] = [],
+    how_restart: typing.Union[typing.Literal["continue"], int] = "continue",
+    dangerously_bypass_readonly: bool = False,
+):
+    """Configure Nod Settings
+    modules:
+        list of modules (as strings) to include in the trace. __main__ included by default, also accepts *, ?, and [] as wildcards
+
+    fmt:
+        notebook conversion format.
+
+    how_restart
+        how the python program should be restarted from the notebook.
+        "continue" returns to let the program finish
+        SIGINT, SIGKILL, or SIGTERM will send that signal to the program instead
+
+    dangerously_bypass_readonly
+        Once the code in associated with one stack frame in a Nod Session is edited, the others become read-only by default to prevent reaching a confusing state. Set to true to remove this safeguard, if you know what you're doing.
+    """
+    global _fmt
+    _fmt = fmt
+    global _modules
+    _modules = modules
+    global _how_restart
+    _how_restart = how_restart
+    global _dangerously_bypass_readonly
+    _dangerously_bypass_readonly = dangerously_bypass_readonly
+
+
 def notebook(
     modules: list[str] = [],
     # indent: int = 1,
-    on_condition: bool = True,
-    deep_copy: bool = False,
+    # on_condition: bool = True,
+    # deep_copy: bool = False,
 ):
     """Invoke a Jupyter Notebook at this location in the source code, with code in the same indent block being editable.
     modules:
         list of modules (as strings) to include in the trace. __main__ included by default.
 
-    on_condition
-        if true, invoke the notebook, else no-op.
-
-    deep_copy
-        if true, deep copy the variables to put into the notebook. By default, in-place modifications to existing variables are persisted through kernel restarts. Enabling can lead to performance issues with large variables in memory. Some variables cannot be deep-copied, and will throw a warning on execution.
 
     """
+    # on_condition
+    #     if true, invoke the notebook, else no-op.
+
+    # deep_copy
+    #     if true, deep copy the variables to put into the notebook. By default, in-place modifications to existing variables are persisted through kernel restarts. Enabling can lead to performance issues with large variables in memory. Some variables cannot be deep-copied, and will throw a warning on execution.
+
     # indent
     # number of indent blocks to make editable
-    if not on_condition:
-        return
+    # if not on_condition:
+    #     return
 
     # Prevent Nested Nod Instances
     try:
@@ -244,7 +294,9 @@ def notebook(
             module_sources.update({stackFrame.filename: cst.parse_module(program_text)})
 
     stack_info = [
-        makeProgramInfo(stackFrame, index, module_sources[stackFrame.filename], pm)
+        makeProgramInfo(
+            stackFrame, index, module_sources[stackFrame.filename], pm, _fmt
+        )
         for index, stackFrame in enumerate(relevant_stack_frames)
     ]
 
@@ -264,12 +316,13 @@ def notebook(
     # STARTING STATE
     startingVariables = {}
     # TODO check deep copy, throw warning or add display for failures
-    if deep_copy:
-        startingVariables.update(copy.deepcopy(notebook_call.frame.f_globals))
-        startingVariables.update(copy.deepcopy(notebook_call.frame.f_locals))
-    else:
-        startingVariables.update(notebook_call.frame.f_globals)
-        startingVariables.update(notebook_call.frame.f_locals)
+    # if deep_copy:
+    #     startingVariables.update(copy.deepcopy(notebook_call.frame.f_globals))
+    #     startingVariables.update(copy.deepcopy(notebook_call.frame.f_locals))
+    # else:
+    startingVariables.update(notebook_call.frame.f_globals)
+    startingVariables.update(notebook_call.frame.f_locals)
+    startingVariables.update({"nodReturn": nodReturn})
 
     scope = {
         # "__NODINFO": program_info,
@@ -282,6 +335,39 @@ def notebook(
 
     shell = cast(TerminalInteractiveShell, app.shell)
     shell.ast_transformers.append(returnTransformer())
+    old_traceback = shell.showtraceback
+
+    def showtraceback(
+        self,
+        exc_tuple: tuple[type[BaseException], BaseException, Any] | None = None,
+        filename: str | None = None,
+        tb_offset: int | None = None,
+        exception_only: bool = False,
+        running_compiled_code: bool = False,
+    ) -> None:
+        """Display the exception that just occurred.
+
+        If nothing is known about the exception, this is the method which
+        should be used throughout the code for presenting user tracebacks,
+        rather than directly invoking the InteractiveTB object.
+
+        A specific showsyntaxerror() also exists, but this method can take
+        care of calling it if needed, so unless you are explicitly catching a
+        SyntaxError exception, don't try to analyze the stack manually and
+        simply call this method."""
+
+        try:
+            etype, value, tb = self._get_exc_info(exc_tuple)
+            if str(type(value).__name__) == "NodStopExecution":
+                return
+        except:
+            pass
+
+        old_traceback(
+            exc_tuple, filename, tb_offset, exception_only, running_compiled_code
+        )
+
+    shell.showtraceback = types.MethodType(showtraceback, shell)
     # app.shell.user_ns.update(newStackFrame.frame.f_locals)
     # self.shell.user_global_ns.update(newStackFrame.frame.f_globals)
     # self.shell.user_ns_hidden.update(newStackFrame.frame.f_builtins)
@@ -390,3 +476,6 @@ def _jupyter_server_extension_points():
             "app": Nod,
         }
     ]
+
+
+nodConfig(how_restart=signal.SIGINT)
