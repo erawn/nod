@@ -20,6 +20,7 @@ import {
 import { Widget } from '@lumino/widgets';
 import { IDisposable, DisposableDelegate } from '@lumino/disposable';
 import { DocumentRegistry } from '@jupyterlab/docregistry';
+import { hasFileInfo } from './types';
 // const INPUT_AREA_CLASS = 'jp-InputArea';
 // const INPUT_AREA_EDITOR_CLASS = 'jp-InputArea-editor';
 const NOD_VIEWER_CLASS = 'jp-nod-viewer'
@@ -31,7 +32,7 @@ function addCodeViewers(panel: NotebookPanel) {
     const innerPanel = panel.node.getElementsByClassName('jp-WindowedPanel-inner')[0] as HTMLElement;
     const parentNode = innerPanel.parentElement
     const currentFrame = nodState.Instance().getFrameFromPath(panel.context.path)
-    if (currentFrame) {
+    if (currentFrame && hasFileInfo(currentFrame)) {
         const header = makeCodeViewer(panel, currentFrame, NOD_HEADER_CLASS);
         const func = makeCodeViewer(panel, currentFrame, NOD_FUNC_CLASS);
         const footer = makeCodeViewer(panel, currentFrame, NOD_FOOTER_CLASS);
@@ -42,7 +43,6 @@ function addCodeViewers(panel: NotebookPanel) {
             Widget.attach(footer, parentNode)
         }
     }
-
 }
 export class CodeViewers implements DocumentRegistry.IWidgetExtension<
     NotebookPanel,
@@ -115,26 +115,26 @@ export class CodeViewers implements DocumentRegistry.IWidgetExtension<
 
     }
 }
-export function makeCodeViewer(panel: NotebookPanel, currentFrame: NonNullable<nodState["currentFrame"]>, className: 'jp-nod-Footer' | 'jp-nod-Header' | 'jp-nod-Function') {
+export function makeCodeViewer(panel: NotebookPanel, currentFrame: Required<NonNullable<nodState["currentFrame"]>>, className: 'jp-nod-Footer' | 'jp-nod-Header' | 'jp-nod-Function') {
     let source = ""
     let editor
     switch (className) {
         case NOD_HEADER_CLASS:
-            source = currentFrame.text_above.join('').split('\\n').join('\n')
+            source = currentFrame.fileInfo.text_above.join('').split('\\n').join('\n')
             if (source.startsWith('\n')) {
                 source = source.slice(source.indexOf('\n'))
             }
             editor = makeCodeViewerWidget(className, source)
             return editor
         case NOD_FOOTER_CLASS:
-            source = currentFrame.text_below.join('').split('\\n').join('\n')
+            source = currentFrame.fileInfo.text_below.join('').split('\\n').join('\n')
             if (source.startsWith('\n')) {
                 source = source.slice(source.indexOf('\n'))
             }
             editor = makeCodeViewerWidget(className, source)
             return editor
         case NOD_FUNC_CLASS:
-            source = currentFrame.text_header.join('').split('\\n').join('\n')
+            source = currentFrame.fileInfo.text_header.join('').split('\\n').join('\n')
             if (source.endsWith('\n')) {
                 source = source.slice(0, source.lastIndexOf('\n'))
             }

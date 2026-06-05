@@ -7,6 +7,8 @@ import {
 
 import {
   INotebookTracker,
+  NotebookPanel,
+  NotebookTracker,
 } from '@jupyterlab/notebook';
 import { ISettingRegistry } from '@jupyterlab/settingregistry';
 import { AccordionPanel } from '@lumino/widgets';
@@ -23,7 +25,7 @@ import { nodState } from './state';
 import { addCommands } from './commands';
 import { addToolbarButtons, disableKernelSwitching } from './buttons';
 import { CodeViewers } from './codeViewers';
-import { getNodInfo, getNodKernel, openNotebookWithNodKernel, requestDebug } from './messaging';
+import { getNodInfo, getNodKernel, launchNodKernel, openNotebookWithNodKernel, requestDebug } from './messaging';
 import { requestAPI } from './request';
 // import { createCallstackSidebar, NodSidebar } from './sidebar';
 import { PageConfig } from '@jupyterlab/coreutils';
@@ -40,12 +42,12 @@ import { IDocumentManager } from '@jupyterlab/docmanager';
 import { IDebugger } from '@jupyterlab/debugger';
 import { check } from 'zod';
 import { bugIcon, buildIcon, SidePanel } from '@jupyterlab/ui-components';
-import { Callstack } from './callstack'
 import { CallstackModel } from './callstack/model';
 import { ca } from 'zod/v4/locales';
 import { IDebugReplyMsg } from '@jupyterlab/services/lib/kernel/messages';
 import { stat } from 'node:fs';
-import { NodSidebar } from './sidebar'
+import { NodSidebar } from './callstack'
+import { onCurrentNotebookChanged } from './interfaceHelpers';
 /**
  * Initialization data for the nod extension.
  */
@@ -104,167 +106,31 @@ const plugin: JupyterFrontEndPlugin<void> = {
     var dialogID = ""
 
 
-    notebookTracker.activeCellChanged.connect(() => {
-      console.log(Array.from(nodState.Instance().app.serviceManager.kernels.running()))
-    })
+
     const callStackModel = new CallstackModel({});
     const sidebar = new NodSidebar({ translator, service: debuggerService, model: callStackModel })
     nodState.Instance().app.shell.add(sidebar, 'left', { type: 'Debugger', rank: 400, });
 
-    notebookTracker.currentChanged.connect((tracker, notebookPanel) => {
-      console.log("CURRENT CHANGED")
-      const inst = nodState.Instance()
-      if (notebookPanel) {
-        console.log("kernel statuses", Array.from(app.serviceManager.kernels.running()).map(kernel => console.log(kernel.execution_state)))
-        notebookPanel.sessionContext.kernelPreference = { autoStartDefault: false, id: nodState.Instance().nodKernelId, shutdownOnDispose: false };
-        const frame = nodState.Instance().getFrameFromPath(notebookPanel.context.path)
-        if (frame) {
-          const newIndex = nodState.Instance().pythonInfo?.indexOf(frame)
-          console.log("new index", newIndex)
-          if (newIndex !== undefined)
-            nodState.Instance().currentFrameIndex = newIndex
-        }
-        console.log("locked", inst.locked)
-        if (nodState.Instance().locked) {
-          if (notebookPanel.id !== nodState.Instance().notebookLockId) {
-            notebookPanel.content.widgets.forEach(cell => cell.model.setMetadata("editable", false))
-            if (!notebookPanel.contentHeader.contains(inst.readOnlyHeader)) {
-              console.log('adding widget')
-              notebookPanel.contentHeader.addWidget(inst.readOnlyHeader);
-              const widget = app.shell.currentWidget;
-              if (widget instanceof MainAreaWidget) {
-                widget.contentHeader.addWidget(inst.readOnlyHeader)
-              }
-            }
-            inst.readOnlyHeader.setHidden(false)
-
-          } else {
-            inst.readOnlyHeader.setHidden(true)
-          }
-        } else {
-          inst.readOnlyHeader.setHidden(true)
-        }
-      }
-
-
-      notebookPanel?.sessionContext.statusChanged.connect((context, status) => {
-        console.log("STATUS CHANGED", status)
-        if (status == 'restarting') {
-          // const sessionManager = context.sessionManager
-          // console.log("RESTARTING ALL")
-          // await sessionManager.refreshRunning();
-          // const content: KernelMessage.IExecuteRequestMsg['content'] = {
-          //   code: 'quit',
-          //   silent: true,
-          //   store_history: false
-          // };
-          // await Promise.resolve(context.session?.kernel?.requestExecute(content));
-          // await Promise.all(
-          //   [...sessionManager.running()].filter(model => model.name === 'nod').map(model => sessionManager.shutdown(model.id))
-          // );
-          // await sessionManager.refreshRunning();
-          // Array.from(app.serviceManager).forEach(session => {
-          //   session.
-          // })
-
-          nodState.Instance().status == 'inactive'
-          checkKernelStatus()
-        }
-      })
+    notebookTracker.activeCellChanged.connect(() => {
+      console.log(Array.from(nodState.Instance().app.serviceManager.kernels.running()))
     })
-
-    nodState.Instance().currentFrameChanged.connect((state, frameNum) => {
-      callStackModel.frame = callStackModel.frames[frameNum]
-      const notebookFile = nodState.Instance().currentFrame?.notebook_file
-      notebookFile ? openNotebookWithNodKernel(notebookFile, docManager) : {}
-      console.log("Switching to frame ", frameNum)
-      const future = requestDebug("nod_switch", frameNum
-      )
-      if (future !== null) {
-        future.onReply = async msg => {
-          console.log("DEBUG RESPONSE", msg)
-        }
-      }
-    })
-
-    callStackModel.currentFrameChanged.connect((model, frame) => {
-      if (frame?.id !== undefined) {
-        nodState.Instance().currentFrameIndex = frame?.id
-        console.log("CallSTackModelOPen")
-      }
-    })
-
     notebookTracker.currentChanged.connect((tracker, panel) => {
       console.log('current Changed')
       if (panel) {
-        // panel.content.modelContentChanged.connect(() => {
-        //   console.log("model content changed")
-        // })
-        // panel.content.stateChanged.connect(() => {
-        //   console.log("state changed")
-        // })
-        // panel.model?.sharedModel.changed.connect((notebook, change) => {
-        //   console.log(notebook, change)
-        // })
-        // panel.model?.contentChanged.connect(() => {
-        //   console.log("content changed")
-        // })
-        panel.content.model?.cells.changed.connect((cellList, changeArgs) => {
-          if (panel.isRevealed) { //this means its a user-edit
-            console.log("user changed cells", cellList, changeArgs, panel.isRevealed)
-            nodState.Instance().lock(panel)
+        if (panel.isRevealed)
+          onCurrentNotebookChanged(panel)
+        else
+          panel.revealed.then(() => onCurrentNotebookChanged(panel))
 
+        panel?.sessionContext.statusChanged.connect((context, status) => {
+          console.log("STATUS CHANGED", status)
+          if (status == 'restarting') {
+            nodState.Instance().status == 'inactive'
+            checkKernelStatus()
           }
         })
       }
-
     })
-
-
-    function kernelWaitDialog() {
-      if (nodState.Instance().status == 'active') {
-        return
-      }
-      if (dialogID === "") {
-        const dialog = new Dialog({
-          title: "Waiting for Nod Kernel...",
-          body: "Call notebook() from a Python file in the same directory",
-          buttons: [Dialog.okButton({ label: "Refresh" })]
-        });
-        dialogID = dialog.id
-        dialog.launch().then(() => {
-          checkKernelStatus(false)
-        });
-      }
-    }
-
-    function checkKernelStatus(recurse: boolean = true) {
-      console.log("Check Kernel Status")
-
-      const manager = nodState.Instance().app.serviceManager.kernels
-      manager.refreshRunning().then(() => {
-        const nodKernel = getNodKernel().then((id) => {
-          if (id === undefined) {
-            console.log("setting to inactive")
-            nodState.Instance().status = 'inactive'
-            if (recurse)
-              kernelWaitDialog()
-            getNodKernel() //TODO Loop update
-          } else {
-            console.log("REFRESHING NOD STATE Found Nod Kernel")
-            const idSearch = Dialog.tracker.find(dialog => dialog.id === dialogID)
-            if (idSearch !== undefined) {
-              idSearch.resolve()
-            }
-            dialogID = ""
-            // docManager.closeAll()
-            sidebar.activate()
-            getNodInfo()
-          }
-        })
-      })
-    }
-
 
     app.serviceManager.kernels.runningChanged.connect((manager, model) => {
       console.log('running changed')
@@ -307,16 +173,16 @@ const plugin: JupyterFrontEndPlugin<void> = {
         console.log("Nod ACTIVE")
         const currentNotebookPath = notebookTracker.currentWidget?.context.path ?? ""
         const selectedFrame = state.getFrameFromPath(currentNotebookPath)
-        const selectedIndex = selectedFrame ? state.pythonInfo?.indexOf(selectedFrame) : 0
+        const selectedIndex = selectedFrame ? state.pythonInfo?.stack_info.indexOf(selectedFrame) : 0
         if (selectedIndex) {
           console.log("Setting index on active to", selectedIndex)
           state.currentFrameIndex = selectedIndex
         }
         const currentFrame = state.currentFrame
-        if (currentFrame) {
-          const openNotebook = notebookTracker.find((panel) => currentFrame.notebook_file.includes(panel.context.path))
+        if (currentFrame && currentFrame.fileInfo) {
+          const openNotebook = notebookTracker.find((panel) => currentFrame && currentFrame.fileInfo !== undefined && currentFrame.fileInfo.notebook_file.includes(panel.context.path))
           if (openNotebook === undefined) {
-            openNotebookWithNodKernel(currentFrame.notebook_file, docManager)
+            openNotebookWithNodKernel(currentFrame.fileInfo.notebook_file, docManager)
           }
         }
 
@@ -329,15 +195,143 @@ const plugin: JupyterFrontEndPlugin<void> = {
         //   return parser2.parse(frame.frame_xml);
 
         // })
-        const frames = state.pythonInfo?.map((frame, index) => {
+        const frames = state.pythonInfo?.stack_info.map((frame, index) => {
           return ({ id: index, name: frame.function_name, source: { path: frame.source_file, name: frame.relative_source_file }, scope: { name: frame.function_name, variables: [{ name: 'a', value: '10' }] } } as INodStackFrame)
         })
         if (frames) {
-          console.log('setting frames', state.currentFrameIndex)
-          callStackModel.setFrames(frames, state.currentFrameIndex)
+          console.log('setting frames', state.currentFrameIndex,)
+          console.log('setting filters', state.pythonInfo?.module_filters ?? [""])
+          callStackModel.setFrames(frames, state.currentFrameIndex, state.pythonInfo?.module_filters ?? [""])
         }
       }
     })
+
+    // notebookTracker.currentChanged.connect((tracker, notebookPanel) => {
+    //   console.log("CURRENT CHANGED")
+    //   const inst = nodState.Instance()
+    //   if (notebookPanel) {
+    //     console.log("kernel statuses", Array.from(app.serviceManager.kernels.running()).map(kernel => console.log(kernel.execution_state)))
+    //     notebookPanel.sessionContext.kernelPreference = { autoStartDefault: false, id: nodState.Instance().nodKernelId, shutdownOnDispose: false };
+
+
+    //   }
+
+
+
+    // })
+
+    nodState.Instance().currentFrameChanged.connect((state, frameNum) => {
+      callStackModel.frame = callStackModel.frames[frameNum]
+      const notebookFile = nodState.Instance().currentFrame?.fileInfo?.notebook_file
+      notebookFile ? openNotebookWithNodKernel(notebookFile, docManager) : {}
+      console.log("Switching to frame ", frameNum)
+      const future = requestDebug("nod_switch", frameNum
+      )
+      if (future !== null) {
+        future.onReply = async msg => {
+          console.log("DEBUG RESPONSE", msg)
+        }
+      }
+    })
+    nodState.Instance().lockChanged.connect((state, id) => {
+      const path = notebookTracker.find(panel => panel.id === id)?.context.path
+      if (path !== undefined) {
+        const frame = state.getFrameFromPath(path)
+        if (frame !== undefined) {
+          callStackModel.editedNotebookIndex = frame.index
+        }
+        console.log("setting edited nb path", path)
+      }
+    })
+
+    callStackModel.currentFrameChanged.connect((model, frame) => {
+      if (frame?.id !== undefined) {
+        nodState.Instance().currentFrameIndex = frame?.id
+        console.log("CallSTackModelOPen")
+      }
+    })
+
+    function kernelWaitDialog() {
+      if (nodState.Instance().status == 'active') {
+        return
+      }
+      if (dialogID === "") {
+        const dialog = new Dialog({
+          title: "Waiting for Nod Kernel...",
+          body: "Call notebook() from a Python file in the same directory",
+          buttons: [Dialog.okButton({ label: "Refresh" })]
+        });
+        dialogID = dialog.id
+        dialog.launch().then(() => {
+          checkKernelStatus(false)
+        });
+      }
+    }
+    // async function startNodSession() {
+    //   const app = nodState.Instance().app
+    //   // await app.serviceManager.kernelspecs.refreshSpecs()
+    //   const kernelManager = app.serviceManager.kernels
+    //   // await kernelManager.refreshRunning()
+    //   console.log(Array.from(kernelManager.running()))
+    //   const oldKernelId = nodState.Instance().nodKernelId
+    //   const oldNodKernel = Array.from(kernelManager.running())
+    //     .find(val =>
+    //       val.name === "nod" &&
+    //       val.id === oldKernelId &&
+    //       val.execution_state &&
+    //       (['idle', 'busy', 'starting', 'connected', 'connecting', 'restarting'].includes(val.execution_state)))
+    //   if (oldNodKernel) {
+    //     //  app.serviceManager.kernelspecs.specs?.kernelspecs
+    //   } else {
+    //     const existingNodKernel = Array.from(kernelManager.running())
+    //       .find(val =>
+    //         val.name === "nod" &&
+    //         val.execution_state &&
+    //         (['idle', 'busy', 'starting', 'connected', 'connecting', 'restarting'].includes(val.execution_state)))
+    //     if (existingNodKernel) {
+    //       nodState.Instance().nodKernelId = existingNodKernel.id
+    //     } else {
+    //       const id = await launchNodKernel()
+    //       return id
+    //     }
+    //   }
+    //   return nodState.Instance().nodKernelId
+
+    // }
+    function checkKernelStatus(recurse: boolean = true) {
+      console.log("Check Kernel Status")
+
+      const manager = nodState.Instance().app.serviceManager.kernels
+      manager.refreshRunning().then(() => {
+        getNodKernel().then((id) => {
+          if (id === undefined) {
+            console.log("setting to inactive")
+            nodState.Instance().status = 'inactive'
+            if (recurse) {
+              kernelWaitDialog()
+            }
+            launchNodKernel().then(id => {
+              if (id === undefined) {
+                checkKernelStatus()
+              }
+            })
+          } else {
+            console.log("REFRESHING NOD STATE Found Nod Kernel")
+            const idSearch = Dialog.tracker.find(dialog => dialog.id === dialogID)
+            if (idSearch !== undefined) {
+              idSearch.resolve()
+            }
+            dialogID = ""
+            // docManager.closeAll()
+            sidebar.activate()
+            getNodInfo()
+          }
+        })
+      })
+    }
+
+
+
 
 
 

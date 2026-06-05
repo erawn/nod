@@ -72,6 +72,7 @@
         "@jupyterlab/translation": "^4.6.0-beta.0",
         "@jupyterlab/ui-components": "^4.6.0-beta.0",
         "fast-xml-parser": "^5.8.0",
+        "multimatch": "^8.0.0",
         "zod": "^4.3.6"
     },
     "devDependencies": {
@@ -80,7 +81,6 @@
         "@types/jest": "^29.2.0",
         "@types/json-schema": "^7.0.11",
         "@types/node": "^25.9.1",
-        "@types/react": "^18.0.26",
         "@types/react-addons-linked-state-mixin": "^0.14.22",
         "@typescript-eslint/eslint-plugin": "^6.1.0",
         "@typescript-eslint/parser": "^6.1.0",

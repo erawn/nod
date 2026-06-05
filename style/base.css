@@ -16,7 +16,10 @@
   padding: 5px 0;
   min-height: 40px;
 }
-
+.jp-NodFileEdited{
+    border-left: 5px solid;
+    border-color: var(--jp-warn-color1)
+}
 .jp-nod-pluginstatus-maintext {
   color: var(--jp-error-color0);
   font-weight: bold;
@@ -25,6 +28,12 @@
 .jp-nod-pluginstatus-bottomtext {
   color: var(--jp-content-font-color2);
 }
+.jp-Nod-CallStack-SearchBox{
+    padding-left: 5px
+}
+/* .jp-DebuggerCallstackFrame-Changed{
+
+} */
 /* .lm-Widget.jp-CodeMirrorEditor.jp-Editor.jp-nod-Header{
     opacity:1
 }

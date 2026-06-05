@@ -2,7 +2,7 @@
 // Distributed under the terms of the Modified BSD License.
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { getTreeItemElement, ReactWidget } from '@jupyterlab/ui-components';
+import { FilterBox, getTreeItemElement, ReactWidget } from '@jupyterlab/ui-components';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { IDebugger } from '@jupyterlab/debugger';
 import { CallstackModel } from './model';
@@ -11,6 +11,7 @@ import { TreeItem, TreeView } from '@jupyter/react-components';
 import { INodStackFrame } from '../types';
 import { Variables } from '@jupyterlab/debugger/lib/panels/variables';
 import { DebugProtocol } from '@vscode/debugprotocol';
+import multimatch from 'multimatch';
 /**
  * The body for a Callstack Panel.
  */
@@ -24,15 +25,22 @@ export class CallstackBody extends ReactWidget {
     super();
     this._model = model;
     this.addClass('jp-DebuggerCallstack-body');
+    this._searchInputRef = React.createRef<HTMLInputElement>();
   }
 
   /**
    * Render the FramesComponent.
    */
   render(): JSX.Element {
-    return <FramesComponent model={this._model} />;
-  }
+    // console.log("current filers", this._model.filters)
+    return (<>
+      <FramesComponent model={this._model} searchInputRef={this._searchInputRef} />
+    </>
 
+
+    )
+  }
+  private _searchInputRef: React.RefObject<HTMLInputElement>;
   private _model: CallstackModel;
 }
 
@@ -44,13 +52,16 @@ export class CallstackBody extends ReactWidget {
  * @returns A JSX element.
  */
 const FramesComponent = ({
-  model
+  model,
+  searchInputRef
 }: {
-  model: CallstackModel;
+  model: CallstackModel,
+  searchInputRef: React.RefObject<HTMLInputElement>;
 }): JSX.Element => {
-  const [frames, setFrames] = useState(model.frames);
+  const [frames, setFrames] = useState<INodStackFrame[]>(model.frames);
   const [selected, setSelected] = useState(model.frame);
-
+  const [filters, setFilters] = useState(model.filters);
+  const [editedNotebookIndex, setEditedNotebookIndex] = useState(model.editedNotebookIndex);
   const onSelected = (frame: any): void => {
     setSelected(frame);
     model.frame = frame;
@@ -60,30 +71,68 @@ const FramesComponent = ({
     const updateFrames = (): void => {
       setSelected(model.frame);
       setFrames(model.frames);
+      setFilters(model.filters)
+      setEditedNotebookIndex(model.editedNotebookIndex)
     };
     model.framesChanged.connect(updateFrames);
     model.currentFrameChanged.connect(updateFrames)
+    model.filtersChanged.connect(updateFrames)
+    model.editedNotebookIndexChanged.connect(updateFrames);
     return (): void => {
       model.framesChanged.disconnect(updateFrames);
       model.currentFrameChanged.disconnect(updateFrames)
+      model.filtersChanged.disconnect(updateFrames)
+      model.editedNotebookIndexChanged.disconnect(updateFrames)
     };
   }, [model]);
 
   return (
     <ul>
-      {frames.map(frame => (
+      <div
+        className={'jp-Nod-CallStack-SearchBox'}
+      ><FilterBox
+          initialQuery={(model.filters).join(',')}
+          placeholder={"**/modA.py, **/modB.py"}
+          disabled={false}
+          updateFilter={(fn, query) => {
+            model.filters = query?.split(",").map(entry => entry.trim()) ?? [''];
+          }}
+          useFuzzyFilter={false}
+        // inputRef={searchInputRef}
+        />
+      </div>
+
+      {frames.filter((frame: INodStackFrame) => {
+        if (frame.source !== undefined && frame.source.path !== undefined) {
+          // console.log(frame, filters, multimatch([frame.source.path], filters))
+
+          console.log(frame.source?.path, editedNotebookIndex, frame.id === editedNotebookIndex)
+        }
+        if (frame.source === undefined || frame.source.path === undefined) {
+          return false
+        } else if (multimatch([frame.source.path], filters).indexOf(frame.source.path) >= 0) {
+          return true
+        }
+        return false
+      }).map((frame: INodStackFrame) => {
+        const edited = frame.id === editedNotebookIndex
+          ? 'jp-NodFileEdited' : ""
+        const select = selected?.id === frame.id
+          ? 'selected'
+          : ''
+        frame.className = select + " " + edited + " " + "jp-DebuggerCallstackFrame"
+        return frame
+      }).map((frame: INodStackFrame) => (
         <li
           key={frame.id}
           onClick={(): void => onSelected(frame)}
-          className={
-            selected?.id === frame.id
-              ? 'selected jp-DebuggerCallstackFrame'
-              : 'jp-DebuggerCallstackFrame'
-          }
+          className={frame.className}
         >
-          <span className={'jp-DebuggerCallstackFrame-name'}>{frame.name}</span><span
+
+          <span className={'jp-DebuggerCallstackFrame-name'}>{frame.name}</span>
+          <span
             className={'jp-DebuggerCallstackFrame-location'}
-            title={frame.source?.name}
+            title={frame.source?.path}
           >
             {frame.source?.name}
           </span>
@@ -101,7 +150,7 @@ const FramesComponent = ({
 
       </TreeView> */}
     </ul>
-  );
+  )
 };
 // /**
 //  * A React component to display a list of variables.

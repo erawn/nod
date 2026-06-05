@@ -16,9 +16,6 @@ import { Widget } from '@lumino/widgets';
 import { nodSchema } from './types';
 import { IDocumentManager } from '@jupyterlab/docmanager';
 
-
-
-
 export async function openNotebookWithNodKernel(notebookFile: string, docManager: IDocumentManager) {
     const state = nodState.Instance()
     // docManager.openOrReveal(notebookFile, 'default', { name: "nod" })
@@ -40,8 +37,8 @@ export async function openNotebookWithNodKernel(notebookFile: string, docManager
         //     // docManager.openOrReveal(notebookFile, 'default', { name: "nod" })
         // }
         // existingNotebook.sessionContext.dispose()
-        console.log("Existing Kernel ID", existingNotebook.sessionContext.session?.id)
-        console.log("New NOD Kernel", nodKernelId)
+        // console.log("Existing Kernel ID", existingNotebook.sessionContext.session?.id)
+        // console.log("New NOD Kernel", nodKernelId)
         existingNotebook.sessionContext.kernelPreference = { autoStartDefault: false, id: nodKernelId, shutdownOnDispose: false };
         // existingNotebook.sessionContext.initialize().then(() => existingNotebook.context.sessionContext.sessionManager.connectTo())
 
@@ -65,34 +62,7 @@ export async function openNotebookWithNodKernel(notebookFile: string, docManager
     }
 
 }
-
-var launching: boolean = false
-async function launchNodKernel() {
-    const app = nodState.Instance().app
-    for (const name in app.serviceManager.kernelspecs.specs?.kernelspecs) {
-        const spec = app.serviceManager.kernelspecs.specs?.kernelspecs[name]!;
-        if (spec.display_name === 'nod') {
-            if (!launching && nodState.Instance().status !== 'active') {
-                try {
-                    launching = true
-                    console.log("Launching Nod Kernel")
-                    await app.serviceManager.kernels.startNew(spec).then((connection) => {
-                        launching = false
-                        nodState.Instance().nodKernelId = connection.model.id
-                        console.log(" LAUNCHNODKERNEL: Started Up New Nod!", connection.model.id)
-                    })
-                    return nodState.Instance().nodKernelId
-                }
-                catch (e) {
-                    console.log(e)
-                    return undefined
-                }
-            }
-        }
-    }
-    return undefined
-}
-export async function getNodKernel() {
+export async function getNodKernel(): Promise<string | undefined> {
     const app = nodState.Instance().app
     // await app.serviceManager.kernelspecs.refreshSpecs()
     const kernelManager = app.serviceManager.kernels
@@ -116,13 +86,42 @@ export async function getNodKernel() {
         if (existingNodKernel) {
             nodState.Instance().nodKernelId = existingNodKernel.id
         } else {
-            const id = await launchNodKernel()
-            return id
+            return undefined
+            // const id = await launchNodKernel()
+            // return id
         }
     }
     return nodState.Instance().nodKernelId
 
 }
+
+var launching: boolean = false
+export async function launchNodKernel() {
+    const app = nodState.Instance().app
+    for (const name in app.serviceManager.kernelspecs.specs?.kernelspecs) {
+        const spec = app.serviceManager.kernelspecs.specs?.kernelspecs[name]!;
+        if (spec.display_name === 'nod') {
+            if (!launching && nodState.Instance().status !== 'active') {
+                try {
+                    launching = true
+                    console.log("Launching Nod Kernel")
+                    await app.serviceManager.kernels.startNew({ ...spec }).then((connection) => {
+                        launching = false
+                        nodState.Instance().nodKernelId = connection.model.id
+                        console.log(" LAUNCHNODKERNEL: Started Up New Nod!", connection.model.id)
+                    })
+                    return nodState.Instance().nodKernelId
+                }
+                catch (e) {
+                    console.log(e)
+                    return undefined
+                }
+            }
+        }
+    }
+    return undefined
+}
+
 
 export function getNodInfo() {
     const contentsManager = nodState.Instance().contentsManager
@@ -240,8 +239,8 @@ export function writeChange() {
         return
     }
     const children = instance.tracker.currentWidget?.content.widgets
-    const indent = currentFrame.indent
-    if (children === undefined) {
+    const indent = currentFrame.fileInfo?.indent
+    if (children === undefined || indent === undefined) {
         return
     }
 
@@ -265,7 +264,9 @@ export function writeChange() {
             return
         }
         let lines = (original.content as string).split(/\r?\n/)
-        const editPos = currentFrame.function_body_position
+        const editPos = currentFrame.fileInfo?.function_body_position
+        if (editPos === undefined)
+            return
         console.log("LINES", lines)
         console.log("EDITPOS", editPos)
         const topContent = lines.slice(0, editPos?.start.line - 1).join('\n')

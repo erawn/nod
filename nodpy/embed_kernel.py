@@ -59,7 +59,7 @@ def reset(shell: InteractiveShell, new_session=True, aggressive=False):
         ## Filter for our special variables
         user_ns = shell.user_ns
         for key in set(user_ns.keys()):
-            if key == "__NODINFO" or key == "__NODSTACK":
+            if key == "nodReturn":
                 continue
             else:
                 del user_ns[key]

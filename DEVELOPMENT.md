@@ -29,16 +29,10 @@ TODO
     - add banner at the top on read only NBs 
     - test unlock
 - get exporting working again
-- multiple returns --- we need a magic which will stop execution of the cell
-    - ast transform to something that will throw an error and display the result.
-    - how to silence the error? Intercept at front end level?  
 - convert markdown back to notebook with nbcovert or jupytext
     - server extension should handle this
-- glob pattern on module include
 - nod on exception https://ipython.readthedocs.io/en/stable/interactive/magics.html#magic-pdb 
-- add label in left panel to edited notebook. 
-- allow running cells across notebooks before editing? 
-
+<!-- - fix startup process  -->
 
 - clear old kernels from jupyter (get shutdown registering properly??)
 - rename nb files to function--class
@@ -52,10 +46,8 @@ TODO
     - how to get info from pane to kernel provisioner?
     - if the python program is being run as a subprocess, we can set an enviornment variable for the connection directory 
 - test timeouts to optimize (and on networked connections?)
-- test restart on in-place operations
 - add exit without saving to menu
 - mark cells above nod() call as run? 
-- post-hoc filter on callstack? 
 - play with opacity on the surrounding code? 
 
 Nice to have
@@ -64,6 +56,7 @@ Nice to have
     - final preview of exported code?
 - debug nod with nod!!
     - need to specify the connection file directly in the cmd line args
+    - or just change the cwd in the outer command? aka nod cd folder && nod python -m module 
 
 <!-- - mode order -- 1. just do forward eval, 2. deep-copy for expensive programs, 3. adult-mode.
     - how to switch modes? notebook() args?  -->

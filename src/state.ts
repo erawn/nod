@@ -26,6 +26,7 @@ export class nodState {
         this._translator = translator
         this._connection_dir = connection_dir
         this._readOnlyHeader = new ReadOnlyHeader()
+        this._readOnlyHeader.setHidden(true)
     }
 
     public static Instance(tracker?: INotebookTracker, app?: JupyterFrontEnd<JupyterFrontEnd.IShell, "desktop" | "mobile">, contents?: Contents.IManager, translator?: ITranslator, connection_dir?: string): nodState {
@@ -44,6 +45,7 @@ export class nodState {
     private _connection_dir: string
     private _statusChanged = new Signal<this, pluginStatus>(this);
     private _currentFrameChanged = new Signal<this, number>(this);
+    private _lockChanged = new Signal<this, string>(this);
     private _nodKernelId: string = ""
     private _lockNotebookId: string = ""
     private _readOnlyHeader: ReadOnlyHeader
@@ -56,8 +58,9 @@ export class nodState {
         return false //this.pythonInfo ? this.pythonInfo[this._currentFrame].notebook_file.includes(panel.context.path) : null
     }
     public getFrameFromPath(path: string) {
-        return this.pythonInfo?.find((frame) => frame.notebook_file.includes(path))
+        return this.pythonInfo?.stack_info.find((frame) => frame.fileInfo && frame.fileInfo.notebook_file.includes(path))
     }
+
     public lock(lockPanel: NotebookPanel) {
         this._lockNotebookId = lockPanel.id
         this.tracker.forEach(panel => {
@@ -75,7 +78,7 @@ export class nodState {
             }
         })
         this._readOnlyHeader.setHidden(false)
-
+        this._lockChanged.emit(this._lockNotebookId)
     }
     public unlock() {
         this._lockNotebookId = ""
@@ -88,6 +91,10 @@ export class nodState {
 
 
         })
+        this._lockChanged.emit(this._lockNotebookId)
+    }
+    get lockChanged(): Signal<this, string> {
+        return this._lockChanged
     }
     get readOnlyHeader(): ReadOnlyHeader {
         return this._readOnlyHeader
@@ -96,7 +103,7 @@ export class nodState {
         return this._lockNotebookId
     }
     get locked(): boolean {
-        return this._lockNotebookId === ""
+        return this._lockNotebookId !== ""
     }
     get currentFrameIndex() {
         return this._currentFrameIndex
@@ -110,7 +117,7 @@ export class nodState {
     }
     get currentFrame() {
         if (this.pythonInfo)
-            return this.pythonInfo[this._currentFrameIndex]
+            return this.pythonInfo.stack_info[this._currentFrameIndex]
     }
     get currentFrameChanged(): ISignal<this, number> {
         return this._currentFrameChanged;

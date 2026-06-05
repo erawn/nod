@@ -24,7 +24,7 @@ export class ReadOnlyHeader extends ReactWidget {
                 </span>
                 <br></br>
                 <span className="jp-nod-pluginstatus-bottomtext">
-                    Export the edited Nod Notebook to Continue
+                    Restart or Export the edited Nod Notebook to Continue
                 </span>
             </>
         );

@@ -30,7 +30,7 @@ export class CallstackModel implements IDebugger.Model.ICallstack {
   /**
    * Set the frames.
    */
-  setFrames(newFrames: INodStackFrame[], currentFrameIndex: number) {
+  setFrames(newFrames: INodStackFrame[], currentFrameIndex: number, filters: string[]) {
     this._state = newFrames;
     // const currentFrameId =
     //   this.frame !== null ? Private.getFrameId(this.frame) : '';
@@ -42,6 +42,9 @@ export class CallstackModel implements IDebugger.Model.ICallstack {
     // if (!frame) {
     //   this.frame = newFrames[];
     // }
+
+    this._filters = filters
+    console.log("Set Filters", this._filters)
     console.log(currentFrameIndex)
     console.log(newFrames)
     this.frame = newFrames[currentFrameIndex]
@@ -78,6 +81,28 @@ export class CallstackModel implements IDebugger.Model.ICallstack {
     return this._currentFrameChanged;
   }
 
+  get filters() {
+    return this._filters
+  }
+  set filters(newFilters: string[]) {
+    this._filters = newFilters
+    this._filtersChanged.emit(newFilters)
+    // console.log("set filters", newFilters)
+  }
+
+  get filtersChanged(): ISignal<this, string[]> {
+    return this._filtersChanged;
+  }
+  get editedNotebookIndex(): number {
+    return this._editedNotebookIndex
+  }
+  set editedNotebookIndex(newIndex: number) {
+    this._editedNotebookIndex = newIndex
+    this._editedNotebookIndexChanged.emit(newIndex);
+  }
+  get editedNotebookIndexChanged() {
+    return this._editedNotebookIndexChanged
+  }
   /**
    * Returns a human-readable display for a frame.
    */
@@ -97,7 +122,15 @@ export class CallstackModel implements IDebugger.Model.ICallstack {
   private _currentFrameChanged = new Signal<this, INodStackFrame | null>(
     this
   );
+  private _filters: string[] = []
+  private _filtersChanged = new Signal<this, string[]>(
+    this
+  );
   private _displayRegistry: IDebuggerDisplayRegistry;
+  private _editedNotebookIndex: number = -1;
+  private _editedNotebookIndexChanged = new Signal<this, number>(
+    this
+  );
 }
 
 /**

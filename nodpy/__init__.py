@@ -186,7 +186,7 @@ def nodPrint(
 
 # _SIGNUM = typing.Union[int, Signals]
 _fmt: typing.Literal["light", "percent"] = "light"
-_modules: list[str] = []
+_modules: list[str] = [os.getcwd() + "/*"]
 _how_restart: typing.Union[typing.Literal["continue"], int] = "continue"
 _dangerously_bypass_readonly: bool = False
 
@@ -274,15 +274,14 @@ def notebook(
     if notebook_call_index + 1 > len(stack):
         raise IndexError
     notebook_parent_frame = stack[notebook_call_index + 1]
-
-    modules.append("__main__")
+    frozenPattern = re.compile("<frozen .*>")
     relevant_stack_frames = [
         frame
         for frame in stack[notebook_call_index:]
-        if frame.frame.f_globals.get("__name__") in modules
+        if frozenPattern.match(frame.filename) is None
     ]
-    print("relevant stack frames")
-    print(relevant_stack_frames)
+    _log.info(stack[notebook_call_index:])
+    _log.info(relevant_stack_frames)
 
     ## FILE ORGANIZATION
     pm = PathManager()
@@ -290,20 +289,42 @@ def notebook(
     module_sources: dict[str, cst.Module] = {}
     for stackFrame in relevant_stack_frames:
         if module_sources.get(stackFrame.filename) is None:
-            program_text = open(stackFrame.filename).read()
-            module_sources.update({stackFrame.filename: cst.parse_module(program_text)})
+            try:
+                if os.path.isfile(stackFrame.filename):
+                    program_text = open(stackFrame.filename).read()
+                    module_sources.update(
+                        {stackFrame.filename: cst.parse_module(program_text)}
+                    )
+                else:
+                    _log.info(stackFrame)
+            except:
+                _log.info(f"Couldn't find source for {stackFrame.filename}")
+                pass
 
     stack_info = [
         makeProgramInfo(
-            stackFrame, index, module_sources[stackFrame.filename], pm, _fmt
+            stackFrame,
+            index,
+            module_sources.get(stackFrame.filename, None),
+            pm,
+            _fmt,
         )
         for index, stackFrame in enumerate(relevant_stack_frames)
     ]
+    if modules == []:
+        module_filters = _modules
+    else:
+        module_filters = modules
 
-    program_info = stack_info[0]
-    # _log.info(stack_info)
-    jsonInfo = orjson.dumps(stack_info)
-    # _log.info("Program Info JSON: " + str(jsonInfo))
+    jsonInfo = orjson.dumps(
+        {
+            "stack_info": stack_info,
+            "module_filters": module_filters,
+            "fmt": _fmt,
+            "how_restart": _how_restart,
+            "dangerously_bypass_readonly": _dangerously_bypass_readonly,
+        }
+    )
 
     c = Config()
     # so they get added to user namespace
@@ -313,30 +334,24 @@ def notebook(
     # c.InteractiveShellApp.hide_initial_ns = False
     # c.HistoryManager.hist_file = ":memory:"
 
-    # STARTING STATE
     startingVariables = {}
-    # TODO check deep copy, throw warning or add display for failures
-    # if deep_copy:
-    #     startingVariables.update(copy.deepcopy(notebook_call.frame.f_globals))
-    #     startingVariables.update(copy.deepcopy(notebook_call.frame.f_locals))
-    # else:
     startingVariables.update(notebook_call.frame.f_globals)
     startingVariables.update(notebook_call.frame.f_locals)
     startingVariables.update({"nodReturn": nodReturn})
 
-    scope = {
-        # "__NODINFO": program_info,
-        # "__NODSTACK": relevant_stack_frames,
-    }
-    scope.update(startingVariables)
     app = embed_kernel(
-        local_ns=scope, config=c, no_stdout=False, no_stderr=False, quiet=(not DEBUG)
+        local_ns=startingVariables,
+        config=c,
+        no_stdout=False,
+        no_stderr=False,
+        quiet=False,  # (not DEBUG)
     )
 
     shell = cast(TerminalInteractiveShell, app.shell)
     shell.ast_transformers.append(returnTransformer())
     old_traceback = shell.showtraceback
 
+    # To handle returns gracefully, we need to intercept the tracebacks so users don't see the error
     def showtraceback(
         self,
         exc_tuple: tuple[type[BaseException], BaseException, Any] | None = None,
@@ -368,12 +383,8 @@ def notebook(
         )
 
     shell.showtraceback = types.MethodType(showtraceback, shell)
-    # app.shell.user_ns.update(newStackFrame.frame.f_locals)
-    # self.shell.user_global_ns.update(newStackFrame.frame.f_globals)
-    # self.shell.user_ns_hidden.update(newStackFrame.frame.f_builtins)
+
     app.kernel.relevant_stack_frames = relevant_stack_frames
-    # app.shell.push(startingVariables)
-    # app.kernel.startingVariables = startingVariables  # set this value in order to reset variables on kernel restart
 
     ## COPY CONNECTION FILE, ADD KERNEL NAME
     connection_file = app.abs_connection_file
@@ -402,67 +413,11 @@ def notebook(
         f.write(jsonInfo.decode("utf-8"))
 
     if not DRY_RUN:
-        nb_env = os.environ.copy()
-        # nb_env["JUPYTER_RUNTIME_DIR"] = pm.connection_dir
-        # notebookProcess = subprocess.Popen(args, env=nb_env)
-        # app.nod_notebook_process = notebookProcess  # type: ignore
-
-    # def close_notebook():
-    #     import os
-    #     import signal
-
-    # notebookProcess.terminate()  # type: ignore
-    # pid = os.getpid()
-    # pgid = os.getpgid(pid)
-    # # Prefer process-group over process
-    # # but only if the kernel is the leader of the process group
-    # if pgid and pgid == pid and hasattr(os, "killpg"):
-    #     try:
-    #         _log.warning("KERNEL KILLPG")
-    #         os.killpg(pgid, signal.SIGTERM)
-    #     except OSError:
-    #         _log.warning("KERNEL KILLP Error")
-    #         os.kill(pid, signal.SIGTERM)
-    #         raise
-    # else:
-    #     _log.warning("KERNEL KILLP")
-    #     os.kill(pid, signal.SIGTERM)
-
-    # _log.warning("NOTEBOOK AT EXIT")
-
-    if not DRY_RUN:
         # atexit.register(close_notebook)
         app.start()
         app.reset_io()
         # TODO nonlocal promote
         # switch back to first frame
-
-    # notebookProcess.kill()
-
-    # # Fork a child process
-    # _log.warning("forking")
-    # processid = os.fork()
-    # _log.warning(processid)
-
-    # # processid > 0 represents the parent process
-    # if processid > 0:
-    #     _log.warning("\nParent Process:")
-    #     _log.warning(os.getpid())
-    #     _log.warning("Child's process ID: %d", processid)
-    #
-    #     sys.op
-
-    # # processid = 0 represents the created child process
-    # else:
-
-    #     app.init_code()
-    #     app.start()
-    #     _log.warning("\nChild Process:")
-    #     _log.warning("Process ID:%d", os.getpid())
-    #     _log.warning("Parent's process ID:%d", os.getppid())
-
-
-# _log = logging.getLogger(__name__)
 
 
 def _jupyter_labextension_paths():
@@ -476,6 +431,3 @@ def _jupyter_server_extension_points():
             "app": Nod,
         }
     ]
-
-
-nodConfig(how_restart=signal.SIGINT)
