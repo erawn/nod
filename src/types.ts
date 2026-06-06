@@ -30,6 +30,7 @@ export const nodSchema = z.object({
     dangerously_bypass_readonly: z.boolean()
 })
 export type nodSchema = z.infer<typeof nodSchema>
+export type stackInfo = nodSchema['stack_info']
 export const hasFileInfo = (frame: NonNullable<nodState["currentFrame"]>): frame is Required<NonNullable<nodState["currentFrame"]>> => {
     return frame.fileInfo !== undefined;
 };

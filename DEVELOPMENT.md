@@ -22,18 +22,21 @@ NODCONFIG
 - format for notebook converstion with jupytext (light, percent, etc)
 - allow optional bypassing of readonly after edits? 
 - module list --- shouldn't be changing the tracing 
+
+
 TODO 
+- Send back to loading screen on restart 
 - paste CWD of JupyterLab for --existing?
+    - how to get CWD string to subprocess? Pass as env variable? yes this should work
 - Change tracker --- which cells are unedited 
 <!-- - make other frames read only after edit -->
-    - add banner at the top on read only NBs 
+<!-- - add banner at the top on read only NBs  -->
     - test unlock
 - get exporting working again
+    -export button doesn't appear on reload
 - convert markdown back to notebook with nbcovert or jupytext
     - server extension should handle this
 - nod on exception https://ipython.readthedocs.io/en/stable/interactive/magics.html#magic-pdb 
-<!-- - fix startup process  -->
-
 - clear old kernels from jupyter (get shutdown registering properly??)
 - rename nb files to function--class
 <!-- - select NOD kernel at notebook open -->

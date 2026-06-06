@@ -35,57 +35,6 @@ _log = logging.getLogger(__name__)
 regex = re.compile(r".*kernel-(.{2,8})\.json")
 _log.setLevel(logging.INFO)
 
-# def get_latest_connection_file():
-
-#     connection_dir = os.path.join(os.getcwd(), ".nod", "connection")
-#     return find_connection_file(path=connection_dir)
-
-
-# _log.info("Connection File")
-# _log.info(connection_filenames)
-# pid_filenames = list(filter(regex.match, connection_filenames))
-# latest_connection_filename = connection_filenames[
-#     0
-# ]  # max(pid_filenames, key=os.path.getctime)
-# return latest_connection_filename
-
-
-# class Watcher(object):
-#     running = True
-#     refresh_delay_secs = 1
-
-#     # Constructor
-#     def __init__(self, dir_to_watch, call_func_on_change=None):
-#         self.dir_to_watch: str = dir_to_watch
-#         self.call_func_on_change = call_func_on_change
-#         self.dir_list_cache: list[str] = [""]
-
-#     # Look for changes
-#     def look(self):
-#         dirlist = set(os.listdir(self.dir_to_watch))
-#         if len(dirlist.symmetric_difference(set(self.dir_list_cache))) > 0:
-#             # File has changed, so do something...
-#             _log.info("File changed")
-#             if self.call_func_on_change is not None:
-#                 self.call_func_on_change(dirlist)
-#         self.dir_list_cache = list(dirlist)
-
-#     # Keep watching in a loop
-#     def watch(self):
-#         while self.running:
-#             try:
-#                 # Look for changes
-#                 time.sleep(self.refresh_delay_secs)
-#                 self.look()
-#             except KeyboardInterrupt:
-#                 print("\nDone")
-#                 break
-#             except FileNotFoundError:
-#                 # Action on file not found
-#                 pass
-#             except:
-#                 print("Unhandled error: %s" % sys.exc_info()[0])
-
 
 class NodProvisionerMeta(type(KernelProvisionerBase)):  # type: ignore[misc]
     pass
@@ -118,6 +67,8 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
     # The kernel connection file is fetched as the latest
     # modified connection file.
     # """
+    nod_cwd = Unicode(os.getcwd()).tag(config=True)
+
     cli_cmd = Unicode(
         "",
         help="User Command To Execute Python Program",
@@ -134,11 +85,6 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
         self.nod_info = NodPythonInfo()
 
     async def poll(self):
-        # _log.info("PROVISIONER POLL")
-        # # """Poll the provisioner."""
-        # if self.restarting:
-        #     _log.info("PROVISIONER POLL 0")
-        #     return 0
         ret = 0
         if self.nod_info.python_process:
             ret = self.nod_info.python_process.poll()
@@ -165,8 +111,8 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
                 fid = getattr(self.nod_info.kernel_process, attr, None)
                 if fid:
                     fid.close()
-            self.nod_info.kernel_process = None  # allow has_process to now return False
-            self.nod_info.python_process = None
+            self.nod_info.kernel_process = None
+            self.nod_info.python_process = None  # allow has_process to now return False
         return ret
 
     async def send_signal(self, signum: int):
@@ -189,7 +135,7 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
             if signum == signal.SIGINT and sys.platform == "win32":  # type: ignore[unreachable]
                 from jupyter_client.win_interrupt import send_interrupt  # type: ignore
 
-                send_interrupt(self.nod_info.python_process.win32_interrupt_event)
+                send_interrupt(self.nod_info.python_process.win32_interrupt_event)  # type: ignore
                 return
 
             # Prefer process-group over process
@@ -250,7 +196,7 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
         self, connection_dir: str
     ) -> tuple[str, int] | tuple[None, None]:
         # Find Connection File and Get Kernel Info
-        # _log.info("Connection Dir Path: %s", connection_dir)
+        _log.info("Connection Dir Path: %s", connection_dir)
         connection_filenames = os.listdir(connection_dir)
         pid_filenames = list(filter(regex.match, connection_filenames))
         # _log.info("PID FILENAMES")
@@ -271,10 +217,10 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
     async def launch_kernel(self, cmd, **kwargs):
         _log.info(f"{self.kernel_id} PROVISIONER LAUNCH KERNEL")
         _log.info(cmd)
-
+        connection_dir = os.path.join(self.nod_cwd, ".nod", "connection")
         # return existing kernel if its still running
-        connection_dir = os.path.join(os.getcwd(), ".nod", "connection")
-        connection_file, pid = self.get_most_recent_connection_file(connection_dir)
+
+        # connection_file, pid = self.get_most_recent_connection_file(connection_dir)
         # if connection_file is not None and pid is not None:
         #     _log.info("Found Existing Connection File")
         #     if psutil.pid_exists(pid):
@@ -309,16 +255,16 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
             # _log.info("Full Cmd and Scrubbed_Kwargs")
             # _log.info(cmd)
             # _log.info(scrubbed_kwargs)
-            self.cwd = (
-                pathlib.Path.cwd()
-            )  # don't change cwd to connection folder  #kwargs.get("cwd", pathlib.Path.cwd())
+            # self.cwd = (
+            #     pathlib.Path.cwd()
+            # )  # don't change cwd to connection folder  #kwargs.get("cwd", pathlib.Path.cwd())
             _log.info(f"{self.kernel_id} CWD")
             # _log.info(self.cwd)
-            _log.info(pathlib.Path.cwd())
+            # _log.info(pathlib.Path.cwd())
             scrubbed_kwargs = LocalProvisioner._scrub_kwargs(kwargs)
             scrubbed_kwargs.pop("cwd", None)
             self.nod_info.python_process = launch_kernel(
-                cmd, **scrubbed_kwargs, cwd=str(pathlib.Path.cwd())
+                cmd, **scrubbed_kwargs, cwd=self.nod_cwd
             )
             python_pgid = None
             if hasattr(os, "getpgid"):
@@ -344,9 +290,9 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
                 #     _log.info(psutil.pid_exists(pid))
                 # except:
                 #     pass
-                _log.info(
-                    f"PIDEXISTS: {psutil.pid_exists(pid or -1)}, PID: {pid} CONNECTION_FILE_IS_NEWER: {((os.path.getmtime(connection_file) - launch_time) < -1)}, {self.kernel_id}"
-                )
+                # _log.info(
+                #     f"PIDEXISTS: {psutil.pid_exists(pid or -1)}, PID: {pid} CONNECTION_FILE_IS_NEWER: {((os.path.getmtime(connection_file) - launch_time) < -1)}, {self.kernel_id}"
+                # )
                 await asyncio.sleep(5)
                 connection_file, pid = self.get_most_recent_connection_file(
                     connection_dir
@@ -363,7 +309,7 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
             file_info["key"] = file_info["key"].encode()
             file_info["kernel_name"] = "nod"
             self.nod_info.file_info = file_info
-            km: KernelManager = self.parent
+            km: KernelManager = self.parent  # type: ignore
             if km:
                 km.shell_port = file_info["shell_port"]
                 km.iopub_port = file_info["iopub_port"]
@@ -378,6 +324,7 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
 
                 self._connection_file_written = False
                 km.write_connection_file()
+                _log.info(f" KM CONNECTION INFO {km.get_connection_info()}")
             else:
                 _log.info("NO KERNEL MANAGER")
 
@@ -392,39 +339,12 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
             _log.info(
                 f"LAUNCHED KERNEL {self.kernel_id}, {self.nod_info.kernel_process}"
             )
-            manager: KernelManager = self.parent
-            if os.path.exists(manager.connection_file):
-                with open(manager.connection_file, "r") as f:
-                    old_file_info = json.load(f)
-                    _log.info(f"Existing Connection File: {old_file_info}")
-                # with open(manager.connection_file, "w") as f:
-                #     f.write(file_info)
-            # os.remove(manager.connection_file)
-            # manager._connection_file_written = False
-            manager.load_connection_file(connection_file)
-            _log.info(f" KM CONNECTION INFO {manager.get_connection_info()}")
             _log.info("connection file_info: " + str(file_info))
             return file_info
 
     async def post_launch(self, **kwargs):
         _log.info("PROVISIONER POST LAUNCH KERNEL")
-        manager: KernelManager = self.parent
-
-        # if not manager.ready.done():
-        #     manager.ready.set_result(None)
-        # if not manager._ready.done():
-        #     manager._ready.set_result(None)
-        # msg = self.session.msg("interrupt_request", content={})
-        # self._connect_control_socket()
-        # self.session.send(self._control_socket, msg)
-        # manager.session.
-        # if manager.has_kernel:
-        #     _log.info("HAS KERNEL")
-        # _log.info(manager.kernel_name)
-        # if manager.kernel_spec is not None:
-        #     _log.info("display_name")
-        #     _log.info(manager.kernel_spec.display_name)
-        # _log.info("OWNS KERNEL %s", str(manager.owns_kernel))
+        # manager: KernelManager = self.parent
         return
 
     # async def shutdown_requested(self, restart: bool = False) -> None:
@@ -478,8 +398,8 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
     def resolve_path(self, path_str: str) -> str | None:  # type: ignore
         """Resolve path to given file."""
         path = pathlib.Path(path_str).expanduser()
-        if not path.is_absolute() and self.cwd:
-            path = (pathlib.Path(self.cwd) / path).resolve()
+        if not path.is_absolute():
+            path = (pathlib.Path(os.getcwd()) / path).resolve()
         if path.exists():
             return path.as_posix()
         return None

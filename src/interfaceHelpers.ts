@@ -1,10 +1,60 @@
+import { Dialog } from "@jupyterlab/apputils";
 import { nodState } from "./state";
 import {
     INotebookTracker,
     NotebookPanel,
     NotebookTracker,
 } from '@jupyterlab/notebook';
-function updateLockedUI(panel: NotebookPanel) {
+import { getNodInfo, getNodKernel, launchNodKernel } from "./kernelHelpers";
+
+function kernelWaitDialog() {
+    if (nodState.Instance().status == 'active') {
+        return
+    }
+    if (nodState.Instance().dialogID === "") {
+        const dialog = new Dialog({
+            title: "Waiting for Nod Kernel...",
+            body: "Call notebook() from a Python file in the same directory",
+            buttons: [Dialog.okButton({ label: "Refresh" })]
+        });
+        nodState.Instance().dialogID = dialog.id
+        dialog.launch().then(() => {
+            checkKernelStatus(false)
+        });
+    }
+}
+export function checkKernelStatus(recurse: boolean = true) {
+    console.log("Check Kernel Status")
+
+    const manager = nodState.Instance().app.serviceManager.kernels
+    manager.refreshRunning().then(() => {
+        getNodKernel().then((id) => {
+            if (id === undefined) {
+                console.log("setting to inactive")
+                nodState.Instance().status = 'inactive'
+                if (recurse) {
+                    kernelWaitDialog()
+                }
+                launchNodKernel().then(id => {
+                    if (id === undefined) {
+                        checkKernelStatus()
+                    }
+                })
+            } else {
+                console.log("REFRESHING NOD STATE Found Nod Kernel")
+                const idSearch = Dialog.tracker.find(dialog => dialog.id === nodState.Instance().dialogID)
+                if (idSearch !== undefined) {
+                    idSearch.resolve()
+                }
+                nodState.Instance().dialogID = ""
+                // docManager.closeAll()
+                nodState.Instance().activate()
+                getNodInfo()
+            }
+        })
+    })
+}
+export function updateLockedUI(panel: NotebookPanel) {
     const state = nodState.Instance()
     if (nodState.Instance().locked && panel.id !== nodState.Instance().notebookLockId) {
         panel.content.widgets.forEach(cell => cell.model.setMetadata("editable", false))
@@ -24,6 +74,7 @@ function updateLockedUI(panel: NotebookPanel) {
                         console.log("Cell source change", change, cell)
                         if (!nodState.Instance().locked) {
                             nodState.Instance().lock(panel)
+                            updateLockedUI(panel)
                         }
                     }
                 }, nodState.Instance().app)

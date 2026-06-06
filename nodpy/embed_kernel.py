@@ -177,20 +177,20 @@ class nodKernel(IPythonKernel):
         return
 
     async def do_debug_request(self, msg):
-        if msg["command"] == "nod_info":
-            _log.info("NOD DEBUG REQUEST")
-            # extension_manager: ExtensionManager = self.shell.extension_manager
-            # extension_manager.loaded.
-            nod_info = self.shell.user_ns.get("__NODINFO")
-            json_dump = orjson.dumps(nod_info)
-            encoded = base64.b64encode(json_dump).decode("utf-8")
-            return {
-                "type": "response",
-                "request_seq": msg["seq"],
-                "success": True,
-                "command": msg["command"],
-                "body": encoded,
-            }
+        # if msg["command"] == "nod_info":
+        #     _log.info("NOD DEBUG REQUEST")
+        #     # extension_manager: ExtensionManager = self.shell.extension_manager
+        #     # extension_manager.loaded.
+        #     nod_info = self.shell.user_ns.get("__NODINFO")
+        #     json_dump = orjson.dumps(nod_info)
+        #     encoded = base64.b64encode(json_dump).decode("utf-8")
+        #     return {
+        #         "type": "response",
+        #         "request_seq": msg["seq"],
+        #         "success": True,
+        #         "command": msg["command"],
+        #         "body": encoded,
+        #     }
         match msg["command"]:
             case "nod_switch":
                 # _log.info("Kernel: Switching Frame to")

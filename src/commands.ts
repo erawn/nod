@@ -118,7 +118,10 @@ export function addCommands(mainMenu: IMainMenu, translator: ITranslator, palett
             }
         },
         execute: args => {
-            writeChange()
+            const frame = nodState.Instance().currentFrame
+            const panel = nodState.Instance().tracker.currentWidget
+            if (frame !== undefined && panel !== null)
+                writeChange(panel, frame)
         },
         isEnabled
     });
@@ -159,7 +162,10 @@ export function addCommands(mainMenu: IMainMenu, translator: ITranslator, palett
                 console.log(result)
                 if (result.button.accept) {
                     if (result.button.label === 'Export and Shut Down') {
-                        writeChange()
+                        const frame = nodState.Instance().currentFrame
+                        const panel = nodState.Instance().tracker.currentWidget
+                        if (frame !== undefined && panel !== null)
+                            writeChange(panel, frame)
                     }
                     exitSession()
                     return commands

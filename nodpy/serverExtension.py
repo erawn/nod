@@ -1,16 +1,17 @@
+from dataclasses import dataclass
 import json
 import logging
 import os
-import shlex
 import subprocess
-import sys
-import time
-from jupyter_server.serverapp import ServerApp
+import textwrap
 from jupyter_server.extension.application import ExtensionApp
+import jupytext
 import orjson
 from traitlets.traitlets import Bool, Unicode
 import base64
-import asyncio
+from dacite import from_dict
+from nodpy.file_helpers import ProgramInfo
+from tornado import web
 
 _log = logging.getLogger(__name__)
 
@@ -20,7 +21,7 @@ _log = logging.getLogger(__name__)
 
 
 import json
-
+from jupytext.formats import long_form_one_format  # type: ignore
 from jupyter_server.base.handlers import APIHandler
 from jupyter_server.utils import url_path_join
 import tornado
@@ -46,33 +47,88 @@ class NodServerRouteHandler(APIHandler):
         )
 
 
-class RestartRouteHandler(APIHandler):
-    # The following decorator should be present on all verb methods (head, get, post,
-    # patch, put, delete, options) to ensure only authorized user can request the
-    # Jupyter server
+@dataclass
+class writeRequest:
+    program_info: ProgramInfo
+    notebookContent: str
+
+
+class WriteFileRouteHandler(APIHandler):
+
+    # @tornado.web.authenticated
+    # def get(self):
+    #     _log.info("Nod Server: Restart Program")
+    #     _log.info(self.settings.get("Nod"))
+    #     nodServer = self.settings.get("Nod")
+    #     if nodServer is not None and hasattr(nodServer, "user_program_process"):
+    #         nodProcess = nodServer.user_program_process
+    #         nodServer = cast(Nod, nodServer)
+    #         if nodProcess is not None:
+    #             nodProcess = cast(subprocess.Popen[bytes], nodProcess)
+    #             # nodProcess.terminate()
+    #         nodServer.runUserProgram(nodServer.cli_cmd)
+    #     self.finish(
+    #         json.dumps(
+    #             {
+    #                 "data": (
+    #                     "Hello, world!"
+    #                     " This is the '/nodpy/hello' endpoint."
+    #                     " Try visiting me in your browser!"
+    #                 ),
+    #             }
+    #         )
+    #     )
+
     @tornado.web.authenticated
-    def get(self):
-        _log.info("Nod Server: Restart Program")
-        _log.info(self.settings.get("Nod"))
-        nodServer = self.settings.get("Nod")
-        if nodServer is not None and hasattr(nodServer, "user_program_process"):
-            nodProcess = nodServer.user_program_process
-            nodServer = cast(Nod, nodServer)
-            if nodProcess is not None:
-                nodProcess = cast(subprocess.Popen[bytes], nodProcess)
-                # nodProcess.terminate()
-            nodServer.runUserProgram(nodServer.cli_cmd)
-        self.finish(
-            json.dumps(
-                {
-                    "data": (
-                        "Hello, world!"
-                        " This is the '/nodpy/hello' endpoint."
-                        " Try visiting me in your browser!"
-                    ),
-                }
+    def post(self):
+        # input_data is a dictionary with a key "name"
+        # Do we need to call body.decode('utf-8') here?
+        body = self.request.body.strip().decode("utf-8")
+        try:
+            _log.info("RECEIVED WRITE REQUEST")
+            json_load = json.loads(body)
+            _log.info(json_load)
+            request = from_dict(writeRequest, json_load)
+            #  notebook: NotebookNode = jupytext.reads(
+            #         "".join(program_info.fileInfo.text_body),
+            #         fmt=long_form_one_format(f"py:{program_info.fmt}"),
+            #     )
+            # nb = jupytext.reads(py, "py")
+            #     py2 = jupytext.writes(nb, "py")
+            #             _log.info(request)
+            _log.info("REQUEST")
+            _log.info(request)
+            decoded_content = base64.b64decode(request.notebookContent).decode("utf-8")
+            _log.info(decoded_content)
+            nb = jupytext.reads(decoded_content, "ipynb")
+            _log.info("NB")
+            _log.info(nb)
+            nb_content_to_write = jupytext.writes(
+                nb, fmt=long_form_one_format(f"py:{request.program_info.fmt}")
             )
-        )
+            _log.info(nb_content_to_write)
+            fileInfo = request.program_info.fileInfo
+            if fileInfo is not None:
+                file_content = (
+                    fileInfo.text_above
+                    + fileInfo.text_header
+                    + textwrap.indent(
+                        nb_content_to_write,
+                        " " * fileInfo.indent,
+                    ).splitlines(True)
+                    + fileInfo.text_below
+                )
+                _log.info(file_content)
+                with open(request.program_info.source_file, "w") as f:
+                    f.writelines(file_content)
+
+        except Exception as e:
+            self.log.debug("Bad JSON: %r", body)
+            self.log.error("Couldn't parse JSON", exc_info=True)
+            raise web.HTTPError(400, "Invalid JSON in body of request") from e
+
+        # data = {"greetings": "Hello {}, enjoy JupyterLab!".format(input_data["name"])}
+        self.finish()
 
 
 class Nod(ExtensionApp):
@@ -92,28 +148,14 @@ class Nod(ExtensionApp):
     #     config=True
     # )
 
-    # # Call this function each time a change happens
-    # def dir_changed_callback(self, dir_list):
-    #     _log.info("DIR CHANGED")
-    #     _log.info(dir_list)
-    def runUserProgram(self, cmd: str):
-        env = os.environ.copy()
-        self.user_program_process = subprocess.Popen(
-            args=cmd,
-            env=env,
-            shell=True,
-            # stdin=subprocess.PIPE, stdout=subprocess.PIPE
-        )
-        # self.user_program_process.wait()
-
     def initialize_handlers(self):
         host_pattern = ".*$"
         base_url = self.serverapp.web_app.settings["base_url"]  # type: ignore
         nod_route_pattern = url_path_join(base_url, "nodpy", "hello")
-        restart_route_pattern = url_path_join(base_url, "nodpy", "restart")
+        write_file_route_pattern = url_path_join(base_url, "nodpy", "write_file")
         handlers = [
             (nod_route_pattern, NodServerRouteHandler),
-            (restart_route_pattern, RestartRouteHandler),
+            (write_file_route_pattern, WriteFileRouteHandler),
         ]
         self.handlers.extend(handlers)
 
@@ -128,7 +170,7 @@ class Nod(ExtensionApp):
         self.cli_cmd = info_decoded
         page_config["cli_cmd"] = self.cli_cmd
         _log.warning(self.cli_cmd)
-        self.runUserProgram(self.cli_cmd)
+        # self.runUserProgram(self.cli_cmd)
 
     # def _load_jupyter_server_extension(self, serverapp):  # type: ignore
     #     """Registers the API handler to receive HTTP requests from the frontend extension.

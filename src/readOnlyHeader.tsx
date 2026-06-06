@@ -7,15 +7,6 @@ export class ReadOnlyHeader extends ReactWidget {
         this.addClass('jp-nod-readOnly-header');
         this.id = 'nod-plugin-status-header';
     }
-
-    // updateHeader(status: pluginStatus) {
-    //     if (status === 'active' || status === 'unset') {
-    //         this.setHidden(true);
-    //     } else {
-    //         this.setHidden(false);
-    //     }
-    // }
-
     render() {
         return (
             <>

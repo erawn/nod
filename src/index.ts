@@ -25,7 +25,7 @@ import { nodState } from './state';
 import { addCommands } from './commands';
 import { addToolbarButtons, disableKernelSwitching } from './buttons';
 import { CodeViewers } from './codeViewers';
-import { getNodInfo, getNodKernel, launchNodKernel, openNotebookWithNodKernel, requestDebug } from './messaging';
+import { requestDebug } from './messaging';
 import { requestAPI } from './request';
 // import { createCallstackSidebar, NodSidebar } from './sidebar';
 import { PageConfig } from '@jupyterlab/coreutils';
@@ -47,7 +47,8 @@ import { ca } from 'zod/v4/locales';
 import { IDebugReplyMsg } from '@jupyterlab/services/lib/kernel/messages';
 import { stat } from 'node:fs';
 import { NodSidebar } from './callstack'
-import { onCurrentNotebookChanged } from './interfaceHelpers';
+import { checkKernelStatus, onCurrentNotebookChanged } from './interfaceHelpers';
+import { getNodKernel, openNotebookWithNodKernel } from './kernelHelpers';
 /**
  * Initialization data for the nod extension.
  */
@@ -97,19 +98,15 @@ const plugin: JupyterFrontEndPlugin<void> = {
     console.log('JupyterLab extension nod is activated!');
     const connection_dir = PageConfig.getOption('nod_connection_dir')
     console.log("connection_dir", connection_dir)
-    nodState.Instance(notebookTracker, app, contentsManager, translator, connection_dir) // initialize singleton with tracker
+    const callStackModel = new CallstackModel({});
+    const callstackSidebar = new NodSidebar({ translator, service: debuggerService, model: callStackModel })
+    const state = nodState.Instance(notebookTracker, app, contentsManager, translator, connection_dir, callstackSidebar) // initialize singleton with tracker
     app.docRegistry.addWidgetExtension('Notebook', new CodeViewers());
     // disableKernelSwitching(sessionContextDialogs, toolbarRegistry)
     addCommands(mainMenu, translator, palette, consoleTracker)
     addToolbarButtons()
 
-    var dialogID = ""
-
-
-
-    const callStackModel = new CallstackModel({});
-    const sidebar = new NodSidebar({ translator, service: debuggerService, model: callStackModel })
-    nodState.Instance().app.shell.add(sidebar, 'left', { type: 'Debugger', rank: 400, });
+    state.app.shell.add(state.callstackSidebar, 'left', { type: 'Debugger', rank: 400, });
 
     notebookTracker.activeCellChanged.connect(() => {
       console.log(Array.from(nodState.Instance().app.serviceManager.kernels.running()))
@@ -135,37 +132,19 @@ const plugin: JupyterFrontEndPlugin<void> = {
     app.serviceManager.kernels.runningChanged.connect((manager, model) => {
       console.log('running changed')
       checkKernelStatus()
-      // console.log(nodKernel)
-
-      if (app.serviceManager.kernels.running()) {
-
-      }
-      // docManager.registry.getKernelPreference
       getNodKernel()
 
     })
     app.started.then(() => {
       console.log('started')
       docManager.closeAll()
-      sidebar.activate()
+      // state.callstackSidebar.activate()
       //TODO close all besides the ones we want to open?
     })
     app.restored.then(() => {
-      // console.log('restored')
-      // (app.shell as LabShell).updateConfig({ hiddenMode: 'display' })
-      // if (app.serviceManager.kernelspecs.specs?.default) {
-      //   app.serviceManager.kernelspecs.specs.default = 'nod'
-      // }
-
-      // const manager = app.serviceManager.kernels
-      // for (const kernel of Array.from(manager.running())) {
-      //   if (kernel.name !== 'nod') {
-      //     manager.shutdown(kernel.id)
-      //   }
-      // }
       checkKernelStatus();
-      (app.shell as LabShell).activateById(sidebar.id);
-      (sidebar.content as AccordionPanel).expand(0)
+      (app.shell as LabShell).activateById(state.callstackSidebar.id);
+      (state.callstackSidebar.content as AccordionPanel).expand(0)
     })
 
     nodState.Instance().statusChanged.connect((state, status) => {
@@ -206,32 +185,13 @@ const plugin: JupyterFrontEndPlugin<void> = {
       }
     })
 
-    // notebookTracker.currentChanged.connect((tracker, notebookPanel) => {
-    //   console.log("CURRENT CHANGED")
-    //   const inst = nodState.Instance()
-    //   if (notebookPanel) {
-    //     console.log("kernel statuses", Array.from(app.serviceManager.kernels.running()).map(kernel => console.log(kernel.execution_state)))
-    //     notebookPanel.sessionContext.kernelPreference = { autoStartDefault: false, id: nodState.Instance().nodKernelId, shutdownOnDispose: false };
-
-
-    //   }
-
-
-
-    // })
-
     nodState.Instance().currentFrameChanged.connect((state, frameNum) => {
       callStackModel.frame = callStackModel.frames[frameNum]
       const notebookFile = nodState.Instance().currentFrame?.fileInfo?.notebook_file
       notebookFile ? openNotebookWithNodKernel(notebookFile, docManager) : {}
       console.log("Switching to frame ", frameNum)
-      const future = requestDebug("nod_switch", frameNum
-      )
-      if (future !== null) {
-        future.onReply = async msg => {
-          console.log("DEBUG RESPONSE", msg)
-        }
-      }
+      requestDebug("nod_switch", frameNum)
+
     })
     nodState.Instance().lockChanged.connect((state, id) => {
       const path = notebookTracker.find(panel => panel.id === id)?.context.path
@@ -251,22 +211,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
       }
     })
 
-    function kernelWaitDialog() {
-      if (nodState.Instance().status == 'active') {
-        return
-      }
-      if (dialogID === "") {
-        const dialog = new Dialog({
-          title: "Waiting for Nod Kernel...",
-          body: "Call notebook() from a Python file in the same directory",
-          buttons: [Dialog.okButton({ label: "Refresh" })]
-        });
-        dialogID = dialog.id
-        dialog.launch().then(() => {
-          checkKernelStatus(false)
-        });
-      }
-    }
+
     // async function startNodSession() {
     //   const app = nodState.Instance().app
     //   // await app.serviceManager.kernelspecs.refreshSpecs()
@@ -298,37 +243,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
     //   return nodState.Instance().nodKernelId
 
     // }
-    function checkKernelStatus(recurse: boolean = true) {
-      console.log("Check Kernel Status")
 
-      const manager = nodState.Instance().app.serviceManager.kernels
-      manager.refreshRunning().then(() => {
-        getNodKernel().then((id) => {
-          if (id === undefined) {
-            console.log("setting to inactive")
-            nodState.Instance().status = 'inactive'
-            if (recurse) {
-              kernelWaitDialog()
-            }
-            launchNodKernel().then(id => {
-              if (id === undefined) {
-                checkKernelStatus()
-              }
-            })
-          } else {
-            console.log("REFRESHING NOD STATE Found Nod Kernel")
-            const idSearch = Dialog.tracker.find(dialog => dialog.id === dialogID)
-            if (idSearch !== undefined) {
-              idSearch.resolve()
-            }
-            dialogID = ""
-            // docManager.closeAll()
-            sidebar.activate()
-            getNodInfo()
-          }
-        })
-      })
-    }
 
 
 

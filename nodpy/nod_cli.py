@@ -1,6 +1,8 @@
 import base64
 import logging
 import os
+from pathlib import Path
+import pathlib
 import shlex
 import subprocess
 from typing import List, Optional
@@ -26,9 +28,10 @@ def callback():
 @app.callback(invoke_without_command=True)
 def main(
     ctx: typer.Context,
+    cwd: Annotated[Path, typer.Option(resolve_path=True)] = pathlib.Path.cwd(),
     commands: Annotated[List[str], typer.Argument()] = [],
 ) -> None:
-    pm = PathManager(clear=False)
+    pm = PathManager(clear=True)
     cmd = (
         "jupyter lab"
         + " "
@@ -72,7 +75,10 @@ def main(
         + "--Nod.active=True"
         + " "
         + "--Nod.connection_dir="
-        + os.path.relpath(pm.connection_dir, os.getcwd())
+        + os.path.relpath(pm.connection_dir, cwd)
+        + " "
+        + "--NodProvisioner.nod_cwd="
+        + str(cwd.absolute().resolve())
         + " "
         # + "--Nod.info="
         # + base64.b64encode(jsonInfo).decode("utf-8")
