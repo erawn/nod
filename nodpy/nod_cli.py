@@ -95,9 +95,12 @@ def main(
     _log.info("Notebook Args: " + str(args))
     if not DRY_RUN:
         nb_env = os.environ.copy()
-        # nb_env["JUPYTER_RUNTIME_DIR"] = pm.connection_dir
+        nb_env["NOD_RUNTIME_DIR"] = pm.connection_dir
         notebookProcess = subprocess.Popen(
-            args, env=nb_env, stdin=subprocess.PIPE, stdout=subprocess.PIPE
+            args,
+            env=nb_env,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
         )
         notebookProcess.wait()
         # app.nod_notebook_process = notebookProcess  # type: ignore

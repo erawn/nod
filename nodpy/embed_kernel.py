@@ -120,61 +120,62 @@ class nodKernel(IPythonKernel):
 
         # self.shell.ask_exit = nod_exit
 
-    def close(self):
-        print("CLOSE")
-        _log.info("CLOSE")
-        super().close(self)
-        print("CLOSE")
-        _log.info("CLOSE")
+    # def close(self):
+    #     print("CLOSE")
+    #     _log.info("CLOSE")
+    #     super().close(self)
+    #     print("CLOSE")
+    #     _log.info("CLOSE")
 
-    def do_shutdown(self, restart):
-        _log.info("NODKERNEL CALL SHUTDOWN")
-        _log.info(restart)
-        reset(self.shell)
-        return dict(status="ok", restart=False)
+    # def do_shutdown(self, restart):
+    #     _log.info("NODKERNEL CALL SHUTDOWN")
+    #     _log.info(restart)
+    #     # reset(self.shell)
+    #     return dict(status="ok", restart=False)
 
-    def _send_interrupt_children(self):
-        _log.info("KERNEL INTERRUPT")
-        if os.name == "nt":
-            self.log.error("Interrupt message not supported on Windows")
-        else:
-            pid = os.getpid()
-            pgid = os.getpgid(pid)
-            # Prefer process-group over process
-            # but only if the kernel is the leader of the process group
-            if pgid and pgid == pid and hasattr(os, "killpg"):
-                try:
-                    _log.info("KERNEL KILLPG")
-                    os.killpg(pgid, SIGINT)
-                except OSError:
-                    _log.info("KERNEL KILLP")
-                    os.kill(pid, SIGINT)
-                    raise
-            else:
-                os.kill(pid, SIGINT)
+    # def _send_interrupt_children(self):
+    #     _log.info("KERNEL INTERRUPT")
+    #     if os.name == "nt":
+    #         self.log.error("Interrupt message not supported on Windows")
+    #     else:
+    #         pid = os.getpid()
+    #         pgid = os.getpgid(pid)
+    #         # Prefer process-group over process
+    #         # but only if the kernel is the leader of the process group
+    #         if pgid and pgid == pid and hasattr(os, "killpg"):
+    #             try:
+    #                 _log.info("KERNEL KILLPG")
+    #                 os.killpg(pgid, SIGINT)
+    #             except OSError:
+    #                 _log.info("KERNEL KILLP")
+    #                 os.kill(pid, SIGINT)
+    #                 raise
+    #         else:
+    #             os.kill(pid, SIGINT)
 
     async def interrupt_request(self, stream, ident, parent):
 
         _log.info("NODKERNEL_INTERRUPT")
-        """Handle an interrupt request."""
-        if not self.session:
-            return
-        content: dict[str, typing.Any] = {"status": "ok"}
-        try:
-            self._send_interrupt_children()
-            self.processes
-        except OSError as err:
-            import traceback
+        await super().interrupt_request(stream, ident, parent)
+        # """Handle an interrupt request."""
+        # if not self.session:
+        #     return
+        # content: dict[str, typing.Any] = {"status": "ok"}
+        # try:
+        #     self._send_interrupt_children()
+        #     self.processes
+        # except OSError as err:
+        #     import traceback
 
-            content = {
-                "status": "error",
-                "traceback": traceback.format_stack(),
-                "ename": str(type(err).__name__),
-                "evalue": str(err),
-            }
+        #     content = {
+        #         "status": "error",
+        #         "traceback": traceback.format_stack(),
+        #         "ename": str(type(err).__name__),
+        #         "evalue": str(err),
+        #     }
 
-        self.session.send(stream, "interrupt_reply", content, parent, ident=ident)
-        return
+        # self.session.send(stream, "interrupt_reply", content, parent, ident=ident)
+        # return
 
     async def do_debug_request(self, msg):
         # if msg["command"] == "nod_info":
@@ -222,38 +223,38 @@ class nodKernel(IPythonKernel):
 
         return await super().do_debug_request(msg)
 
-    async def shutdown_request(self, stream, ident, parent):
-        _log.info("NODKERNEL_SHUTDOWN")
-        """Handle a shutdown request."""
-        if not self.session:
-            return
-        content = self.do_shutdown(parent["content"]["restart"])
-        if inspect.isawaitable(content):
-            content = await content
-        # else:
-        #     infos.warn(
-        #         _AWAITABLE_MESSAGE.format(
-        #             func_name="do_shutdown", target=self.do_shutdown
-        #         ),
-        #         PendingDeprecationinfo,
-        #         stacklevel=1,
-        #     )
-        self.session.send(stream, "shutdown_reply", content, parent, ident=ident)
-        # same content, but different msg_id for broadcasting on IOPub
-        self._shutdown_message = self.session.msg("shutdown_reply", content, parent)
+    # async def shutdown_request(self, stream, ident, parent):
+    #     _log.info("NODKERNEL_SHUTDOWN")
+    #     """Handle a shutdown request."""
+    #     if not self.session:
+    #         return
+    #     content = self.do_shutdown(parent["content"]["restart"])
+    #     if inspect.isawaitable(content):
+    #         content = await content
+    #     # else:
+    #     #     infos.warn(
+    #     #         _AWAITABLE_MESSAGE.format(
+    #     #             func_name="do_shutdown", target=self.do_shutdown
+    #     #         ),
+    #     #         PendingDeprecationinfo,
+    #     #         stacklevel=1,
+    #     #     )
+    #     self.session.send(stream, "shutdown_reply", content, parent, ident=ident)
+    #     # same content, but different msg_id for broadcasting on IOPub
+    #     self._shutdown_message = self.session.msg("shutdown_reply", content, parent)
 
-        # await self._at_shutdown()
+    #     # await self._at_shutdown()
 
-        # self.log.debug("Stopping control ioloop")
-        # if self.control_stream:
-        #     control_io_loop = self.control_stream.io_loop
-        #     control_io_loop.add_callback(control_io_loop.stop)
+    #     # self.log.debug("Stopping control ioloop")
+    #     # if self.control_stream:
+    #     #     control_io_loop = self.control_stream.io_loop
+    #     #     control_io_loop.add_callback(control_io_loop.stop)
 
-        # self.log.debug("Stopping shell ioloop")
-        # self.io_loop.add_callback(self.io_loop.stop)
-        # if self.shell_stream and self.shell_stream.io_loop != self.io_loop:
-        #     shell_io_loop = self.shell_stream.io_loop
-        #     shell_io_loop.add_callback(shell_io_loop.stop)
+    #     # self.log.debug("Stopping shell ioloop")
+    #     # self.io_loop.add_callback(self.io_loop.stop)
+    #     # if self.shell_stream and self.shell_stream.io_loop != self.io_loop:
+    #     #     shell_io_loop = self.shell_stream.io_loop
+    #     #     shell_io_loop.add_callback(shell_io_loop.stop)
 
 
 def embed_kernel(module=None, local_ns=None, **kwargs):
@@ -290,7 +291,6 @@ def embed_kernel(module=None, local_ns=None, **kwargs):
         main = app.kernel.shell._orig_sys_modules_main_mod
         if main is not None:
             sys.modules[app.kernel.shell._orig_sys_modules_main_name] = main
-    app.abs_connection_file
     # load the calling scope if not given
     caller_module, caller_locals = extract_module_locals(1)
     if module is None:
@@ -302,9 +302,4 @@ def embed_kernel(module=None, local_ns=None, **kwargs):
     assert isinstance(local_ns, dict)
     app.kernel.user_ns = local_ns
     app.shell.set_completer_frame()  # type: ignore[union-attr]
-    # print("Starting IPKernel with NS:")
-    # print(local_ns)
-    # os.environ["NOD_IPYTHON_CONNECTION_FILE"] = "test"
-    # print("setting connection file:", app.connection_file)
-    # _log.info("EMBED KERNEL")
     return app

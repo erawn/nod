@@ -37,12 +37,23 @@ function addCodeViewers(panel: NotebookPanel) {
         const func = makeCodeViewer(panel, currentFrame, NOD_FUNC_CLASS);
         const footer = makeCodeViewer(panel, currentFrame, NOD_FOOTER_CLASS);
         console.log("is panel revealed?", panel.isRevealed)
+
         if (parentNode) {
-            Widget.attach(header, parentNode, innerPanel)
-            Widget.attach(func, parentNode, innerPanel)
-            Widget.attach(footer, parentNode)
+            if (panel.isAttached) {
+                Widget.attach(header, parentNode, innerPanel)
+                Widget.attach(func, parentNode, innerPanel)
+                Widget.attach(footer, parentNode)
+            } else {
+                panel.revealed.then(() => {
+                    Widget.attach(header, parentNode, innerPanel)
+                    Widget.attach(func, parentNode, innerPanel)
+                    Widget.attach(footer, parentNode)
+                })
+            }
         }
+        return [header, footer, func]
     }
+    return [null, null, null]
 }
 export class CodeViewers implements DocumentRegistry.IWidgetExtension<
     NotebookPanel,
@@ -55,64 +66,25 @@ export class CodeViewers implements DocumentRegistry.IWidgetExtension<
         panel: NotebookPanel,
         context: DocumentRegistry.IContext<INotebookModel>
     ): IDisposable {
+        var header: null | CodeEditorWrapper = null
+        var footer: null | CodeEditorWrapper = null
+        var func: null | CodeEditorWrapper = null
         console.log("panel created", panel.context.path)
         if (nodState.Instance().status !== 'active') {
             nodState.Instance().statusChanged.connect((state, status) => {
                 if (status === 'active') {
-                    if (panel.isAttached) {
-                        addCodeViewers(panel)
-                    } else {
-                        panel.revealed.then(() => { addCodeViewers(panel) })
-                    }
+                    [header, footer, func] = addCodeViewers(panel)
                 }
             }
             )
         } else {
-            if (panel.isAttached) {
-                addCodeViewers(panel)
-            } else {
-                panel.revealed.then(() => { addCodeViewers(panel) })
-            }
+            [header, footer, func] = addCodeViewers(panel)
         }
-
-        // if (panel.isAttached) {
-        //     addCodeViewers(panel)
-        // } else {
-        //     panel.revealed.then(() => { addCodeViewers(panel) })
-        // }
         return new DisposableDelegate(() => {
-            // header.dispose()
-            // footer.dispose()
-            // func.dispose()
+            header?.dispose()
+            footer?.dispose()
+            func?.dispose()
         });
-
-        // if (panel.isRevealed) {
-        //     console.log("panel ISrevealed:", panel.context.path)
-        //     if (nodState.Instance().isNodFile(panel)) {
-        //         console.log("IS Main File!")
-        //         addCodeViewers(panel)
-        //     } else {
-        //         console.log("NOT Main File!")
-        //     }
-        // } else {
-        //     panel.revealed.then(() => {
-        //         console.log("panel revealed:", panel.context.path)
-        //         if (nodState.Instance().isNodFile(panel)) {
-        //             console.log("IS Main File!")
-        //             const innerPanel = panel.node.getElementsByClassName('jp-WindowedPanel-inner')[0] as HTMLElement;
-        //             const parentNode = innerPanel.parentElement
-        //             if (parentNode) {
-        //                 Widget.attach(header, parentNode, innerPanel)
-        //                 Widget.attach(func, parentNode, innerPanel)
-        //                 Widget.attach(footer, parentNode)
-        //             }
-        //         } else {
-        //             console.log("NOT Main File!")
-        //         }
-        //     })
-        // }
-
-
     }
 }
 export function makeCodeViewer(panel: NotebookPanel, currentFrame: Required<NonNullable<nodState["currentFrame"]>>, className: 'jp-nod-Footer' | 'jp-nod-Header' | 'jp-nod-Function') {

@@ -125,62 +125,62 @@ export function addCommands(mainMenu: IMainMenu, translator: ITranslator, palett
         },
         isEnabled
     });
-    commands.addCommand(nodCommands.exitNotebook, {
-        label: trans.__('Exit Nod Session'),
-        describedBy: {
-            args: {
-                type: 'object',
-                properties: {
-                    activate: {
-                        type: 'boolean',
-                        description: trans.__('Exit Nod Session')
-                    }
-                }
-            }
-        },
-        execute: args => {
-            console.log("dialog")
-            return showDialog({
-                title: trans.__('Shut Down Nod Session?'),
-                body: trans.__(
-                    'Are you sure you want to close the Nod Session?'
-                ),
-                buttons: [
-                    Dialog.cancelButton({
-                        ariaLabel: trans.__('Cancel console Shut Down'),
-                    }),
-                    Dialog.warnButton({
-                        ariaLabel: trans.__('Exit Without Saving'),
-                        label: 'Shut Down Without Saving'
-                    }),
-                    Dialog.okButton({
-                        ariaLabel: trans.__('Export and Shut Down'),
-                        label: 'Export and Shut Down'
-                    })
-                ]
-            }).then(result => {
-                console.log(result)
-                if (result.button.accept) {
-                    if (result.button.label === 'Export and Shut Down') {
-                        const frame = nodState.Instance().currentFrame
-                        const panel = nodState.Instance().tracker.currentWidget
-                        if (frame !== undefined && panel !== null)
-                            writeChange(panel, frame)
-                    }
-                    exitSession()
-                    return commands
-                        .execute('console:shutdown', { activate: false })
-                        .then(() => {
-                            nodState.Instance().tracker.currentWidget?.dispose()
-                            return true;
-                        });
-                } else {
-                    return false;
-                }
-            });
-        },
-        isEnabled
-    });
+    // commands.addCommand(nodCommands.exitNotebook, {
+    //     label: trans.__('Exit Nod Session'),
+    //     describedBy: {
+    //         args: {
+    //             type: 'object',
+    //             properties: {
+    //                 activate: {
+    //                     type: 'boolean',
+    //                     description: trans.__('Exit Nod Session')
+    //                 }
+    //             }
+    //         }
+    //     },
+    //     execute: args => {
+    //         console.log("dialog")
+    //         return showDialog({
+    //             title: trans.__('Shut Down Nod Session?'),
+    //             body: trans.__(
+    //                 'Are you sure you want to close the Nod Session?'
+    //             ),
+    //             buttons: [
+    //                 Dialog.cancelButton({
+    //                     ariaLabel: trans.__('Cancel console Shut Down'),
+    //                 }),
+    //                 Dialog.warnButton({
+    //                     ariaLabel: trans.__('Exit Without Saving'),
+    //                     label: 'Shut Down Without Saving'
+    //                 }),
+    //                 Dialog.okButton({
+    //                     ariaLabel: trans.__('Export and Shut Down'),
+    //                     label: 'Export and Shut Down'
+    //                 })
+    //             ]
+    //         }).then(result => {
+    //             console.log(result)
+    //             if (result.button.accept) {
+    //                 if (result.button.label === 'Export and Shut Down') {
+    //                     const frame = nodState.Instance().currentFrame
+    //                     const panel = nodState.Instance().tracker.currentWidget
+    //                     if (frame !== undefined && panel !== null)
+    //                         writeChange(panel, frame)
+    //                 }
+    //                 exitSession()
+    //                 return commands
+    //                     .execute('console:shutdown', { activate: false })
+    //                     .then(() => {
+    //                         nodState.Instance().tracker.currentWidget?.dispose()
+    //                         return true;
+    //                     });
+    //             } else {
+    //                 return false;
+    //             }
+    //         });
+    //     },
+    //     isEnabled
+    // });
     commands.addCommand(nodCommands.restart, {
         label: trans.__('Restart Kernel'),
         describedBy: {

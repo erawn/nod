@@ -3,7 +3,7 @@ import {
     INotebookTracker,
     NotebookPanel,
 } from '@jupyterlab/notebook';
-import { JupyterFrontEnd } from "@jupyterlab/application";
+import { JupyterFrontEnd, LabShell } from "@jupyterlab/application";
 import {
     Contents,
 } from '@jupyterlab/services'
@@ -13,6 +13,8 @@ import { Signal } from '@lumino/signaling';
 import { ReadOnlyHeader } from "./readOnlyHeader";
 import { MainAreaWidget } from "@jupyterlab/apputils";
 import { NodSidebar } from "./callstack";
+import { ISettingRegistry } from "@jupyterlab/settingregistry";
+import { IDocumentManager } from "@jupyterlab/docmanager";
 export type pluginStatus = 'active' | 'inactive' | 'unset';
 export class nodState {
 
@@ -20,7 +22,7 @@ export class nodState {
     private static _instance: nodState
 
 
-    private constructor(tracker: INotebookTracker, app: JupyterFrontEnd<JupyterFrontEnd.IShell, "desktop" | "mobile">, contents: Contents.IManager, translator: ITranslator, connection_dir: string, callstackSidebar: NodSidebar) {
+    private constructor(tracker: INotebookTracker, app: JupyterFrontEnd<JupyterFrontEnd.IShell, "desktop" | "mobile">, contents: Contents.IManager, translator: ITranslator, connection_dir: string, callstackSidebar: NodSidebar, settingRegistry: ISettingRegistry, docManager: IDocumentManager) {
         this._notebookTracker = tracker
         this._app = app
         this._contentsManager = contents
@@ -29,11 +31,13 @@ export class nodState {
         this._readOnlyHeader = new ReadOnlyHeader()
         this._readOnlyHeader.setHidden(true)
         this.callstackSidebar = callstackSidebar
+        this.settingRegistry = settingRegistry
+        this.docManager = docManager
     }
 
-    public static Instance(tracker?: INotebookTracker, app?: JupyterFrontEnd<JupyterFrontEnd.IShell, "desktop" | "mobile">, contents?: Contents.IManager, translator?: ITranslator, connection_dir?: string, callstackSidebar?: NodSidebar): nodState {
-        if (tracker && app && contents && translator && connection_dir && callstackSidebar) {
-            this._instance = new this(tracker, app, contents, translator, connection_dir, callstackSidebar)
+    public static Instance(tracker?: INotebookTracker, app?: JupyterFrontEnd<JupyterFrontEnd.IShell, "desktop" | "mobile">, contents?: Contents.IManager, translator?: ITranslator, connection_dir?: string, callstackSidebar?: NodSidebar, settingRegistry?: ISettingRegistry, docManager?: IDocumentManager): nodState {
+        if (tracker && app && contents && translator && connection_dir && callstackSidebar && settingRegistry && docManager) {
+            this._instance = new this(tracker, app, contents, translator, connection_dir, callstackSidebar, settingRegistry, docManager)
         }
         return this._instance;
     }
@@ -47,11 +51,13 @@ export class nodState {
     private _connection_dir: string
     private _statusChanged = new Signal<this, pluginStatus>(this);
     private _currentFrameChanged = new Signal<this, number>(this);
+    private _pythonInfoChanged = new Signal<this, nodSchema | null>(this);
     private _lockChanged = new Signal<this, string>(this);
     private _nodKernelId: string = ""
     private _lockNotebookId: string = ""
     private _readOnlyHeader: ReadOnlyHeader
-
+    docManager: IDocumentManager
+    settingRegistry: ISettingRegistry
     callstackSidebar: NodSidebar
     dialogID = ""
 
@@ -96,6 +102,9 @@ export class nodState {
     }
     get lockChanged(): Signal<this, string> {
         return this._lockChanged
+    }
+    get pythonInfoChanged(): Signal<this, nodSchema | null> {
+        return this._pythonInfoChanged
     }
     get readOnlyHeader(): ReadOnlyHeader {
         return this._readOnlyHeader
@@ -154,7 +163,7 @@ export class nodState {
     }
     set pythonInfo(pythonInfo: nodSchema) {
         this._pythonInfo = pythonInfo
-
+        this._pythonInfoChanged.emit(pythonInfo)
     }
     get pythonInfo(): nodSchema | null {
         return this._pythonInfo
@@ -173,6 +182,10 @@ export class nodState {
     }
     get connection_dir(): string {
         return this._connection_dir
+    }
+
+    public activateSidebars() {
+        (this._app.shell as LabShell).activateById(this.callstackSidebar.id);
     }
 
 }

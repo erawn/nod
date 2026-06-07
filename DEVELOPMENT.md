@@ -7,7 +7,7 @@ Session not found: session_id='2e3651ad-e58a-41ec-8b90-ce370cf3d153'
 
 
 NOTES:
-
+- old kernel 404's --- WORKSPACE FILE. HOW to fix?
 - just use Nod log to deep copy things, have no args capture all, args capture variables, and have a not=[] field to capture all but some. Restart shouldn't do anything different because it can't reset the whole stackframe, but you can just click back into a specific frame to reset the state. 
     - this also gets you out of having to do the full-adult mode, because users can just nodlog the things they want to checkpoint and leave out a huge dataset which can't be copied but can be modified.
 -how to do linked execution? when you select one nod.log, maybe the rest of the same nodlogs also light up with a button to do linked execution 
@@ -25,6 +25,7 @@ NODCONFIG
 
 
 TODO 
+- layoutrestorer, restorablepool
 - Send back to loading screen on restart 
 - paste CWD of JupyterLab for --existing?
     - how to get CWD string to subprocess? Pass as env variable? yes this should work

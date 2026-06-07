@@ -253,6 +253,8 @@ def notebook(
     except NameError:
         pass
 
+    runtime_dir = os.environ.get("NOD_RUNTIME_DIR", "")
+    _log.info(f"NOD_RUNTIME_DIR: {runtime_dir}")
     stack = inspect.stack()
 
     def find_notebook_func(frame: inspect.FrameInfo):
@@ -280,8 +282,8 @@ def notebook(
         for frame in stack[notebook_call_index:]
         if frozenPattern.match(frame.filename) is None
     ]
-    _log.info(stack[notebook_call_index:])
-    _log.info(relevant_stack_frames)
+    # _log.info(stack[notebook_call_index:])
+    # _log.info(relevant_stack_frames)
 
     ## FILE ORGANIZATION
     pm = PathManager()

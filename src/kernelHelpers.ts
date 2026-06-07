@@ -1,6 +1,8 @@
 import { IDocumentManager } from "@jupyterlab/docmanager";
 import { nodState } from "./state";
 import { nodSchema } from "./types";
+import { Dialog, ISessionContext, showDialog } from "@jupyterlab/apputils";
+import { checkKernelStatus, kernelWaitDialog } from "./interfaceHelpers";
 
 export async function openNotebookWithNodKernel(notebookFile: string, docManager: IDocumentManager) {
     const state = nodState.Instance()
@@ -22,7 +24,7 @@ export async function openNotebookWithNodKernel(notebookFile: string, docManager
 export async function getNodKernel(): Promise<string | undefined> {
     const app = nodState.Instance().app
     const kernelManager = app.serviceManager.kernels
-    console.log(Array.from(kernelManager.running()))
+    console.log("Current Nod Kernels ", Array.from(kernelManager.running()))
     const oldKernelId = nodState.Instance().nodKernelId
     const oldNodKernel = Array.from(kernelManager.running())
         .find(val =>
@@ -31,6 +33,7 @@ export async function getNodKernel(): Promise<string | undefined> {
             val.execution_state &&
             (['idle', 'busy', 'starting', 'connected', 'connecting', 'restarting'].includes(val.execution_state)))
     if (oldNodKernel) {
+        console.log("found existing kernel with id and status", oldKernelId, oldNodKernel.execution_state)
         return nodState.Instance().nodKernelId
     } else {
         const existingNodKernel = Array.from(kernelManager.running())
@@ -49,6 +52,7 @@ export async function getNodKernel(): Promise<string | undefined> {
 
 var launching: boolean = false
 export async function launchNodKernel() {
+    console.log("launch nod kernel enter")
     const app = nodState.Instance().app
     for (const name in app.serviceManager.kernelspecs.specs?.kernelspecs) {
         const spec = app.serviceManager.kernelspecs.specs?.kernelspecs[name]!;
@@ -87,4 +91,190 @@ export function getNodInfo() {
                 nodState.Instance().status = 'active'
             }
         })
+}
+
+/**
+ * Restart the session.
+ *
+ * @returns A promise that resolves with whether the kernel has restarted.
+ *
+ * #### Notes
+ * If there is a running kernel, present a dialog.
+ * If there is no kernel, we start a kernel with the last run
+ * kernel name and resolves with `true`.
+ */
+export async function default_restart(
+    sessionContext: ISessionContext,
+    restartOptions?: ISessionContext.IRestartOptions
+): Promise<boolean> {
+    const trans = nodState.Instance().translator.load('jupyterlab');
+
+    await sessionContext.initialize();
+    if (sessionContext.isDisposed) {
+        throw new Error('session already disposed');
+    }
+    const kernel = sessionContext.session?.kernel;
+    if (!kernel && sessionContext.prevKernelName) {
+        await sessionContext.changeKernel({
+            name: sessionContext.prevKernelName
+        });
+        return true;
+    }
+    // Bail if there is no previous kernel to start.
+    if (!kernel) {
+        throw new Error('No kernel to restart');
+    }
+
+    // Skip the dialog and restart the kernel
+    const kernelPluginId = '@jupyterlab/apputils-extension:sessionDialogs';
+    const skipKernelRestartDialog =
+        sessionContext.kernelPreference?.skipKernelRestartDialog ?? false;
+    const skipKernelRestartDialogSetting = (
+        await nodState.Instance().settingRegistry?.get(
+            kernelPluginId,
+            'skipKernelRestartDialog'
+        )
+    )?.composite as boolean;
+    if (skipKernelRestartDialogSetting || skipKernelRestartDialog) {
+        await sessionContext.restartKernel();
+        return true;
+    }
+
+    const restartBtn = Dialog.warnButton({
+        label: trans.__('Restart'),
+        ariaLabel: trans.__('Confirm Kernel Restart')
+    });
+    const result = await showDialog({
+        title: trans.__('Restart Kernel?'),
+        body: trans.__(
+            'Do you want to restart the kernel of %1? All variables will be lost.',
+            sessionContext.name
+        ),
+        buttons: [
+            Dialog.cancelButton({ ariaLabel: trans.__('Cancel Kernel Restart') }),
+            restartBtn
+        ],
+        checkbox: {
+            label: trans.__('Do not ask me again.'),
+            caption: trans.__(
+                'If checked, the kernel will restart without confirmation prompt in the future; you can change this back in the settings.'
+            )
+        }
+    });
+
+    if (kernel.isDisposed) {
+        return false;
+    }
+    if (result.button.accept) {
+        if (typeof result.isChecked === 'boolean' && result.isChecked == true) {
+            sessionContext.kernelPreference = {
+                ...sessionContext.kernelPreference,
+                skipKernelRestartDialog: true
+            };
+        }
+        await restartOptions?.onBeforeRestart();
+        await sessionContext.restartKernel();
+        return true;
+    }
+    return false;
+}
+//  console.log("RESTARTING")
+//     notebookTracker.forEach((panel) => {
+//       const frame = state.getFrameFromPath(panel.context.path)
+//       if (frame !== undefined) {
+//         docManager.closeFile(panel.context.path)
+//       }
+//     })
+//     nodState.Instance().status = 'inactive'
+//     kernelWaitDialog(false)
+//     function kernelChangedCheck(context: ISessionContext, changed: IChangedArgs<IKernelConnection | null, IKernelConnection | null, "kernel">) {
+//       if (changed.newValue !== null) {
+//         console.log("NEW KERNEL VALUE POST RESTART")
+//         checkKernelStatus()
+//       }
+//       context.kernelChanged.disconnect(kernelChangedCheck, state)
+//     }
+//     context.kernelChanged.connect(kernelChangedCheck, state)
+export async function restart(
+    sessionContext: ISessionContext,
+    restartOptions?: ISessionContext.IRestartOptions
+): Promise<boolean> {
+    const trans = nodState.Instance().translator.load('jupyterlab');
+
+    await sessionContext.initialize();
+    if (sessionContext.isDisposed) {
+        throw new Error('session already disposed');
+    }
+    console.log("session context", sessionContext)
+    const kernel = sessionContext.session?.kernel;
+    console.log("NOD RESTART", kernel?.name)
+
+    if (kernel?.name !== 'nod') {
+        default_restart(sessionContext, restartOptions)
+    }
+
+    if (!kernel && sessionContext.prevKernelName) {
+        console.log("no kernel, opening old")
+        await sessionContext.changeKernel({
+            name: sessionContext.prevKernelName
+        });
+        return true;
+    }
+    // Bail if there is no previous kernel to start.
+    if (!kernel) {
+        throw new Error('No kernel to restart');
+    }
+    nodState.Instance().status = 'inactive'
+
+    const nodNoSave = Dialog.warnButton({
+        label: trans.__('Restart without Saving'),
+        ariaLabel: trans.__('Confirm Nod Restart without Saving'),
+        accept: true, //TODO
+    })
+    const restartBtn = Dialog.createButton({
+        label: trans.__('Restart'),
+        ariaLabel: trans.__('Confirm Nod Restart')
+    })
+    const result = await showDialog({
+        title: trans.__('Restart Nod Session?'),
+        body: trans.__(
+            'Do you want to restart the Nod Session of %1? Modifications will be copied back to Source Files.',
+            sessionContext.name
+        ),
+        buttons: [
+            Dialog.cancelButton({ ariaLabel: trans.__('Cancel Nod Restart') }),
+            nodNoSave,
+            restartBtn
+        ],
+        checkbox: {
+            label: trans.__('Do not ask me again.'),
+            caption: trans.__(
+                'If checked, the kernel will restart without confirmation prompt in the future; you can change this back in the settings.'
+            )
+        }
+    })
+    if (kernel.isDisposed) {
+        return false;
+    }
+    if (result.button.accept) {
+        if (typeof result.isChecked === 'boolean' && result.isChecked == true) {
+            sessionContext.kernelPreference = {
+                ...sessionContext.kernelPreference,
+                skipKernelRestartDialog: true
+            };
+        }
+        console.log(sessionContext)
+        const state = nodState.Instance()
+        await nodState.Instance().app.commands.execute('docmanager:save-all')
+        kernelWaitDialog(false)
+        await restartOptions?.onBeforeRestart();
+        await sessionContext.restartKernel();
+        await state.docManager.closeAll()
+        if (kernel.name === "nod") {
+            console.log("POST RESTART")
+            checkKernelStatus()
+        }
+        return true;
+    }
+    return false;
 }

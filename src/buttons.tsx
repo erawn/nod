@@ -37,7 +37,7 @@ export class NodExportButton
             panel.toolbar.insertItem(9, 'export', button);
         }
         return new DisposableDelegate(() => {
-            button.dispose
+            button.dispose()
         });
     }
 }
@@ -63,7 +63,7 @@ export class NodQuitButton
             panel.toolbar.insertItem(9, 'exit', button);
         }
         return new DisposableDelegate(() => {
-            button.dispose
+            button.dispose()
         });
     }
 }

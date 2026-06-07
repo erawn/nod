@@ -7,10 +7,11 @@ import {
 } from '@jupyterlab/notebook';
 import { getNodInfo, getNodKernel, launchNodKernel } from "./kernelHelpers";
 
-function kernelWaitDialog() {
+export function kernelWaitDialog(checkKernel: boolean = true) {
     if (nodState.Instance().status == 'active') {
         return
     }
+    console.log("dialogID", nodState.Instance().dialogID)
     if (nodState.Instance().dialogID === "") {
         const dialog = new Dialog({
             title: "Waiting for Nod Kernel...",
@@ -19,7 +20,9 @@ function kernelWaitDialog() {
         });
         nodState.Instance().dialogID = dialog.id
         dialog.launch().then(() => {
-            checkKernelStatus(false)
+            console.log("DIALOG LAUNCH")
+            if (checkKernel)
+                checkKernelStatus(false)
         });
     }
 }
@@ -47,8 +50,7 @@ export function checkKernelStatus(recurse: boolean = true) {
                     idSearch.resolve()
                 }
                 nodState.Instance().dialogID = ""
-                // docManager.closeAll()
-                nodState.Instance().activate()
+                nodState.Instance().activateSidebars()
                 getNodInfo()
             }
         })

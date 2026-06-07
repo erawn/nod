@@ -169,7 +169,7 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
 
     async def terminate(self, restart=False):
         """Terminate the provisioner and optionally restart."""
-        _log.info("PROVISIONER TERM" + str(restart))
+        _log.info("PROVISIONER TERM, restart: " + str(restart))
         if self.nod_info.python_process:
             if hasattr(signal, "SIGTERM"):  # type: ignore[unreachable]
                 # If available, give preference to signalling the process group over `terminate()`.

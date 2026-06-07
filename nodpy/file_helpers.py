@@ -199,43 +199,49 @@ class PathManager:
         if not os.path.exists(self.archiveDir):
             os.makedirs(self.archiveDir, exist_ok=True)
 
-        self.notebook_checkpoints = os.path.join(self.hiddenDir, ".ipynb_checkpoints")
-        os.makedirs(self.notebook_checkpoints, exist_ok=True)
-
         self.archive_checkpoints = os.path.join(self.archiveDir, ".ipynb_checkpoints")
         os.makedirs(self.archive_checkpoints, exist_ok=True)
-        # TODO - check if file, if so, delete
 
         self.connection_dir = os.path.join(self.hiddenDir, "connection")
-        if os.path.exists(self.connection_dir) and clear:
-            shutil.rmtree(self.connection_dir)
+
+        self.notebook_checkpoints = os.path.join(
+            self.connection_dir, ".ipynb_checkpoints"
+        )
+
+        if os.path.exists(self.connection_dir):
+            file_names = os.listdir(self.notebook_checkpoints)
+            for file_name in file_names:
+                if os.path.isfile(os.path.join(self.notebook_checkpoints, file_name)):
+                    if os.path.exists(
+                        os.path.join(self.archive_checkpoints, file_name)
+                    ):
+                        os.replace(
+                            os.path.join(self.notebook_checkpoints, file_name),
+                            os.path.join(self.archive_checkpoints, file_name),
+                        )
+                    else:
+                        shutil.move(
+                            os.path.join(self.notebook_checkpoints, file_name),
+                            self.archive_checkpoints,
+                        )
+
+            os.rmdir(self.notebook_checkpoints)
+            # TODO -- files aren't getting archived
+            file_names = os.listdir(self.connection_dir)
+            for file_name in file_names:
+                hidden_file = os.path.join(self.connection_dir, file_name)
+                archive_file = os.path.join(self.archiveDir, file_name)
+                if os.path.isfile(hidden_file):
+                    if os.path.exists(archive_file):
+                        os.replace(
+                            hidden_file,
+                            archive_file,
+                        )
+                    else:
+                        shutil.move(hidden_file, archive_file)
+
+            if os.path.exists(self.connection_dir) and clear:
+                os.rmdir(self.connection_dir)
+
         os.makedirs(self.connection_dir, exist_ok=True)
-
-        file_names = os.listdir(self.notebook_checkpoints)
-        for file_name in file_names:
-            if os.path.isfile(os.path.join(self.notebook_checkpoints, file_name)):
-                if os.path.exists(os.path.join(self.archive_checkpoints, file_name)):
-                    os.replace(
-                        os.path.join(self.notebook_checkpoints, file_name),
-                        os.path.join(self.archive_checkpoints, file_name),
-                    )
-                else:
-                    shutil.move(
-                        os.path.join(self.notebook_checkpoints, file_name),
-                        self.archive_checkpoints,
-                    )
-
-        os.rmdir(self.notebook_checkpoints)
-        # TODO -- files aren't getting archived
-        file_names = os.listdir(self.hiddenDir)
-        for file_name in file_names:
-            hidden_file = os.path.join(self.hiddenDir, file_name)
-            archive_file = os.path.join(self.archiveDir, file_name)
-            if os.path.isfile(hidden_file):
-                if os.path.exists(archive_file):
-                    os.replace(
-                        hidden_file,
-                        archive_file,
-                    )
-                else:
-                    shutil.move(hidden_file, archive_file)
+        os.makedirs(self.notebook_checkpoints, exist_ok=True)
