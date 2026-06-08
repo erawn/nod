@@ -3,6 +3,7 @@ import { nodState } from "./state";
 import { nodSchema } from "./types";
 import { Dialog, ISessionContext, showDialog } from "@jupyterlab/apputils";
 import { checkKernelStatus, kernelWaitDialog } from "./interfaceHelpers";
+import { writeChange } from "./messaging";
 
 export async function openNotebookWithNodKernel(notebookFile: string, docManager: IDocumentManager) {
     const state = nodState.Instance()
@@ -79,18 +80,16 @@ export async function launchNodKernel() {
 }
 
 
-export function getNodInfo() {
+export async function getNodInfo() {
     const contentsManager = nodState.Instance().contentsManager
-    contentsManager.get(contentsManager.normalize(nodState.Instance().connection_dir + "/nodInfo.json"), { type: 'file', format: 'base64', content: true })
-        .then(file => {
-            const jsonObj = JSON.parse(atob(file.content))
-            const schema = nodSchema.parse(jsonObj)
-            console.log(schema)
-            if (nodState.Instance().status !== 'active') {
-                nodState.Instance().pythonInfo = schema
-                nodState.Instance().status = 'active'
-            }
-        })
+    const file = await contentsManager.get(contentsManager.normalize(nodState.Instance().connection_dir + "/nodInfo.json"), { type: 'file', format: 'base64', content: true })
+    const jsonObj = JSON.parse(atob(file.content))
+    const schema = nodSchema.parse(jsonObj)
+    console.log(schema)
+    if (nodState.Instance().status !== 'active') {
+        nodState.Instance().pythonInfo = schema
+        nodState.Instance().status = 'active'
+    }
 }
 
 /**
@@ -178,23 +177,7 @@ export async function default_restart(
     }
     return false;
 }
-//  console.log("RESTARTING")
-//     notebookTracker.forEach((panel) => {
-//       const frame = state.getFrameFromPath(panel.context.path)
-//       if (frame !== undefined) {
-//         docManager.closeFile(panel.context.path)
-//       }
-//     })
-//     nodState.Instance().status = 'inactive'
-//     kernelWaitDialog(false)
-//     function kernelChangedCheck(context: ISessionContext, changed: IChangedArgs<IKernelConnection | null, IKernelConnection | null, "kernel">) {
-//       if (changed.newValue !== null) {
-//         console.log("NEW KERNEL VALUE POST RESTART")
-//         checkKernelStatus()
-//       }
-//       context.kernelChanged.disconnect(kernelChangedCheck, state)
-//     }
-//     context.kernelChanged.connect(kernelChangedCheck, state)
+
 export async function restart(
     sessionContext: ISessionContext,
     restartOptions?: ISessionContext.IRestartOptions
@@ -227,13 +210,13 @@ export async function restart(
     nodState.Instance().status = 'inactive'
 
     const nodNoSave = Dialog.warnButton({
-        label: trans.__('Restart without Saving'),
-        ariaLabel: trans.__('Confirm Nod Restart without Saving'),
-        accept: true, //TODO
+        label: ('Restart without Export'),
+        ariaLabel: ('Confirm Nod Restart without Saving'),
+        accept: true,
     })
     const restartBtn = Dialog.createButton({
-        label: trans.__('Restart'),
-        ariaLabel: trans.__('Confirm Nod Restart')
+        label: ('Export and Restart'),
+        ariaLabel: ('Confirm Nod Restart')
     })
     const result = await showDialog({
         title: trans.__('Restart Nod Session?'),
@@ -246,34 +229,37 @@ export async function restart(
             nodNoSave,
             restartBtn
         ],
-        checkbox: {
-            label: trans.__('Do not ask me again.'),
-            caption: trans.__(
-                'If checked, the kernel will restart without confirmation prompt in the future; you can change this back in the settings.'
-            )
-        }
+        // checkbox: {
+        //     label: trans.__('Do not ask me again.'),
+        //     caption: trans.__(
+        //         'If checked, the kernel will restart without confirmation prompt in the future; you can change this back in the settings.'
+        //     )
+        // }
     })
     if (kernel.isDisposed) {
         return false;
     }
+    const state = nodState.Instance()
+
     if (result.button.accept) {
-        if (typeof result.isChecked === 'boolean' && result.isChecked == true) {
-            sessionContext.kernelPreference = {
-                ...sessionContext.kernelPreference,
-                skipKernelRestartDialog: true
-            };
-        }
-        console.log(sessionContext)
-        const state = nodState.Instance()
         await nodState.Instance().app.commands.execute('docmanager:save-all')
-        kernelWaitDialog(false)
-        await restartOptions?.onBeforeRestart();
-        await sessionContext.restartKernel();
-        await state.docManager.closeAll()
-        if (kernel.name === "nod") {
-            console.log("POST RESTART")
-            checkKernelStatus()
+        if (result.button.label === "Export and Restart") {
+            if (state.notebookLockId !== "") {
+                const nbToExport = state.tracker.find(panel => panel.id === state.notebookLockId)
+                if (nbToExport !== undefined) {
+                    const frame = state.getFrameFromPath(nbToExport.context.path)
+                    if (frame !== undefined)
+                        await writeChange(nbToExport, frame)
+                }
+            }
         }
+        await restartOptions?.onBeforeRestart();
+        const restartPromise = sessionContext.restartKernel(); //TODO--let program continue? 
+        kernelWaitDialog(false)
+        await restartPromise
+        await state.docManager.closeAll()
+        console.log("POST RESTART")
+        checkKernelStatus.invoke()
         return true;
     }
     return false;

@@ -1,11 +1,8 @@
 import { Dialog } from "@jupyterlab/apputils";
 import { nodState } from "./state";
-import {
-    INotebookTracker,
-    NotebookPanel,
-    NotebookTracker,
-} from '@jupyterlab/notebook';
+import { NotebookPanel } from '@jupyterlab/notebook';
 import { getNodInfo, getNodKernel, launchNodKernel } from "./kernelHelpers";
+import { Throttler } from '@lumino/polling';
 
 export function kernelWaitDialog(checkKernel: boolean = true) {
     if (nodState.Instance().status == 'active') {
@@ -22,27 +19,23 @@ export function kernelWaitDialog(checkKernel: boolean = true) {
         dialog.launch().then(() => {
             console.log("DIALOG LAUNCH")
             if (checkKernel)
-                checkKernelStatus(false)
+                checkKernelStatus.invoke()
         });
     }
 }
-export function checkKernelStatus(recurse: boolean = true) {
-    console.log("Check Kernel Status")
 
+export const checkKernelStatus = new Throttler(checkKernelStatusInner, { limit: 100, edge: 'trailing' })
+async function checkKernelStatusInner() {
+    console.log("Check Kernel Status")
     const manager = nodState.Instance().app.serviceManager.kernels
-    manager.refreshRunning().then(() => {
-        getNodKernel().then((id) => {
+    await manager.refreshRunning().then(() => {
+        getNodKernel().then(async (id) => {
             if (id === undefined) {
                 console.log("setting to inactive")
                 nodState.Instance().status = 'inactive'
-                if (recurse) {
-                    kernelWaitDialog()
-                }
-                launchNodKernel().then(id => {
-                    if (id === undefined) {
-                        checkKernelStatus()
-                    }
-                })
+                const launchPromise = launchNodKernel().then(() => checkKernelStatus.invoke())
+                kernelWaitDialog()
+                await launchPromise
             } else {
                 console.log("REFRESHING NOD STATE Found Nod Kernel")
                 const idSearch = Dialog.tracker.find(dialog => dialog.id === nodState.Instance().dialogID)
@@ -51,10 +44,11 @@ export function checkKernelStatus(recurse: boolean = true) {
                 }
                 nodState.Instance().dialogID = ""
                 nodState.Instance().activateSidebars()
-                getNodInfo()
+                await getNodInfo()
             }
         })
     })
+
 }
 export function updateLockedUI(panel: NotebookPanel) {
     const state = nodState.Instance()

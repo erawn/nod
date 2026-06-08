@@ -6,7 +6,8 @@ import { nullTranslator } from '@jupyterlab/translation';
 import {
   CommandToolbarButton,
   AccordionToolbar,
-  PanelWithToolbar
+  PanelWithToolbar,
+  ToolbarButton
 } from '@jupyterlab/ui-components';
 
 import type { CommandRegistry } from '@lumino/commands';
@@ -15,6 +16,8 @@ import type { IDebugger } from '@jupyterlab/debugger'
 import { CallstackBody } from './body';
 import { CallstackModel } from './model';
 import { bugIcon, SidePanel } from "@jupyterlab/ui-components";
+import { nodState } from '../state';
+import { nodCommands } from '../commands';
 export class NodSidebar extends SidePanel {
   /**
    * Instantiate a new Debugger.Sidebar
@@ -42,7 +45,6 @@ export class NodSidebar extends SidePanel {
     //   commands,
     //   translator
     // });
-
     this.addWidget(callstack);
   }
 }
@@ -60,9 +62,39 @@ class Callstack extends PanelWithToolbar {
     super(options);
     const { model } = options;
     const trans = (options.translator ?? nullTranslator).load('jupyterlab');
-    this.title.label = trans.__('Nod Callstack');
+    this.title.label = 'Nod Callstack';
     const widget = new CallstackBody(model)
     // widgets.map(widget => accordion.addWidget(widget))
+    this.toolbar.node.setAttribute(
+      'aria-label',
+      trans.__('Breakpoints panel toolbar')
+    );
+
+    this.toolbar.addItem(
+      'nod-exit',
+      new ToolbarButton({
+        className: 'nod-Close',
+        onClick: (): void => {
+          nodState.Instance().app.commands.execute(nodCommands.exitNotebook)
+        },
+        tooltip: 'Exit',
+        label: 'Exit',
+      })
+    );
+
+
+    this.toolbar.addItem(
+      'nod-export',
+      new ToolbarButton({
+        className: 'nod-export',
+        iconClass: 'fas fa-download ',
+        onClick: (): void => {
+          nodState.Instance().app.commands.execute(nodCommands.exportNotebook)
+        },
+        tooltip: 'Export',
+        label: 'Export',
+      })
+    );
     this.addWidget(widget)
     this.addClass('jp-DebuggerCallstack');
   }

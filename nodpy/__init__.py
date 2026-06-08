@@ -190,6 +190,15 @@ _modules: list[str] = [os.getcwd() + "/*"]
 _how_restart: typing.Union[typing.Literal["continue"], int] = "continue"
 _dangerously_bypass_readonly: bool = False
 
+class NodException(Exception):
+    """Exception raised for custom error in the application."""
+
+    def __init__(self, message):
+        super().__init__(message)
+        self.message = message
+
+    def __str__(self):
+        return f"{self.message})"
 
 def nodConfig(
     fmt: typing.Literal["light", "percent"] = "light",
@@ -270,8 +279,8 @@ def notebook(
     notebook_call = next((frame for frame in stack if find_notebook_func(frame)), None)
 
     if notebook_call is None:
-        # TODO: Throw Error
-        return
+        raise NodException("Cannot find notebook() function call in callstack")
+    
     notebook_call_index = stack.index(notebook_call)
     if notebook_call_index + 1 > len(stack):
         raise IndexError
@@ -418,6 +427,13 @@ def notebook(
         # atexit.register(close_notebook)
         app.start()
         app.reset_io()
+        # if _how_restart == 'continue':
+        #         newStackFrame = relevant_stack_frames[0]
+        #         if app.shell is not None:
+        #             reset(app.shell, True, True)
+        #             app.shell.user_ns.update(newStackFrame.frame.f_locals)
+        #             app.shell.user_global_ns.update(newStackFrame.frame.f_globals)
+        #             app.shell.user_ns_hidden.update(newStackFrame.frame.f_builtins)
         # TODO nonlocal promote
         # switch back to first frame
 

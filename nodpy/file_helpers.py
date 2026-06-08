@@ -226,7 +226,6 @@ class PathManager:
                         )
 
             os.rmdir(self.notebook_checkpoints)
-            # TODO -- files aren't getting archived
             file_names = os.listdir(self.connection_dir)
             for file_name in file_names:
                 hidden_file = os.path.join(self.connection_dir, file_name)

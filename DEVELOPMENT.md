@@ -21,58 +21,61 @@ NODCONFIG
 - Add to NodConfig how the program should be restarted — (i.e. allowed to finish or interrupted, and if interrupted, with what signal). Obv smart defaults are our friend here. 
 - format for notebook converstion with jupytext (light, percent, etc)
 - allow optional bypassing of readonly after edits? 
-- module list --- shouldn't be changing the tracing 
-
+- if you want to test your program output after quit, you just gotta use the command line version 
 
 TODO 
-- layoutrestorer, restorablepool
-- Send back to loading screen on restart 
-- paste CWD of JupyterLab for --existing?
-    - how to get CWD string to subprocess? Pass as env variable? yes this should work
-- Change tracker --- which cells are unedited 
+
+
 <!-- - make other frames read only after edit -->
 <!-- - add banner at the top on read only NBs  -->
-    - test unlock
-- get exporting working again
-    -export button doesn't appear on reload
-- convert markdown back to notebook with nbcovert or jupytext
-    - server extension should handle this
+- test unlock
 - nod on exception https://ipython.readthedocs.io/en/stable/interactive/magics.html#magic-pdb 
-- clear old kernels from jupyter (get shutdown registering properly??)
 - rename nb files to function--class
-<!-- - select NOD kernel at notebook open -->
-    - throw warning if spec not installed
+- throw warning if spec not installed
 - Maybe have the current NOD Instance notebook be undeleteable and a different color? 
+
 - JupyterHub Integration? 
+    - paste CWD of JupyterLab for --existing?
+    - how to get CWD string to subprocess? Pass as env variable? yes this should work
     - can we add as a CMD from the front end?
     - or an --existing flag to the nod call, then we add the command to the connection file 
     - left hand pane that users can add CWD (or just specify the command to run directly from the pane?)
     - how to get info from pane to kernel provisioner?
     - if the python program is being run as a subprocess, we can set an enviornment variable for the connection directory 
-- test timeouts to optimize (and on networked connections?)
+    - print CWD on bottom pane to paste into existing arg
+        - problem with this is that we can't use existing provisioner architecture, bc the kernel doesn't own the subprocess
+        - but we probably want stdout in some way
+        - we can pipe the subprocess to the terminal? Can Jupyterhub people access the console? 
+        - no they can't, but maybe stdout doesn't matter? people can debug their programs to hit the notebook call ahead of time? If theres a bug before notebook we're gonna have a problem anyways 
+        - on the other hand, being able to continue with a program and see the output is cool
 - add exit without saving to menu
-- mark cells above nod() call as run? 
-- play with opacity on the surrounding code? 
+- "continue" option now that the provisioner is handling the subprocess? 
+- rename setting to "how_exit"?
+    - maybe we don't need this -- people can just send a "quit" manually if they want to continue the program
 
 Nice to have
+- persist lock through reload? 
+- - clear old kernels from jupyter (get shutdown registering properly??)
+    - layoutrestorer, restorablepool
+- test timeouts to optimize (and on networked connections?)
+- play with opacity on the surrounding code? 
 - mode to create function at call site? 
+- mark cells above nod() call as run? 
+- Change tracker --- which cells are unedited 
 - Add check interface where it shows side by side 
     - final preview of exported code?
 - debug nod with nod!!
     - need to specify the connection file directly in the cmd line args
     - or just change the cwd in the outer command? aka nod cd folder && nod python -m module 
 
-<!-- - mode order -- 1. just do forward eval, 2. deep-copy for expensive programs, 3. adult-mode.
-    - how to switch modes? notebook() args?  -->
-<!-- - figure out why jupytext isn't respecting the kernelinfo metadata, so that we can restart the notebook without switching to normal python kernel
-    - alternatively, figure out how to switch the kernel always to python
-    - ok maybe its actually switching properly but restart has wiped the state  -->
+
 
 NOD Log Todo
 nod.log(x)
 - Nod log right sidebar 
 - just deep copy it and put it in a dict
 - clicking on the side panel puts it in state 
+- have a 'unique' boolean in nod.log() that doesn't save if it compares equal to another obj in the list 
 
 Nod Save Args
 nod.save_args(f, [x,y,z])
@@ -103,6 +106,10 @@ Inter-function, the sources and sinks are anything referenced in the body, and t
 Will the taint analysis catch things like for loops tho? If not, this would be an argument to use a decorator instead
 
 
-
+<!-- - mode order -- 1. just do forward eval, 2. deep-copy for expensive programs, 3. adult-mode.
+    - how to switch modes? notebook() args?  -->
+<!-- - figure out why jupytext isn't respecting the kernelinfo metadata, so that we can restart the notebook without switching to normal python kernel
+    - alternatively, figure out how to switch the kernel always to python
+    - ok maybe its actually switching properly but restart has wiped the state  -->
 
 

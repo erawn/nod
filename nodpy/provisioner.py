@@ -31,6 +31,8 @@ import jupyter_core
 from jupyter_client import find_connection_file
 from subprocess import PIPE, Popen
 
+from nodpy import NodException
+
 _log = logging.getLogger(__name__)
 regex = re.compile(r".*kernel-(.{2,8})\.json")
 _log.setLevel(logging.INFO)
@@ -185,6 +187,7 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
 
     async def pre_launch(self, **kwargs):
         _log.info("PROVISIONER PRELAUNCH")
+        _log.info(kwargs)
         python_cmd = shlex.split(base64.b64decode(self.cli_cmd).decode("utf-8"))
         extra_arguments = kwargs.pop("extra_arguments", [])
         kwargs.pop("cmd", None)
@@ -208,7 +211,7 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
             # _log.info("Connection File Path: %s", connection_file)
             match = regex.match(os.path.basename(connection_file))
             if match is None:
-                raise  # TODO
+                return None, None
 
             pid = int(match.group(1))
             return connection_file, pid
@@ -261,6 +264,7 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
             _log.info(f"{self.kernel_id} CWD")
             # _log.info(self.cwd)
             # _log.info(pathlib.Path.cwd())
+            #TODO check metadata/env vars for Nod Info, then connect to that existing kernel
             scrubbed_kwargs = LocalProvisioner._scrub_kwargs(kwargs)
             scrubbed_kwargs.pop("cwd", None)
             self.nod_info.python_process = launch_kernel(

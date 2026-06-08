@@ -1,27 +1,14 @@
 
-import { KernelMessage, ServerConnection } from '@jupyterlab/services';
+import { KernelMessage } from '@jupyterlab/services';
 
-import '../style/index.css';
+// import '../style/index.css';
 
 import { nodState } from './state';
-import {
-    INotebookTracker,
-    NotebookPanel,
-    NotebookTracker,
-} from '@jupyterlab/notebook';
-import {
-    Contents,
-} from '@jupyterlab/services'
-import { IControlFuture, IKernelConnection, IShellFuture } from '@jupyterlab/services/lib/kernel/kernel';
+import { NotebookPanel } from '@jupyterlab/notebook';
+import { IControlFuture, IShellFuture } from '@jupyterlab/services/lib/kernel/kernel';
 import { IExecuteReplyMsg, IExecuteRequestMsg } from '@jupyterlab/services/lib/kernel/messages';
-import { URLExt } from '@jupyterlab/coreutils';
-import { showDialog } from '@jupyterlab/apputils';
-import { Widget } from '@lumino/widgets';
-import { INodStackFrame, nodSchema, stackInfo } from './types';
-import { IDocumentManager } from '@jupyterlab/docmanager';
 import { requestAPI } from './request';
-
-
+import { getNodKernel } from './kernelHelpers';
 
 export function requestExecute(code: string): IShellFuture<IExecuteRequestMsg, IExecuteReplyMsg> | null {
     const kernel = nodState.Instance().tracker.currentWidget?.sessionContext?.session?.kernel;
@@ -64,80 +51,25 @@ export async function exitSession() {
     const future = requestExecute('exit')
     if (future !== null) {
         future.onReply = async msg => {
-            const app = nodState.Instance().app
-            const trans = nodState.Instance().translator.load('jupyterlab')
-            const setting = app.serviceManager.serverSettings;
-            const apiURL = URLExt.join(setting.baseUrl, 'api/shutdown');
-
-            // Shutdown all kernel and terminal sessions before shutting down the server
-            // If this fails, we continue execution so we can post an api/shutdown request
-            try {
-                await Promise.all([
-                    app.serviceManager.sessions.shutdownAll(),
-                    app.serviceManager.terminals.shutdownAll()
-                ]);
-            } catch (e) {
-                // Do nothing
-                console.log(`Failed to shutdown sessions and terminals: ${e}`);
-            }
-
-            return ServerConnection.makeRequest(
-                apiURL,
-                { method: 'POST' },
-                setting
-            )
-                .then(result => {
-                    if (result.ok) {
-                        // Close this window if the shutdown request has been successful
-                        const body = document.createElement('div');
-                        const p1 = document.createElement('p');
-                        p1.textContent = trans.__(
-                            'You have shut down the Jupyter server. You can now close this tab.'
-                        );
-                        const p2 = document.createElement('p');
-                        p2.textContent = trans.__(
-                            'To use %1 again, you will need to relaunch it.',
-                            app.name
-                        );
-
-                        body.appendChild(p1);
-                        body.appendChild(p2);
-                        void showDialog({
-                            title: trans.__('Server stopped'),
-                            body: new Widget({ node: body }),
-                            buttons: []
-                        });
-                        window.close();
-                    } else {
-                        throw new ServerConnection.ResponseError(result);
-                    }
+            const how_restart = nodState.Instance().pythonInfo?.how_restart
+            if (how_restart !== undefined && how_restart !== 'continue') {
+                getNodKernel()
+                const kernelManager = nodState.Instance().app.serviceManager.kernels
+                kernelManager.refreshRunning().then(() => {
+                    kernelManager.running()
+                    Array.from(kernelManager.running()).filter(kernel => {
+                        kernel.name === 'nod'
+                    }).map(kernel => kernelManager.shutdown(kernel.id))
                 })
-                .catch(data => {
-                    throw new ServerConnection.NetworkError(data);
-                });
+            }
         }
     }
-    return
 }
 
-// const dataToSend = { name: 'George' };
-// requestAPI<any>('hello', {
-//     body: JSON.stringify(dataToSend),
-//     method: 'POST'
-// })
-//     .then(reply => {
-//         console.log(reply);
-//     })
-//     .catch(reason => {
-//         console.error(
-//             `Error on POST /jupyterlab-examples-server/hello ${dataToSend}.\n${reason}`
-//         );
-//     });
-
-export function writeChange(panel: NotebookPanel, frame: NonNullable<nodState["currentFrame"]>) {
+export async function writeChange(panel: NotebookPanel, frame: NonNullable<nodState["currentFrame"]>) {
     const contentsManager = nodState.Instance().contentsManager
-    //TODO--save current file
-    contentsManager.get(panel.context.path, { type: 'file', format: 'base64', content: true }).then(nb_content => {
+    await nodState.Instance().app.commands.execute('docmanager:save-all')
+    await contentsManager.get(panel.context.path, { type: 'file', format: 'base64', content: true }).then(nb_content => {
         console.log("nb_content", nb_content)
         const dataToSend = { program_info: frame, notebookContent: nb_content.content };
         console.log("sending write request: ", dataToSend)
@@ -156,58 +88,3 @@ export function writeChange(panel: NotebookPanel, frame: NonNullable<nodState["c
     })
 
 }
-// const instance = nodState.Instance()
-// if (instance.currentFrame === null) {
-//     return
-// }
-// const currentFrame = instance.currentFrame
-// if (currentFrame === undefined) {
-//     return
-// }
-// const children = instance.tracker.currentWidget?.content.widgets
-// const indent = currentFrame.fileInfo?.indent
-// if (children === undefined || indent === undefined) {
-//     return
-// }
-
-// const toExport = children.map((cell, index) => {
-//     return !cell.hasClass('nod-export') ?
-//         cell?.model.sharedModel.getSource().split('\n')
-//             .map(line => " ".repeat(indent).concat(line))
-//             .join('\n').concat(index === children.length - 1 ? "" : '\n\n')
-//         : ""
-// }).join('')
-
-// console.log('path', nodState.Instance().tracker.currentWidget?.context.path)
-// const contentsManager = nodState.Instance().contentsManager
-// const sourceFile = contentsManager.normalize(currentFrame.relative_source_file)
-// console.log("sourcefile", sourceFile)
-
-// //TODO: Rewrite this --- pass in top text and bottom text at start so we can't run into alignment, overwriting issues like this.
-// contentsManager.get(sourceFile, { type: "file", content: true }).then(original => {
-//     const instance = nodState.Instance()
-//     if (instance.currentFrame === null) {
-//         return
-//     }
-//     let lines = (original.content as string).split(/\r?\n/)
-//     const editPos = currentFrame.fileInfo?.function_body_position
-//     if (editPos === undefined)
-//         return
-//     console.log("LINES", lines)
-//     console.log("EDITPOS", editPos)
-//     const topContent = lines.slice(0, editPos?.start.line - 1).join('\n')
-//     const bottomContent = lines.slice(editPos.end.line).join('\n')
-//     console.log(topContent)
-//     console.log("TO EXPORT", toExport)
-//     console.log(bottomContent)
-//     const newFileContent = [topContent, toExport, bottomContent].join('\n')
-//     console.log("NEW FILE", newFileContent)
-//     const newModel = {
-//         ...original,
-//         content: newFileContent
-//     } as Contents.IModel;
-//     return contentsManager.save(sourceFile, newModel)
-// }).catch ((err) => {
-//     console.log(err)
-// })
-// }
