@@ -3,7 +3,7 @@
 ## Install
 
 ```bash
-pip install nodpy
+pip install nodpy && nod --install-kernel
 ```
 
 ## Usage

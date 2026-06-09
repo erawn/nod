@@ -55,10 +55,7 @@ from types import FrameType, TracebackType
 from jupytext.formats import long_form_one_format  # type: ignore
 from IPython.terminal.interactiveshell import TerminalInteractiveShell
 from .provisioner import NodProvisioner
-from enum import Enum, IntEnum
 from .ip_plugin import nodReturn
-from IPython.core.interactiveshell import ExecutionResult
-import traceback
 
 if TYPE_CHECKING:
     # False at run time, only for type checker
@@ -66,10 +63,10 @@ if TYPE_CHECKING:
 
 _log = logging.getLogger(__name__)
 logging.basicConfig()
-_log.setLevel(logging.INFO)
+_log.setLevel(logging.WARNING)
+_log.addHandler(logging.FileHandler("log.txt"))
 
-
-DRY_RUN = True
+DRY_RUN = False
 
 DEBUG: bool = False
 
@@ -187,6 +184,7 @@ _modules: list[str] = [os.getcwd() + "/*"]
 _how_restart: typing.Union[typing.Literal["continue"], int] = "continue"
 _dangerously_bypass_readonly: bool = False
 
+
 class NodException(Exception):
     """Exception raised for custom error in the application."""
 
@@ -196,6 +194,7 @@ class NodException(Exception):
 
     def __str__(self):
         return f"{self.message})"
+
 
 def nodConfig(
     fmt: typing.Literal["light", "percent"] = "light",
@@ -259,9 +258,11 @@ def notebook(
     except NameError:
         pass
 
+    # print("NB ENTER")
     runtime_dir = os.environ.get("NOD_RUNTIME_DIR", "")
     _log.info(f"NOD_RUNTIME_DIR: {runtime_dir}")
     stack = inspect.stack()
+    # print(stack)
 
     def find_notebook_func(frame: inspect.FrameInfo):
         if frame.code_context is None:
@@ -269,7 +270,7 @@ def notebook(
             return False
 
         for line in frame.code_context:
-            if line.find("notebook(") > 0:  # TODO replace with regex
+            if line.find("notebook(") > -1:  # TODO replace with regex
                 return True
         return False
 
@@ -277,7 +278,7 @@ def notebook(
 
     if notebook_call is None:
         raise NodException("Cannot find notebook() function call in callstack")
-    
+
     notebook_call_index = stack.index(notebook_call)
     if notebook_call_index + 1 > len(stack):
         raise IndexError
@@ -289,7 +290,7 @@ def notebook(
         if frozenPattern.match(frame.filename) is None
     ]
     # _log.info(stack[notebook_call_index:])
-    # _log.info(relevant_stack_frames)
+    _log.info(relevant_stack_frames)
 
     ## FILE ORGANIZATION
     pm = PathManager()

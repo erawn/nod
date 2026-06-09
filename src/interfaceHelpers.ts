@@ -36,25 +36,52 @@ export async function checkKernelStatus() {
 }
 async function checkKernelStatusInner() {
   console.log('Check Kernel Status');
+  const kernelSpecManager = nodState.Instance().app.serviceManager.kernelspecs
+  await kernelSpecManager.refreshSpecs()
+  const specs = kernelSpecManager.specs?.kernelspecs;
+  if (!specs) {
+    console.error('NO KERNEL SPECS')
+    return;
+  }
+  const nodKernelInstalled = Object.keys(specs).some(
+    name => name === 'nod'
+  );
+  if (!nodKernelInstalled) {
+    console.error("No Nod Kernel Installed!")
+    const dialog = new Dialog({
+      title: 'Nod Kernel Not Installed!',
+      body: 'Nod requires the Nod Kernel. Run \"nod --install-kernel\" in your terminal and restart.',
+      buttons: [Dialog.okButton({ label: 'Ok' })],
+      hasClose: false
+    });
+    dialog.launch()
+    return
+  }
   const manager = nodState.Instance().app.serviceManager.kernels;
   await manager.refreshRunning().then(async () => {
     await getNodKernel().then(async id => {
       if (id === undefined) {
         console.log('setting to inactive');
         nodState.Instance().status = 'inactive';
-        const launchPromise = launchNodKernel().then(async id => {
-          console.log('returned from launch');
-          const idSearch = Dialog.tracker.find(
-            dialog => dialog.id === nodState.Instance().dialogID
-          );
-          if (idSearch !== undefined) {
-            idSearch.reject();
-          }
-
-          await getNodInfo();
-        });
         kernelWaitDialog();
-        await launchPromise;
+        await launchNodKernel().then(async id => {
+          console.log('returned from launch');
+
+          await getNodInfo().then((success) => {
+            if (success) {
+              const idSearch = Dialog.tracker.find(
+                dialog => dialog.id === nodState.Instance().dialogID
+              );
+              if (idSearch !== undefined) {
+                idSearch.reject();
+              }
+            } else {
+              //TODO -- warning message
+              console.error("NOD LAUNCH FAILED")
+            }
+
+          })
+        });
       } else {
         const idSearch = Dialog.tracker.find(
           dialog => dialog.id === nodState.Instance().dialogID

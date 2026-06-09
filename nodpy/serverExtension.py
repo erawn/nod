@@ -169,7 +169,7 @@ class Nod(ExtensionApp):
         info_decoded = base64.b64decode(self.cli_cmd).decode("utf-8")
         self.cli_cmd = info_decoded
         page_config["cli_cmd"] = self.cli_cmd
-        _log.warning(self.cli_cmd)
+        # _log.info(self.cli_cmd)
         # self.runUserProgram(self.cli_cmd)
 
     # def _load_jupyter_server_extension(self, serverapp):  # type: ignore

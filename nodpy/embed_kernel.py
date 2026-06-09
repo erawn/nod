@@ -272,14 +272,14 @@ def embed_kernel(module=None, local_ns=None, **kwargs):
         on the first embed_kernel call for a given process.
 
     """
-    print("Starting Kernel")
+    _log.debug("Starting Kernel")
     # os.environ["NOD_IPYTHON_CONNECTION_FILE"] = "test2"
     # get the app if it exists, or set it up if it doesn't
     if IPKernelApp.initialized():
-        print("Already Initialized")
+        _log.debug("Already Initialized")
         app = IPKernelApp.instance()
     else:
-        print("Initializing")
+        _log.debug("Initializing")
         app = IPKernelApp.instance(**kwargs)
         app.kernel_class = nodKernel
         app.kernel_name = str(os.getpid())
