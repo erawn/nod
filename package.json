@@ -1,15 +1,15 @@
 {
     "name": "nodjs",
-    "version": "0.1.0",
+    "version": "0.1.6",
     "description": "A JupyterLab extension.",
     "keywords": [
         "jupyter",
         "jupyterlab",
         "jupyterlab-extension"
     ],
-    "homepage": "",
+    "homepage": "https://github.com/erawn/nod",
     "bugs": {
-        "url": "/issues"
+        "url": "https://github.com/erawn/nod/issues"
     },
     "license": "BSD-3-Clause",
     "author": {
@@ -27,7 +27,7 @@
     "style": "style/index.css",
     "repository": {
         "type": "git",
-        "url": ".git"
+        "url": "https://github.com/erawn/nod"
     },
     "scripts": {
         "build": "jlpm build:lib && jlpm build:labextension:dev",
@@ -54,7 +54,8 @@
         "test": "jest --coverage",
         "watch": "run-p watch:src watch:labextension",
         "watch:src": "tsc -w --sourceMap",
-        "watch:labextension": "jupyter labextension watch ."
+        "watch:labextension": "jupyter labextension watch .",
+        "publish:test": "jlpm clean:all && python -m build && twine upload --verbose --repository-url https://test.pypi.org/legacy/ dist/*"
     },
     "dependencies": {
         "@jupyterlab/application": "~4.6.0-beta.0",

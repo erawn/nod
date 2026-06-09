@@ -16,8 +16,6 @@ import shutil
 import types
 
 import jupytext  # type: ignore
-from nbformat import NotebookNode
-import nbformat
 import orjson
 import shlex
 import sys
@@ -69,12 +67,12 @@ if TYPE_CHECKING:
 
 _log = logging.getLogger(__name__)
 logging.basicConfig()
-_log.setLevel(logging.INFO)
+# _log.setLevel(logging.INFO)
 
 
 DRY_RUN = False
 
-DEBUG: bool = True
+DEBUG: bool = False
 
 
 @dataclass

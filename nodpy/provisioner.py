@@ -229,7 +229,7 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
     async def launch_kernel(self, cmd, **kwargs):
         _log.info(f"{self.kernel_id} PROVISIONER LAUNCH KERNEL")
         _log.info(cmd)
-        _log.info(kwargs)
+        # _log.info(kwargs)
         connection_dir = os.path.join(self.nod_cwd, ".nod", "connection")
         # return existing kernel if its still running
 
