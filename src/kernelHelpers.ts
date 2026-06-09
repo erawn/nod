@@ -87,8 +87,11 @@ export async function getNodInfo() {
     const schema = nodSchema.parse(jsonObj)
     console.log(schema)
     if (nodState.Instance().status !== 'active') {
+        console.log("REFRESHING NOD STATE Found Nod Kernel")
         nodState.Instance().pythonInfo = schema
         nodState.Instance().status = 'active'
+        nodState.Instance().dialogID = ""
+        nodState.Instance().activateSidebars()
     }
 }
 
@@ -255,11 +258,11 @@ export async function restart(
         }
         await restartOptions?.onBeforeRestart();
         const restartPromise = sessionContext.restartKernel(); //TODO--let program continue? 
-        kernelWaitDialog(false)
+        kernelWaitDialog()
         await restartPromise
-        await state.docManager.closeAll()
         console.log("POST RESTART")
-        checkKernelStatus.invoke()
+        state.unlock()
+        checkKernelStatus()
         return true;
     }
     return false;

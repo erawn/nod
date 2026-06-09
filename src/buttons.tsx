@@ -69,8 +69,8 @@ export class NodQuitButton
 }
 
 export function addToolbarButtons() {
-    nodState.Instance().app.docRegistry.addWidgetExtension('Notebook', new NodExportButton());
-    nodState.Instance().app.docRegistry.addWidgetExtension('Notebook', new NodQuitButton());
+    // nodState.Instance().app.docRegistry.addWidgetExtension('Notebook', new NodExportButton());
+    // nodState.Instance().app.docRegistry.addWidgetExtension('Notebook', new NodQuitButton());
 }
 export function disableKernelSwitching(sessionContextDialogs: ISessionContextDialogs, toolbarRegistry: IToolbarWidgetRegistry) {
     sessionContextDialogs.selectKernel = () => { return Promise.resolve() }

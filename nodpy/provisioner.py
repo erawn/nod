@@ -31,7 +31,6 @@ import jupyter_core
 from jupyter_client import find_connection_file
 from subprocess import PIPE, Popen
 
-from nodpy import NodException
 
 _log = logging.getLogger(__name__)
 regex = re.compile(r".*kernel-(.{2,8})\.json")
@@ -187,19 +186,29 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
 
     async def pre_launch(self, **kwargs):
         _log.info("PROVISIONER PRELAUNCH")
-        _log.info(kwargs)
+        # _log.info(kwargs)
         python_cmd = shlex.split(base64.b64decode(self.cli_cmd).decode("utf-8"))
         extra_arguments = kwargs.pop("extra_arguments", [])
         kwargs.pop("cmd", None)
         kernel_cmd = python_cmd + extra_arguments
         final_cmd = await super().pre_launch(cmd=kernel_cmd, **kwargs)
+        km: KernelManager = self.parent  # type: ignore
+            # if km:
+            #     km.
+        # _log.info()
         return final_cmd
-
+# animation = "|/-\\"
+# idx = 0
+# while thing_not_complete():
+#     print(animation[idx % len(animation)], end="\r")
+#     idx += 1
+#     time.sleep(0.1)
     def get_most_recent_connection_file(
         self, connection_dir: str
     ) -> tuple[str, int] | tuple[None, None]:
         # Find Connection File and Get Kernel Info
-        _log.info("Connection Dir Path: %s", connection_dir)
+        _log.info("...looking for ")
+        # _log.info("Connection Dir Path: %s", connection_dir)
         connection_filenames = os.listdir(connection_dir)
         pid_filenames = list(filter(regex.match, connection_filenames))
         # _log.info("PID FILENAMES")
@@ -220,6 +229,7 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
     async def launch_kernel(self, cmd, **kwargs):
         _log.info(f"{self.kernel_id} PROVISIONER LAUNCH KERNEL")
         _log.info(cmd)
+        _log.info(kwargs)
         connection_dir = os.path.join(self.nod_cwd, ".nod", "connection")
         # return existing kernel if its still running
 
@@ -297,7 +307,7 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
                 # _log.info(
                 #     f"PIDEXISTS: {psutil.pid_exists(pid or -1)}, PID: {pid} CONNECTION_FILE_IS_NEWER: {((os.path.getmtime(connection_file) - launch_time) < -1)}, {self.kernel_id}"
                 # )
-                await asyncio.sleep(5)
+                await asyncio.sleep(.1)
                 connection_file, pid = self.get_most_recent_connection_file(
                     connection_dir
                 )
@@ -309,7 +319,7 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
             self.nod_info.connection_file = connection_file
             with open(self.nod_info.connection_file) as f:
                 file_info = json.load(f)
-
+        
             file_info["key"] = file_info["key"].encode()
             file_info["kernel_name"] = "nod"
             self.nod_info.file_info = file_info

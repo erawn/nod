@@ -32,7 +32,7 @@ function addCodeViewers(panel: NotebookPanel) {
     const innerPanel = panel.node.getElementsByClassName('jp-WindowedPanel-inner')[0] as HTMLElement;
     const parentNode = innerPanel.parentElement
     const currentFrame = nodState.Instance().getFrameFromPath(panel.context.path)
-    if (currentFrame && hasFileInfo(currentFrame)) {
+    if (currentFrame && hasFileInfo(currentFrame) && parentNode?.getElementsByClassName(NOD_HEADER_CLASS).length === 0) {
         const header = makeCodeViewer(panel, currentFrame, NOD_HEADER_CLASS);
         const func = makeCodeViewer(panel, currentFrame, NOD_FUNC_CLASS);
         const footer = makeCodeViewer(panel, currentFrame, NOD_FOOTER_CLASS);

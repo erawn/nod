@@ -2,9 +2,10 @@ import { Dialog } from "@jupyterlab/apputils";
 import { nodState } from "./state";
 import { NotebookPanel } from '@jupyterlab/notebook';
 import { getNodInfo, getNodKernel, launchNodKernel } from "./kernelHelpers";
-import { Throttler } from '@lumino/polling';
+import { Debouncer, Throttler } from '@lumino/polling';
+import { check } from "zod";
 
-export function kernelWaitDialog(checkKernel: boolean = true) {
+export function kernelWaitDialog() {
     if (nodState.Instance().status == 'active') {
         return
     }
@@ -13,37 +14,53 @@ export function kernelWaitDialog(checkKernel: boolean = true) {
         const dialog = new Dialog({
             title: "Waiting for Nod Kernel...",
             body: "Call notebook() from a Python file in the same directory",
-            buttons: [Dialog.okButton({ label: "Refresh" })]
+            buttons: [Dialog.okButton({ label: "Refresh" })],
+            hasClose: false
         });
         nodState.Instance().dialogID = dialog.id
-        dialog.launch().then(() => {
-            console.log("DIALOG LAUNCH")
-            if (checkKernel)
-                checkKernelStatus.invoke()
+        dialog.launch().then((result) => {
+            if (result.button.label === 'Refresh') {
+                console.log("DIALOG Clicked")
+                kernelWaitDialog()
+                checkKernelStatus()
+            }
         });
     }
 }
-
-export const checkKernelStatus = new Throttler(checkKernelStatusInner, { limit: 100, edge: 'trailing' })
+let checkKernelPromise: undefined | Promise<void> = undefined
+export async function checkKernelStatus() {
+    if (checkKernelPromise === undefined) {
+        checkKernelPromise = checkKernelStatusInner()
+        await checkKernelPromise.then(() => checkKernelPromise = undefined)
+    } else {
+        console.log("checkKernelStatus rejected")
+    }
+}
 async function checkKernelStatusInner() {
     console.log("Check Kernel Status")
     const manager = nodState.Instance().app.serviceManager.kernels
-    await manager.refreshRunning().then(() => {
-        getNodKernel().then(async (id) => {
+    await manager.refreshRunning().then(async () => {
+        await getNodKernel().then(async (id) => {
             if (id === undefined) {
                 console.log("setting to inactive")
                 nodState.Instance().status = 'inactive'
-                const launchPromise = launchNodKernel().then(() => checkKernelStatus.invoke())
+                const launchPromise = launchNodKernel().then(async (id) => {
+                    console.log("returned from launch")
+                    const idSearch = Dialog.tracker.find(dialog => dialog.id === nodState.Instance().dialogID)
+                    if (idSearch !== undefined) {
+                        idSearch.reject()
+                    }
+
+                    await getNodInfo()
+                })
                 kernelWaitDialog()
                 await launchPromise
             } else {
-                console.log("REFRESHING NOD STATE Found Nod Kernel")
                 const idSearch = Dialog.tracker.find(dialog => dialog.id === nodState.Instance().dialogID)
                 if (idSearch !== undefined) {
-                    idSearch.resolve()
+                    idSearch.reject()
                 }
-                nodState.Instance().dialogID = ""
-                nodState.Instance().activateSidebars()
+
                 await getNodInfo()
             }
         })
