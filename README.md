@@ -3,7 +3,6 @@
 [![Github Actions Status](/workflows/Build/badge.svg)](/actions/workflows/build.yml)
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh//main?urlpath=lab)
 
-
 A JupyterLab extension.
 
 This extension is composed of a Python package named `nodpy`

@@ -10,7 +10,7 @@ node_modules/
 nodpy/labextension
 # Version file is handled by hatchling
 nodpy/_version.py
-
+**/*.lock
 **/*.ipynb
 # Integration tests
 ui-tests/test-results/
@@ -138,3 +138,4 @@ tsconfig.tsbuildinfo
 .nod/**
 .nod
 tsconfig.tsbuildinfo
+yarn.lock

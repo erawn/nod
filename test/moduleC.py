@@ -7,8 +7,8 @@ def functionC(x):
     notebook()
 
     print(10)
-    return 10
-    print(11)
+    return 3222
+    print(1122)
     # this is a code comment
 
     # ## this is a cell

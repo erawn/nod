@@ -26,12 +26,7 @@
     "strict": true,
     "strictNullChecks": true,
     "target": "ES2018",
-    "types": [
-      "jest",
-      "node"
-    ]
+    "types": ["jest", "node"]
   },
-  "include": [
-    "src/**/*"
-  ]
+  "include": ["src/**/*"]
 }
