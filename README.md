@@ -8,7 +8,8 @@ pip install nodpy
 
 ## Usage
 
-In a Python file call ```notebook()``` anywhere:
+In a Python file call `notebook()` anywhere:
+
 ```python
 #myfile.py
 from nodpy import notebook
@@ -22,6 +23,4 @@ then run the python program with nod <command>
 nod python -m myfile
 ```
 
-
 ### NodConfig
-

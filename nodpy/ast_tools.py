@@ -18,7 +18,6 @@ from libcst.metadata import CodePosition, CodeRange
 #     func_pos: CodeRange = finder.target_pos
 #     newWrapper = cst.MetadataWrapper(metaAST)
 #     filteredAST = newWrapper.visit(NodRemove(frameInfo.lineno))
-#     # todo None check
 #     indent = func_body.start.column
 
 #     return filteredAST, func_body, func_pos, indent
