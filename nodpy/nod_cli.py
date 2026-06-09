@@ -1,22 +1,62 @@
 import base64
+import json
 import logging
 import os
 from pathlib import Path
 import pathlib
 import shlex
 import subprocess
+import sys
+from tempfile import TemporaryDirectory
 from typing import List, Optional
 import orjson
+import nbformat
 from typing_extensions import Annotated
 
 import typer
 
 from nodpy import DRY_RUN
 from nodpy.file_helpers import PathManager
-
+from jupyter_client.kernelspec import KernelSpecManager
 app = typer.Typer(no_args_is_help=False)
 _log = logging.getLogger(__name__)
 
+kernel_json = {
+    "argv": [
+        "python",
+        "-m",
+        "ipykernel_launcher",
+        "-f",
+        "{connection_file}",
+    ],
+    "display_name": "nod",
+    "language": "python",
+    "metadata": {
+        "debugger": True,
+        "kernel_provisioner": {"provisioner_name": "NodProvisioner"},
+    },
+}
+def install_nod_kernel():
+    here = os.path.abspath(os.path.dirname(__file__))
+    sys.path.insert(0, here)
+    prefix = os.path.join(here, "data_kernelspec")
+    with TemporaryDirectory() as td:
+        os.chmod(td, 0o755)  # Starts off as 700, not user readable
+        with open(os.path.join(td, "kernel.json"), "w") as f:
+            json.dump(kernel_json, f, sort_keys=True)
+        print("Installing Jupyter kernel spec")
+
+        # # Requires logo files in kernel root directory
+        # cur_path = os.path.dirname(os.path.realpath(__file__))
+        # for logo in ["logo-32x32.png", "logo-64x64.png"]:
+        #     try:
+        #         shutil.copy(os.path.join(cur_path, logo), td)
+        #     except FileNotFoundError:
+        #         print("Custom logo files not found. Default logos will be used.")
+
+        KernelSpecManager().install_kernel_spec(
+            td, "nod", prefix=sys.prefix
+        )
 
 @app.callback()
 def callback():
@@ -24,13 +64,23 @@ def callback():
     Nod
     """
 
+@app.command()
+def install_kernel():
+    """
+    Install the Nod Kernel to the local Jupyter directory. 
+    Will install in a virtual enviornment if it exists.
+    """
+    install_nod_kernel()
 
 @app.callback(invoke_without_command=True)
 def main(
     ctx: typer.Context,
-    cwd: Annotated[Path, typer.Option(resolve_path=True)] = pathlib.Path.cwd(),
+    cwd: Annotated[Path, typer.Option(resolve_path=True,help="Directory to create Nod Connection Folder")] = pathlib.Path.cwd(),
     commands: Annotated[List[str], typer.Argument()] = [],
 ) -> None:
+    """
+    Run the command to execute a python file which will call notebook(). 
+    """
     pm = PathManager(clear=True)
     cmd = (
         "jupyter lab"
@@ -56,14 +106,14 @@ def main(
         # + " "
         # + "--AsyncMultiKernelManager.use_pending_kernels=True"
         # + " "
-        # + "--LabServerApp.log_level=INFO"
-        # + " "
-        # + "--LabApp.log_level=INFO"
-        # + " "
-        # + "--ExtensionApp.log_level=INFO"
-        # + " "
-        # + "--Application.log_level=INFO"
-        # + " "
+        + "--LabServerApp.log_level=INFO"
+        + " "
+        + "--LabApp.log_level=INFO"
+        + " "
+        + "--ExtensionApp.log_level=INFO"
+        + " "
+        + "--Application.log_level=INFO"
+        + " "
         # + "--KernelSpecManager.kernel_dirs=['"
         # + connection_dir
         # + "']"
@@ -180,5 +230,4 @@ def main(
 
 
 if __name__ == "__main__":
-    print("test")
     app()

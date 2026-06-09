@@ -1,6 +1,6 @@
 {
     "name": "nodjs",
-    "version": "0.1.6",
+    "version": "0.1.8",
     "description": "A JupyterLab extension.",
     "keywords": [
         "jupyter",
@@ -55,7 +55,8 @@
         "watch": "run-p watch:src watch:labextension",
         "watch:src": "tsc -w --sourceMap",
         "watch:labextension": "jupyter labextension watch .",
-        "publish:test": "jlpm clean:all && python -m build && twine upload --verbose --repository-url https://test.pypi.org/legacy/ dist/*"
+        "publish:test": "jlpm clean:all && python -m build && twine upload --verbose --repository-url https://test.pypi.org/legacy/ dist/*",
+        "publish": "jlpm clean:all && python -m build && twine upload dist/*"
     },
     "dependencies": {
         "@jupyterlab/application": "~4.6.0-beta.0",

@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "nodpy"
 readme = "README.md"
 license = { file = "LICENSE" }
-requires-python = ">=3.14.5"
+requires-python = ">=3.14.0"
 classifiers = [
     "Framework :: Jupyter",
     "Framework :: Jupyter :: JupyterLab",
@@ -65,14 +65,9 @@ exclude = [".github", "binder"]
 "nodpy/labextension" = "share/jupyter/labextensions/nodjs"
 "install.json" = "share/jupyter/labextensions/nodjs/install.json"
 "jupyter-config/server-config" = "etc/jupyter/jupyter_server_config.d"
-"data_kernelspec/share" = "share"
 
 [tool.hatch.build.hooks.version]
 path = "nodpy/_version.py"
-
-# Used to call hatch_build.py
-[tool.hatch.build.hooks.custom]
-path = "nodpy/hatch_build.py"
 
 [tool.hatch.build.hooks.jupyter-builder]
 dependencies = ["hatch-jupyter-builder>=0.5"]

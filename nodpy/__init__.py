@@ -50,7 +50,6 @@ from ipykernel.connect import get_connection_info
 from .embed_kernel import embed_kernel
 from .ast_tools import FunctionFinder, NodFinder
 from .file_helpers import PathManager, ProgramInfo, makeProgramInfo
-from .datastore import LogStore
 from inspect import FrameInfo, Traceback
 from types import FrameType, TracebackType
 from jupytext.formats import long_form_one_format  # type: ignore
@@ -67,10 +66,10 @@ if TYPE_CHECKING:
 
 _log = logging.getLogger(__name__)
 logging.basicConfig()
-# _log.setLevel(logging.INFO)
+_log.setLevel(logging.INFO)
 
 
-DRY_RUN = False
+DRY_RUN = True
 
 DEBUG: bool = False
 
