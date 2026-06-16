@@ -1,7 +1,7 @@
 {
-  "name": "nodjs-ui-tests",
+  "name": "nod-ui-tests",
   "version": "1.0.0",
-  "description": "JupyterLab nodjs Integration Tests",
+  "description": "JupyterLab nod Integration Tests",
   "private": true,
   "scripts": {
     "start": "jupyter lab --config jupyter_server_test_config.py",

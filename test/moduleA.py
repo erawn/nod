@@ -8,6 +8,7 @@ def functionA():
 
 def functionA2(x):
     k = 10 + x
+    print(222)
     functionB(k + 3)
 
 

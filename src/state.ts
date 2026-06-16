@@ -10,6 +10,7 @@ import { NodSidebar } from './callstack';
 import { ISettingRegistry } from '@jupyterlab/settingregistry';
 import { IDocumentManager } from '@jupyterlab/docmanager';
 export type pluginStatus = 'active' | 'inactive' | 'unset';
+import { PathExt } from '@jupyterlab/coreutils';
 export class nodState {
   private static _instance: nodState;
 
@@ -21,39 +22,58 @@ export class nodState {
     connection_dir: string,
     callstackSidebar: NodSidebar,
     settingRegistry: ISettingRegistry,
-    docManager: IDocumentManager
+    docManager: IDocumentManager,
+    paths: JupyterFrontEnd.IPaths,
+    mode: "existing" | "from_cli"
   ) {
     this._notebookTracker = tracker;
     this._app = app;
     this._contentsManager = contents;
     this._translator = translator;
-    this._connection_dir = connection_dir;
+    this.connection_dir = connection_dir;
     this._readOnlyHeader = new ReadOnlyHeader();
     this._readOnlyHeader.setHidden(true);
     this.callstackSidebar = callstackSidebar;
     this.settingRegistry = settingRegistry;
     this.docManager = docManager;
+    this.paths = paths;
+    this.mode = mode
   }
-
   public static Instance(
-    tracker?: INotebookTracker,
+  ): nodState;
+  public static Instance(tracker: INotebookTracker,
+    app: JupyterFrontEnd<JupyterFrontEnd.IShell, 'desktop' | 'mobile'>,
+    contents: Contents.IManager,
+    translator: ITranslator,
+    connection_dir: string,
+    callstackSidebar: NodSidebar,
+    settingRegistry: ISettingRegistry,
+    docManager: IDocumentManager,
+    paths: JupyterFrontEnd.IPaths,
+    mode: "existing" | "from_cli"
+  ): nodState;
+  public static Instance(tracker?: INotebookTracker,
     app?: JupyterFrontEnd<JupyterFrontEnd.IShell, 'desktop' | 'mobile'>,
     contents?: Contents.IManager,
     translator?: ITranslator,
     connection_dir?: string,
     callstackSidebar?: NodSidebar,
     settingRegistry?: ISettingRegistry,
-    docManager?: IDocumentManager
+    docManager?: IDocumentManager,
+    paths?: JupyterFrontEnd.IPaths,
+    mode?: "existing" | "from_cli"
   ): nodState {
     if (
       tracker &&
       app &&
       contents &&
       translator &&
-      connection_dir &&
+      connection_dir !== undefined &&
       callstackSidebar &&
       settingRegistry &&
-      docManager
+      docManager &&
+      paths &&
+      mode
     ) {
       this._instance = new this(
         tracker,
@@ -63,7 +83,9 @@ export class nodState {
         connection_dir,
         callstackSidebar,
         settingRegistry,
-        docManager
+        docManager,
+        paths,
+        mode
       );
     }
     return this._instance;
@@ -74,18 +96,21 @@ export class nodState {
   private _app: JupyterFrontEnd<JupyterFrontEnd.IShell, 'desktop' | 'mobile'>;
   private _contentsManager: Contents.IManager;
   private _translator: ITranslator;
-  private _currentFrameIndex: number = 0;
-  private _connection_dir: string;
-  private _statusChanged = new Signal<this, pluginStatus>(this);
   private _currentFrameChanged = new Signal<this, number>(this);
   private _pythonInfoChanged = new Signal<this, nodSchema | null>(this);
   private _lockChanged = new Signal<this, string>(this);
-  private _nodKernelId: string = '';
-  private _lockNotebookId: string = '';
+  private _statusChanged = new Signal<this, pluginStatus>(this);
   private _readOnlyHeader: ReadOnlyHeader;
+  paths: JupyterFrontEnd.IPaths
   docManager: IDocumentManager;
   settingRegistry: ISettingRegistry;
   callstackSidebar: NodSidebar;
+  mode: "existing" | "from_cli"
+
+  private _currentFrameIndex: number = 0;
+  private _nodKernelId: string = '';
+  private _lockNotebookId: string = '';
+  connection_dir: string;
   dialogID = '';
 
   public isNodFile(panel: NotebookPanel) {
@@ -98,7 +123,7 @@ export class nodState {
   }
   public getFrameFromPath(path: string) {
     return this.pythonInfo?.stack_info.find(
-      frame => frame.fileInfo && frame.fileInfo.notebook_file.includes(path)
+      frame => frame.file_info && frame.file_info.notebook_file.includes(path)
     );
   }
 
@@ -128,6 +153,12 @@ export class nodState {
     //     panel.content.widgets.forEach(cell => cell.model.setMetadata("editable", true))
     // })
     this._lockChanged.emit(this._lockNotebookId);
+  }
+  public reset(schema: nodSchema, kernelId: string) {
+    this.unlock()
+    this._currentFrameIndex = 0;
+    this._nodKernelId = kernelId
+    this.connection_dir = schema.nod_info_local_path.split("/nodInfo.json")[0]
   }
   get lockChanged(): Signal<this, string> {
     return this._lockChanged;
@@ -178,14 +209,12 @@ export class nodState {
   set nodKernelId(kernelId: string) {
     if (this._nodKernelId !== kernelId) {
       const panel = this._notebookTracker.currentWidget;
-      if (panel) {
+      if (panel && this.isNodFile(panel)) {
         panel.sessionContext.kernelPreference = {
           autoStartDefault: false,
           id: kernelId
         };
       }
-
-      this._app;
     }
     this._nodKernelId = kernelId;
   }
@@ -214,11 +243,10 @@ export class nodState {
   get contentsManager(): Contents.IManager {
     return this._contentsManager;
   }
-  get connection_dir(): string {
-    return this._connection_dir;
-  }
 
   public activateSidebars() {
     (this._app.shell as LabShell).activateById(this.callstackSidebar.id);
+
+
   }
 }

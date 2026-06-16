@@ -36,8 +36,83 @@
 
 .jp-Nod-CallStack-SearchBox {
   padding-left: 5px;
+  padding-top: 0px;
+  padding-right: 5px;
+}
+.jp-nod-label {
+  padding-left: 5px;
+  position: static;
+  margin-right: auto;
+}
+/* .jp-DebuggerCallstackFrame {
+
+} */
+.jp-NodLeftPanel {
+  display: flex;
+  flex-direction: column;
+  min-width: var(--jp-sidebar-min-width);
+  color: var(--jp-ui-font-color1);
+  background: var(--jp-layout-color1);
+
+  /* This is needed so that all font sizing of children done in ems is
+   * relative to this base size */
+  font-size: var(--jp-ui-font-size1);
 }
 
+.jp-NodLeftPanel > .jp-SidePanel-toolbar::part(positioning-region) {
+  justify-content: flex-end;
+}
+
+.jp-NodLeftPanel-section {
+  min-height: fit-content;
+  overflow: auto;
+}
+.jp-Nod-ConnectLabel-Span {
+  text-align: center;
+  line-height: 2px;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+.jp-NodRunningSessions-itemLabel {
+  font-size: var(--jp-ui-font-size1);
+  flex: 1 0 auto;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.jp-NodRunningSessions-itemDetail {
+  font-size: var(--jp-ui-font-size1);
+  flex: auto;
+  padding: 0 4px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.jp-NodRunningSessions-itemShutdown {
+  outline: none;
+  color: var(--jp-ui-font-color1);
+}
+.jp-NodRunningSessions-itemShutdown:hover {
+  outline: calc(var(--stroke-width) * 1px) solid var(--jp-brand-color1);
+  outline-offset: calc(var(--stroke-width) * -1px);
+}
+.jp-NodItem:hover > .jp-NodItem {
+  outline: calc(var(--stroke-width) * 1px) solid var(--jp-brand-color1);
+  outline-offset: calc(var(--stroke-width) * -1px);
+}
+.jp-NodLeftPanel-sectionContainer {
+  margin: 0;
+  padding: 0;
+}
+
+.jp-NodLeftPanel-sectionList {
+  display: block;
+  margin: 0;
+  padding: 0;
+  list-style-type: none;
+  padding-left: 14px;
+}
 /* .jp-DebuggerCallstackFrame-Changed{
 
 } */

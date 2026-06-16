@@ -16,6 +16,6 @@
 //   await page.goto();
 
 //   expect(
-//     logs.filter(s => s === 'JupyterLab extension nodjs is activated!')
+//     logs.filter(s => s === 'JupyterLab extension nod is activated!')
 //   ).toHaveLength(1);
 // });

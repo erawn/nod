@@ -22,6 +22,4 @@ b = 20
 
 
 if __name__ == "__main__":
-    with open("directory.txt", "w") as f:
-        f.write(str(pathlib.Path.cwd()))
     caller()

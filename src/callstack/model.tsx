@@ -3,12 +3,17 @@
 
 import type { ISignal } from '@lumino/signaling';
 import { Signal } from '@lumino/signaling';
-
+import { IRenderMime } from '@jupyterlab/rendermime-interfaces';
 import { DebuggerDisplayRegistry } from '@jupyterlab/debugger';
 import type { IDebugger, IDebuggerDisplayRegistry } from '@jupyterlab/debugger';
 import type { INotebookTracker } from '@jupyterlab/notebook';
 import type { IConsoleTracker } from '@jupyterlab/console';
-import { INodStackFrame } from '../types';
+import { INodStackFrame, nodSchema } from '../types';
+import { IRunningSessions } from '@jupyterlab/running';
+import { Button, jupyterIcon, kernelIcon, LabIcon } from '@jupyterlab/ui-components';
+import React, { ReactNode } from 'react';
+import { getNodInfo, launchNodKernel, NodSwitchSessions } from '../kernelHelpers';
+import { setKernelToOpen } from '../messaging';
 /**
  * A model for a callstack.
  */
@@ -155,16 +160,97 @@ export namespace CallstackModel {
   }
 }
 
-/**
- * A namespace for private data.
- */
-// namespace Private {
-//   /**
-//    * Construct an id for the given frame.
-//    *
-//    * @param frame The frame.
-//    */
-//   export function getFrameId(frame: IDebugger.IStackFrame): string {
-//     return `${frame?.source?.path}-${frame?.id}`;
-//   }
-// }
+export namespace NodSessionItem {
+  export interface IOptions {
+    name: string;
+    rel_path: string;
+    full_path: string;
+    nodSchema: nodSchema;
+  }
+}
+const KERNEL_ITEM_LABEL_CLASS = 'jp-RunningSessions-itemLabel'
+const CONNECT_BUTTON_CLASS = 'jp-Nod-ConnectButton'
+const KERNEL_LABEL_ID = 'jp-RunningSessions-item-label-kernel-id';
+const KERNEL_ITEM_CLASS = 'jp-mod-kernel';
+const KERNELSPEC_ITEM_CLASS = 'jp-mod-kernelspec';
+export class NodSessionItem implements IRunningSessions.IRunningItem {
+  constructor(options: NodSessionItem.IOptions) {
+    this._name = options.name;
+    this.rel_path = options.rel_path
+    this.full_path = options.full_path
+    this.className = KERNELSPEC_ITEM_CLASS;
+    this.schema = options.nodSchema
+  }
+
+  readonly className: string;
+  public rel_path: string;
+  public full_path: string;
+  public schema: nodSchema;
+  private _name: string;
+
+  icon(): LabIcon | string {
+    return kernelIcon;
+  }
+  open(): void {
+    console.log('called open from model')
+  }
+
+  label(): ReactNode {
+    // const { kernel } = this;
+    // const kernelIdPrefix = kernel.id.split('-')[0];
+    // {this._summary}{' '}
+    return (
+      <>
+        <span className={KERNEL_ITEM_LABEL_CLASS} > {this._name} </span>
+      </>
+    );
+  }
+  async shutdown(): Promise<void> {
+    await NodSwitchSessions(this.schema)
+  }
+}
+export class NodRunningModel {
+  constructor(options: {}) {
+
+
+  }
+  get items(): NodSessionItem[] {
+    return this._items;
+  }
+
+  /**
+   * Set the frames.
+   */
+  setItems(
+    newItems: NodSessionItem[],
+  ) {
+    this._items = newItems;
+    this._itemsChanged.emit(newItems);
+  }
+
+
+  /**
+   * Signal emitted when the frames have changed.
+   */
+  get itemsChanged(): ISignal<this, NodSessionItem[]> {
+    return this._itemsChanged;
+  }
+
+  get selectedKernelKey(): string {
+    return this._selectedKernelKey
+  }
+
+  set selectedKernelKey(newKey: string) {
+    this._selectedKernelKey = newKey
+    this._selectedChanged.emit(newKey)
+  }
+
+  get selectedChanged(): ISignal<this, string> {
+    return this._selectedChanged
+  }
+
+  private _selectedKernelKey: string = ""
+  private _items: NodSessionItem[] = [];
+  private _itemsChanged = new Signal<this, NodSessionItem[]>(this);
+  private _selectedChanged = new Signal<this, string>(this);
+}

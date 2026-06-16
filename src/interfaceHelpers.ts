@@ -28,8 +28,15 @@ export function kernelWaitDialog() {
 let checkKernelPromise: undefined | Promise<void> = undefined;
 export async function checkKernelStatus() {
   if (checkKernelPromise === undefined) {
-    checkKernelPromise = checkKernelStatusInner();
-    await checkKernelPromise.then(() => (checkKernelPromise = undefined));
+    try {
+      checkKernelPromise = checkKernelStatusInner();
+      await checkKernelPromise;
+    } catch (e) {
+      console.error("Check Kernel Status", e)
+    } finally {
+      checkKernelPromise = undefined
+    }
+
   } else {
     console.log('checkKernelStatus rejected');
   }
@@ -61,27 +68,30 @@ async function checkKernelStatusInner() {
   await manager.refreshRunning().then(async () => {
     await getNodKernel().then(async id => {
       if (id === undefined) {
-        console.log('setting to inactive');
+        console.log('setting to inactive and launching new kernel');
         nodState.Instance().status = 'inactive';
-        kernelWaitDialog();
-        await launchNodKernel().then(async id => {
-          console.log('returned from launch');
+        if (nodState.Instance().mode === 'from_cli') {
+          kernelWaitDialog();
+          await launchNodKernel().then(async id => {
+            console.log('returned from launch');
 
-          await getNodInfo().then((success) => {
-            if (success) {
-              const idSearch = Dialog.tracker.find(
-                dialog => dialog.id === nodState.Instance().dialogID
-              );
-              if (idSearch !== undefined) {
-                idSearch.reject();
+            await getNodInfo().then((success) => {
+              if (success) {
+                const idSearch = Dialog.tracker.find(
+                  dialog => dialog.id === nodState.Instance().dialogID
+                );
+                if (idSearch !== undefined) {
+                  idSearch.reject();
+                }
+              } else {
+                //TODO -- warning message
+                console.error("NOD LAUNCH FAILED")
               }
-            } else {
-              //TODO -- warning message
-              console.error("NOD LAUNCH FAILED")
-            }
 
-          })
-        });
+            })
+          });
+        }
+
       } else {
         const idSearch = Dialog.tracker.find(
           dialog => dialog.id === nodState.Instance().dialogID
@@ -89,7 +99,7 @@ async function checkKernelStatusInner() {
         if (idSearch !== undefined) {
           idSearch.reject();
         }
-
+        console.log("gettingNodInfo")
         await getNodInfo();
       }
     });

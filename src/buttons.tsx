@@ -69,10 +69,10 @@ export class NodQuitButton implements DocumentRegistry.IWidgetExtension<
   }
 }
 
-export function addToolbarButtons() {
-  // nodState.Instance().app.docRegistry.addWidgetExtension('Notebook', new NodExportButton());
-  // nodState.Instance().app.docRegistry.addWidgetExtension('Notebook', new NodQuitButton());
-}
+// export function addToolbarButtons() {
+//   // nodState.Instance().app.docRegistry.addWidgetExtension('Notebook', new NodExportButton());
+//   // nodState.Instance().app.docRegistry.addWidgetExtension('Notebook', new NodQuitButton());
+// }
 export function disableKernelSwitching(
   sessionContextDialogs: ISessionContextDialogs,
   toolbarRegistry: IToolbarWidgetRegistry
@@ -83,7 +83,7 @@ export function disableKernelSwitching(
   toolbarRegistry.addFactory<NotebookPanel>('Notebook', 'kernelName', panel => {
     return new ToolbarButton({
       className: 'nod-kernelName',
-      onClick: (): void => {},
+      onClick: (): void => { },
       tooltip: 'Cannot Switch Kernel In Embedded Mode',
       label: 'Nod Kernel'
     });

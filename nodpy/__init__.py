@@ -38,18 +38,25 @@ from pathlib import Path
 import libcst as cst
 from libcst.display import dump
 from IPython.core.error import UsageError
+from nodpy.exceptions import NodException
 from nodpy.ip_plugin import returnTransformer
 from .serverExtension import Nod
 from libcst.metadata import CodePosition, CodeRange
 from libcst.metadata import PositionProvider, ParentNodeProvider
 from IPython.core.interactiveshell import InteractiveShell
 from dataclasses import dataclass
-from typing import List, Literal, TYPE_CHECKING, IO, Any, cast
+from typing import List, Literal, IO, Any, cast
 from IPython.core.getipython import get_ipython
 from ipykernel.connect import get_connection_info
 from .embed_kernel import embed_kernel
 from .ast_tools import FunctionFinder, NodFinder
-from .file_helpers import PathManager, ProgramInfo, makeProgramInfo
+from .file_helpers import (
+    PathManager,
+    ProgramInfo,
+    makeProgramInfo,
+    NodInfo,
+    NodConnectionInfo,
+)
 from inspect import FrameInfo, Traceback
 from types import FrameType, TracebackType
 from jupytext.formats import long_form_one_format  # type: ignore
@@ -57,9 +64,9 @@ from IPython.terminal.interactiveshell import TerminalInteractiveShell
 from .provisioner import NodProvisioner
 from .ip_plugin import nodReturn
 
-if TYPE_CHECKING:
-    # False at run time, only for type checker
-    from _typeshed import SupportsWrite
+# if TYPE_CHECKING:
+#     # False at run time, only for type checker
+#     from _typeshed import SupportsWrite
 
 _log = logging.getLogger(__name__)
 logging.basicConfig()
@@ -69,6 +76,9 @@ _log.addHandler(logging.FileHandler("log.txt"))
 DRY_RUN = False
 
 DEBUG: bool = False
+
+if DEBUG:
+    _log.setLevel(logging.DEBUG)
 
 
 @dataclass
@@ -139,37 +149,37 @@ def compare_identifiers(
 # def nodConfig():
 
 
-def nodPrint(
-    *values: object,
-    sep: str | None = " ",
-    end: str | None = "\n",
-    file: SupportsWrite[str] | None = None,
-    flush: Literal[False] = False,
-):
-    """Inside of an IPython Instance, prints the values to a stream, or to sys.stdout by default.
+# def nodPrint(
+#     *values: object,
+#     sep: str | None = " ",
+#     end: str | None = "\n",
+#     file: SupportsWrite[str] | None = None,
+#     flush: Literal[False] = False,
+# ):
+#     """Inside of an IPython Instance, prints the values to a stream, or to sys.stdout by default.
 
-    sep
-      string inserted between values, default a space.
-    end
-      string appended after the last value, default a newline.
-    file
-      a file-like object (stream); defaults to the current sys.stdout.
-    flush
-      whether to forcibly flush the stream.
-    """
-    # Prevent Nested Nod Instances
-    try:
-        name = get_ipython().__class__.__name__
-        if name != "NoneType":
-            print(
-                *values,
-                sep=sep,
-                end=end,
-                file=file,
-                flush=flush,
-            )
-    except NameError:
-        pass
+#     sep
+#       string inserted between values, default a space.
+#     end
+#       string appended after the last value, default a newline.
+#     file
+#       a file-like object (stream); defaults to the current sys.stdout.
+#     flush
+#       whether to forcibly flush the stream.
+#     """
+#     # Prevent Nested Nod Instances
+#     try:
+#         name = get_ipython().__class__.__name__
+#         if name != "NoneType":
+#             print(
+#                 *values,
+#                 sep=sep,
+#                 end=end,
+#                 file=file,
+#                 flush=flush,
+#             )
+#     except NameError:
+#         pass
 
 
 # class Signals(IntEnum):
@@ -183,17 +193,6 @@ _fmt: typing.Literal["light", "percent"] = "light"
 _modules: list[str] = [os.getcwd() + "/*"]
 _how_restart: typing.Union[typing.Literal["continue"], int] = "continue"
 _dangerously_bypass_readonly: bool = False
-
-
-class NodException(Exception):
-    """Exception raised for custom error in the application."""
-
-    def __init__(self, message):
-        super().__init__(message)
-        self.message = message
-
-    def __str__(self):
-        return f"{self.message})"
 
 
 def nodConfig(
@@ -260,7 +259,10 @@ def notebook(
 
     # print("NB ENTER")
     runtime_dir = os.environ.get("NOD_RUNTIME_DIR", "")
+
     _log.info(f"NOD_RUNTIME_DIR: {runtime_dir}")
+    nod_cli_args_64 = os.environ.get("NOD_CLI_ARGS", "")
+    # _log.info(f"NOD_CLI_ARGS: {nod_cli_args_64}")
     stack = inspect.stack()
     # print(stack)
 
@@ -290,7 +292,7 @@ def notebook(
         if frozenPattern.match(frame.filename) is None
     ]
     # _log.info(stack[notebook_call_index:])
-    _log.info(relevant_stack_frames)
+    # _log.info(relevant_stack_frames)
 
     ## FILE ORGANIZATION
     pm = PathManager()
@@ -324,16 +326,6 @@ def notebook(
         module_filters = _modules
     else:
         module_filters = modules
-
-    jsonInfo = orjson.dumps(
-        {
-            "stack_info": stack_info,
-            "module_filters": module_filters,
-            "fmt": _fmt,
-            "how_restart": _how_restart,
-            "dangerously_bypass_readonly": _dangerously_bypass_readonly,
-        }
-    )
 
     c = Config()
     # so they get added to user namespace
@@ -391,34 +383,54 @@ def notebook(
             exc_tuple, filename, tb_offset, exception_only, running_compiled_code
         )
 
-    shell.showtraceback = types.MethodType(showtraceback, shell)
+    shell.showtraceback = types.MethodType(showtraceback, shell)  # type: ignore[method-assign]
 
     app.kernel.relevant_stack_frames = relevant_stack_frames
 
     ## COPY CONNECTION FILE, ADD KERNEL NAME
     connection_file = app.abs_connection_file
     _log.info("Connection File Path: " + str(app.abs_connection_file))
+    nod_info_local_path = os.path.join(pm.connection_dir, "nodInfo.json")
+    regex = re.compile(r".*kernel-(.{2,8})\.json")
+    match = regex.match(connection_file)
+    if match is None:
+        _log.error("NO PID MATCH")
+        return None
+    kernel_pid = int(match.group(1))
 
+    nod_info = NodInfo(
+        stack_info,
+        module_filters,
+        _fmt,
+        _how_restart,
+        _dangerously_bypass_readonly,
+        nod_info_local_path,
+        nod_cli_args_64,
+        python_pid=os.getpid(),
+        kernel_pid=kernel_pid,
+    )
     info = None
     with open(connection_file) as f:
         info_str = f.read()
-        info = orjson.loads(info_str)
-        info["kernel_name"] = "nod"
-        info["display_name"] = "nod"
+        info = NodConnectionInfo.from_json(info_str)
+        info.kernel_name = "nod"
+        info.display_name = "nod"
         # info["language"] = "python"
-        # info["metadata"] = {
-        #     "kernel_provisioner": {"provisioner_name": "nod-provisioner"}
-        # }
+        info.metadata = {
+            "kernel_provisioner": {"provisioner_name": "nod-provisioner"},
+            "nod_info": nod_info,
+        }
         # info["metadata"] = {"kernel_provisioner": {"config": {}}}
-        _log.info("Connection File: " + str(info))
-
+        # _log.info("Connection File: " + str(info))
+        nod_info.key = info.key
     with open(connection_file, "w") as f:
         f.write(orjson.dumps(info).decode("utf-8"))
 
     nod_connection_file = os.path.join(pm.connection_dir, Path(connection_file).name)
     shutil.copy(connection_file, nod_connection_file)
 
-    with open(os.path.join(pm.connection_dir, "nodInfo.json"), "x") as f:
+    jsonInfo = orjson.dumps(nod_info)
+    with open(nod_info_local_path, "x") as f:
         f.write(jsonInfo.decode("utf-8"))
 
     if not DRY_RUN:
@@ -437,7 +449,7 @@ def notebook(
 
 
 def _jupyter_labextension_paths():
-    return [{"src": "labextension", "dest": "nodjs"}]
+    return [{"src": "labextension", "dest": "nod"}]
 
 
 def _jupyter_server_extension_points():

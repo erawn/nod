@@ -6,6 +6,8 @@
 
 Session not found: session_id='2e3651ad-e58a-41ec-8b90-ce370cf3d153'
 
+
+pip install --force-reinstall nodpy-0.2.0-py3-none-any.whl  
 NOTES:
 
 - old kernel 404's --- WORKSPACE FILE. HOW to fix?
@@ -28,13 +30,25 @@ TODO
 
 <!-- - make other frames read only after edit -->
 <!-- - add banner at the top on read only NBs  -->
-
+- move restart button -- make it a "refresh" button?
+  - maybe a "push and pull" setup?
+  - or maybe integrate jupytext more fully?( maybe not, I think thats more confusing tbh)
 - test unlock
 - nod on exception https://ipython.readthedocs.io/en/stable/interactive/magics.html#magic-pdb
 - rename nb files to function--class
 - throw warning if spec not installed
 - Maybe have the current NOD Instance notebook be undeleteable and a different color?
-
+- frozen modules?
+[E 2026-06-09 16:28:22.375 ServerApp] 0.00s - Debugger warning: It seems that frozen modules are being used, which may
+    0.00s - make the debugger miss breakpoints. Please pass -Xfrozen_modules=off
+    0.00s - to python to disable frozen modules.
+    0.00s - Note: Debugging will proceed. Set PYDEVD_DISABLE_FILE_VALIDATION=1 to disable this validation.
+- dont quit existing sessions if jupyter lab closes?
+-  ERROR:asyncio:Task was destroyed but it is pending!    130 ↵
+task: <Task pending name='Task-72' coro=<Kernel.dispatch_control() running at /Users/erawn/.virtualenvs/nod-vryx/lib/python3.14/site-packages/ipykernel/kernelbase.py:344> cb=[ZMQStream._run_callback.<locals>._log_error() at /Users/erawn/.virtualenvs/nod-vryx/lib/python3.14/site-packages/zmq/eventloop/zmqstream.py:563]>
+/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py:744: RuntimeWarning: coroutine 'Kernel.dispatch_control' was never awaited
+  self._ready.clear()
+RuntimeWarning: Enable tracemalloc to get the object allocation traceback
 - JupyterHub Integration?
   - paste CWD of JupyterLab for --existing?
   - how to get CWD string to subprocess? Pass as env variable? yes this should work
@@ -49,6 +63,8 @@ TODO
     - we can pipe the subprocess to the terminal? Can Jupyterhub people access the console?
     - no they can't, but maybe stdout doesn't matter? people can debug their programs to hit the notebook call ahead of time? If theres a bug before notebook we're gonna have a problem anyways
     - on the other hand, being able to continue with a program and see the output is cool
+    — existing is working and we can see the data show up on the web front end, now we just need to 1. Check on the server side whether the process is actually running, 2. Build a ui to show any open sessions in the bottom left corner of the nod panel (copy the kernel menu?), and 3. Set a runner to continually check for new kernel files. 
+
 - add exit without saving to menu
 - "continue" option now that the provisioner is handling the subprocess?
 - rename setting to "how_exit"?

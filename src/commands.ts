@@ -5,6 +5,9 @@ import { exitSession, writeChange } from './messaging';
 import { ICommandPalette, showDialog, Dialog } from '@jupyterlab/apputils';
 import { IConsoleTracker } from '@jupyterlab/console';
 import { checkIcon } from '@jupyterlab/ui-components';
+import { CommandRegistry } from '@lumino/commands';
+import { INotebookTracker } from '@jupyterlab/notebook';
+import { NodRestart } from './kernelHelpers';
 export namespace nodCommands {
   export const changeKernel = 'nod:changeKernel';
   export const clearAllOutputs = 'nod:clearAllOutputs';
@@ -46,13 +49,14 @@ export namespace nodCommands {
 //     return widget;
 // }
 export function addCommands(
+  commands: CommandRegistry,
   mainMenu: IMainMenu,
   translator: ITranslator,
   palette: ICommandPalette,
-  consoleTracker: IConsoleTracker
+  consoleTracker: IConsoleTracker,
+  tracker: INotebookTracker,
 ) {
-  const { commands } = nodState.Instance().app;
-  const tracker = nodState.Instance().tracker;
+
   const trans = translator.load('jupyterlab');
   // commands.addCommand(nodCommands.changeKernel, {
   //     label: trans.__('Cannot Change Kernel In Nod Notebook'),
@@ -81,8 +85,9 @@ export function addCommands(
 
   // });
   function isEnabled(): boolean {
+
+    return tracker.currentWidget?.sessionContext.kernelDisplayName === 'nod';
     return true;
-    return nodState.Instance().status === 'active';
   }
   commands.addCommand(nodCommands.toggleForExport, {
     icon: checkIcon,
@@ -127,6 +132,24 @@ export function addCommands(
     },
     isEnabled
   });
+  commands.addCommand(nodCommands.restart, {
+    label: trans.__('Restart'),
+    describedBy: {
+      args: {
+        type: 'object',
+        properties: {
+          activate: {
+            type: 'boolean',
+            description: trans.__('Restart')
+          }
+        }
+      }
+    },
+    execute: args => {
+      NodRestart()
+    },
+    isEnabled
+  });
   commands.addCommand(nodCommands.exitNotebook, {
     label: trans.__('Exit Nod Session'),
     describedBy: {
@@ -164,10 +187,16 @@ export function addCommands(
           if (result.button.label === 'Export and Shut Down') {
             const frame = nodState.Instance().currentFrame;
             const panel = nodState.Instance().tracker.currentWidget;
+            const state = nodState.Instance()
+            state.unlock()
             if (frame !== undefined && panel !== null) {
-              writeChange(panel, frame).then(() => exitSession());
+              writeChange(panel, frame).then(() => {
+                console.log("Exiting Nod Session")
+                exitSession(state.nodKernelId)
+              });
             } else {
-              exitSession();
+              console.log("Exiting Nod Session")
+              exitSession(state.nodKernelId);
             }
             // return commands
             //     .execute('console:shutdown', { activate: false })
@@ -255,15 +284,15 @@ export function addCommands(
   // });
 
   const category = 'Nod';
-  [nodCommands.exitNotebook, nodCommands.exportNotebook].forEach(
+  [nodCommands.exitNotebook, nodCommands.exportNotebook, nodCommands.restart].forEach(
     (cmd: string) => palette.addItem({ command: cmd, category })
   );
 
-  mainMenu.kernelMenu.kernelUsers.changeKernel.add({
-    id: nodCommands.changeKernel,
-    isEnabled,
-    rank: -1
-  });
+  // mainMenu.kernelMenu.kernelUsers.changeKernel.add({
+  //   id: nodCommands.changeKernel,
+  //   isEnabled,
+  //   rank: -1
+  // });
   // mainMenu.kernelMenu.kernelUsers.clearWidget.add({
   //     id: CommandIDs.clearAllOutputs,
   //     isEnabled,

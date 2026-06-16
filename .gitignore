@@ -136,5 +136,7 @@ nod/_version.py
 tsconfig.tsbuildinfo
 .nod/**
 .nod
+nod
+nod/**
 tsconfig.tsbuildinfo
 yarn.lock

@@ -98,7 +98,7 @@ export function makeCodeViewer(
   let editor;
   switch (className) {
     case NOD_HEADER_CLASS:
-      source = currentFrame.fileInfo.text_above
+      source = currentFrame.file_info.text_above
         .join('')
         .split('\\n')
         .join('\n');
@@ -108,7 +108,7 @@ export function makeCodeViewer(
       editor = makeCodeViewerWidget(className, source);
       return editor;
     case NOD_FOOTER_CLASS:
-      source = currentFrame.fileInfo.text_below
+      source = currentFrame.file_info.text_below
         .join('')
         .split('\\n')
         .join('\n');
@@ -118,7 +118,7 @@ export function makeCodeViewer(
       editor = makeCodeViewerWidget(className, source);
       return editor;
     case NOD_FUNC_CLASS:
-      source = currentFrame.fileInfo.text_header
+      source = currentFrame.file_info.text_header
         .join('')
         .split('\\n')
         .join('\n');
