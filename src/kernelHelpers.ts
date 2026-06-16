@@ -31,14 +31,13 @@ export async function openNotebookWithNodKernel(
       shutdownOnDispose: false
     };
     state.app.shell.activateById(existingNotebook.id);
+    existingNotebook.context.sessionContext.changeKernel({ name: 'nod', id: state.nodKernelId })
   } else {
     console.log('opening', normalized, nodKernelId);
     docManager.openOrReveal(
       normalized,
       'default',
-      { name: 'nod' },
-      {},
-      { id: nodKernelId }
+      { name: 'nod', id: nodKernelId },
     );
   }
 }

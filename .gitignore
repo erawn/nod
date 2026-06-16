@@ -140,3 +140,4 @@ nod
 nod/**
 tsconfig.tsbuildinfo
 yarn.lock
+**/*.txt

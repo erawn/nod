@@ -62,6 +62,7 @@ class NodInfo(DataClassJsonMixin):
     kernel_pid: int
     nod_info_rel_path: str = ""
     key: Optional[str] = ""
+    connection_file_path: Optional[str] = ""
 
 
 @dataclass
@@ -266,11 +267,9 @@ def makeProgramInfo(
                 line[indent:] if line[:indent] == """ """ * indent else line
                 for line in source_lines[func_body_start - 1 : func_end]
             ],
-            text_above=source_lines[max(func_head_start - 11, 0) : func_head_start - 1],
+            text_above=source_lines[0 : func_head_start - 1],
             text_below=source_lines[
-                min(func_end, len(source_lines) - 1) : min(
-                    func_end + 11, len(source_lines) - 1
-                )
+                min(func_end, len(source_lines) - 1) : len(source_lines)
             ],
             notebook_file=os.path.relpath(tempNotebook, os.getcwd()),
         ),

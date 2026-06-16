@@ -139,6 +139,7 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
 
             self.nod_info.kernel_process = None
             self.nod_info.python_process = None
+        _log.info(f"return from wait {ret}")
         return ret
 
     async def send_signal(self, signum: int):
@@ -164,13 +165,13 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
                 return
             # We can't use the process group because the existing kernel cannot handle a SIGINT
             # Prefer process-group over process
-            # if signal_pgid and hasattr(os, "killpg"):
-            #     try:
-            #         _log.info(f"Sending {signum} to pgid {signal_pgid}")
-            #         os.killpg(signal_pgid, signum)
-            #         return
-            #     except OSError:
-            #         pass  # We'll retry sending the signal to only the process below
+            if signal_pgid and hasattr(os, "killpg") and signum != signal.SIGINT:
+                try:
+                    _log.info(f"Sending {signum} to pgid {signal_pgid}")
+                    os.killpg(signal_pgid, signum)
+                    return
+                except OSError:
+                    pass  # We'll retry sending the signal to only the process below
             _log.info(f"Sending {signum} to signal_route {signal_route.pid}")
             # If we're here, send the signal to the process and let caller handle exceptions
             if psutil.pid_exists(signal_route.pid):
@@ -219,7 +220,6 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
         #     if "nod_key" in serverapp.kernel_manager.trait_names():
         #         serverapp.kernel_manager.nod_key = body  # type: ignore
         existing_info = None
-        file_name = None
         km: KernelManager = self.parent  # type: ignore
         mkm: MultiKernelManager = km.parent  # type: ignore
         _log.info(mkm)
@@ -232,7 +232,7 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
                 paths.jupyter_runtime_dir(), paths.get_home_dir(), key=key
             )
             if len(file_list) > 0:
-                file_name, existing_info = file_list.popitem()
+                existing_info = file_list.pop()
                 self.cli_cmd = existing_info.cli_args
         _log.info(existing_info)
         python_cmd = shlex.split(base64.b64decode(self.cli_cmd).decode("utf-8"))
@@ -247,9 +247,7 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
         final_cmd = await super().pre_launch(
             cmd=kernel_cmd,
             existing_info=(
-                {"file_name": file_name, "info": existing_info}
-                if existing_info is not None
-                else None
+                {"info": existing_info} if existing_info is not None else None
             ),
             **kwargs,
         )
@@ -365,33 +363,44 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
 
         async with self.nod_info.starting_lock:
             _log.info(f"{self.kernel_id} PROVISIONER AQUIRED LOCK")
+            existing_info = kwargs.pop("existing_info", None)
+            _log.debug("existing info")
+            _log.debug(existing_info)
 
-            if (
-                self.nod_info.kernel_process
-                and self.nod_info.kernel_process.is_running()
-            ):
-                _log.info("Returning Existing Kernel Info")
-                return self.nod_info.file_info
+            # if (
+            #     self.nod_info.kernel_process
+            #     and self.nod_info.kernel_process.is_running()
+            # ):
+            #     if existing_info is not None:
+            #         info = t.cast(NodInfo, existing_info["info"])
+            #         if self.nod_info.kernel_pid == info.kernel_pid:
+            #             _log.info("Returning Existing Kernel Info, Same Existing PID")
+            #             return self.nod_info.file_info
+            #     else:
+            #         _log.info("Returning Existing Kernel Info")
+            #         return self.nod_info.file_info
 
-            existing_info = kwargs.pop("existing_info")
-            _log.info("existing info")
-            _log.info(existing_info)
             if existing_info is not None:
-                _log.info("existing info")
-                _log.info(existing_info)
+                _log.debug("existing info")
+                _log.debug(existing_info)
                 info = t.cast(NodInfo, existing_info["info"])
-                file_name = t.cast(str, existing_info["file_name"])
-                connection_file_path = os.path.join(
-                    paths.jupyter_runtime_dir(), file_name
-                )
+                connection_file_path = info.connection_file_path
                 _log.info(connection_file_path)
-                if os.path.exists(connection_file_path):
+                if connection_file_path is not None and os.path.exists(
+                    connection_file_path
+                ):
                     self.nod_info.connection_file = connection_file_path
                 self.nod_info.kernel_pid = info.kernel_pid
                 self.nod_info.kernel_process = psutil.Process(info.kernel_pid)
                 # self.nod_info.kernel_pid = pid
                 # self.nod_info.connection_file = connection_file
                 self.nod_info.python_process = None
+
+            if (
+                self.nod_info.kernel_process
+                and self.nod_info.kernel_process.is_running()
+            ):
+                _log.info("Returning Existing Kernel Info")
             else:
                 # Launch Python Command
                 await self.launch_nod_kernel(cmd, kwargs)
@@ -468,6 +477,7 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
         if not restart:
             km: KernelManager = self.parent  # type: ignore
             km.stop_restarter()
+            self.kill
         # self.nod_info.__class__._instances.clear()
 
     @staticmethod

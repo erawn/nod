@@ -5,9 +5,9 @@ import os
 import subprocess
 import textwrap
 from jupyter_server.extension.application import ExtensionApp
-import jupytext
+import jupytext  # type: ignore[import-untyped]
 import orjson
-import psutil
+import psutil  # type: ignore[import-untyped]
 from traitlets.traitlets import Bool, Unicode
 import base64
 from dacite import from_dict
@@ -36,7 +36,7 @@ from jupytext.formats import long_form_one_format  # type: ignore
 from jupyter_server.base.handlers import APIHandler
 from jupyter_server.utils import url_path_join
 import tornado
-from typing import cast
+from typing import List, cast
 
 
 class NodServerFileRouteHandler(APIHandler):
@@ -64,8 +64,8 @@ class NodServerFileRouteHandler(APIHandler):
 
 def findNodRuntimeFile(
     runtime_dir: str, server_dir: str, key: str | None = None
-) -> dict[str, NodInfo]:
-    metadata_fields: dict[str, NodInfo] = {}
+) -> List[NodInfo]:
+    metadata_fields: List[NodInfo] = []
     if not os.path.exists(runtime_dir):
         return metadata_fields
     connection_files = os.listdir(runtime_dir)
@@ -119,11 +119,23 @@ def findNodRuntimeFile(
                             nod_info.nod_info_local_path, os.getcwd()
                         )
                         _log.info(nod_info.nod_info_rel_path)
-                        if key is not None:
-                            if nod_info.key == key:
-                                metadata_fields[file_name] = nod_info
-                        else:
-                            metadata_fields[file_name] = nod_info
+                        nod_info.connection_file_path = file_path
+                        if (
+                            len(
+                                [
+                                    info
+                                    for info in metadata_fields
+                                    if info.key == nod_info.key
+                                ]
+                            )
+                            == 0
+                        ):
+
+                            if key is not None:
+                                if nod_info.key == key:
+                                    metadata_fields.append(nod_info)
+                            else:
+                                metadata_fields.append(nod_info)
                         # now check if kernel is alive
                         # _log.info(nod_info)
 
@@ -150,10 +162,7 @@ class ExistingKernelsRouteHandler(APIHandler):
             paths.jupyter_runtime_dir(), paths.get_home_dir()
         )
         _log.info(metadata_fields)
-        metadata_fields = {
-            key: val.to_dict(True)
-            for key, val in zip(metadata_fields.keys(), metadata_fields.values())
-        }
+        metadata_fields = [info.to_dict(True) for info in metadata_fields]
         out = base64.b64encode(
             orjson.dumps(
                 metadata_fields,
@@ -242,11 +251,11 @@ class WriteFileRouteHandler(APIHandler):
             _log.debug(decoded_content)
             nb = jupytext.reads(decoded_content, "ipynb")
             _log.debug("NB")
-            _log.debug(nb)
+            _log.info(nb)
             nb_content_to_write = jupytext.writes(
                 nb, fmt=long_form_one_format(f"py:{request.program_info.fmt}")
             )
-            _log.debug(nb_content_to_write)
+            _log.info(nb_content_to_write)
             fileInfo = request.program_info.file_info
             if fileInfo is not None:
                 file_content = (
@@ -258,7 +267,7 @@ class WriteFileRouteHandler(APIHandler):
                     ).splitlines(True)
                     + fileInfo.text_below
                 )
-                _log.debug(file_content)
+                _log.info(file_content)
                 with open(request.program_info.source_file, "w") as f:
                     f.writelines(file_content)
 

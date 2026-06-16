@@ -19,6 +19,7 @@ import { Signal } from '@lumino/signaling';
 import Section from "@jupyterlab/running"
 import { ListWidget } from './listWidget';
 import { getKernels } from '../messaging';
+import { run } from 'node:test';
 // import { Section } from "@jupyterlab/running"
 
 
@@ -107,7 +108,7 @@ export class NodSidebar extends SidePanel {
 
     const runningKernelsTab = new PanelWithToolbar()
     runningKernelsTab.addClass('jp-NodLeftPanel-section')
-    runningKernelsTab.title.label = trans.__('Connect To Existing Session')
+    runningKernelsTab.title.label = trans.__('Sessions')
     runningKernelsTab.toolbar.addItem(
       'nod-refresh-sessions',
       new ToolbarButton({
@@ -122,8 +123,8 @@ export class NodSidebar extends SidePanel {
     runningKernelsTab.addWidget(runningTab)
     this.addWidget(runningKernelsTab)
 
-    const buttonPanel = buttonTab(translator)
-    this.addWidget(buttonPanel)
+    // const buttonPanel = buttonTab(translator)
+    // this.addWidget(buttonPanel)
   }
   refreshKernels() {
     getKernels().then((reply) => {
@@ -131,14 +132,14 @@ export class NodSidebar extends SidePanel {
       if (reply === undefined) {
         nodState.Instance().callstackSidebar.runningModel.setItems([])
       }
-      const firstFrame = reply?.stack_info[0]
-      if (reply !== undefined && firstFrame !== undefined) {
-        nodState.Instance().callstackSidebar.runningModel.setItems(reply?.stack_info.map(frame => {
+      if (reply !== undefined && reply.length > 0) {
+        nodState.Instance().callstackSidebar.runningModel.setItems(reply.map(info => {
+          const frame = info.stack_info[0]
           return new NodSessionItem({
             name: frame.function_name,
             rel_path: frame.relative_source_file,
             full_path: frame.source_file,
-            nodSchema: reply
+            nodSchema: info
           })
         }))
       }

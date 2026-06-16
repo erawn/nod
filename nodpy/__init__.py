@@ -62,7 +62,6 @@ from types import FrameType, TracebackType
 from jupytext.formats import long_form_one_format  # type: ignore
 from IPython.terminal.interactiveshell import TerminalInteractiveShell
 from .provisioner import NodProvisioner
-from .ip_plugin import nodReturn
 
 # if TYPE_CHECKING:
 #     # False at run time, only for type checker
@@ -190,36 +189,37 @@ def compare_identifiers(
 
 # _SIGNUM = typing.Union[int, Signals]
 _fmt: typing.Literal["light", "percent"] = "light"
-_modules: list[str] = [os.getcwd() + "/*"]
+_filter: list[str] = [os.getcwd() + "/*"]
 _how_restart: typing.Union[typing.Literal["continue"], int] = "continue"
 _dangerously_bypass_readonly: bool = False
 
 
 def nodConfig(
     fmt: typing.Literal["light", "percent"] = "light",
-    modules: list[str] = [],
+    filter: list[str] = [],
     how_restart: typing.Union[typing.Literal["continue"], int] = "continue",
     dangerously_bypass_readonly: bool = False,
 ):
     """Configure Nod Settings
-    modules:
-        list of modules (as strings) to include in the trace. __main__ included by default, also accepts *, ?, and [] as wildcards
+    filter: (default ['<CWD>/**'])
+        list of paths (as strings) to include in the trace filter. Accepts *, ?, and [] as wildcards
 
-    fmt:
+    fmt: (default 'light')
         notebook conversion format.
+        Options: "light", "percent"
 
-    how_restart
+    how_restart: (default 'continue')
         how the python program should be restarted from the notebook.
-        "continue" returns to let the program finish
-        SIGINT, SIGKILL, or SIGTERM will send that signal to the program instead
+        "continue" returns to let the program finish, and "exit" will stop the program.
+        Options: 'continue', 'exit'
 
-    dangerously_bypass_readonly
+    dangerously_bypass_readonly: (default 'false')
         Once the code in associated with one stack frame in a Nod Session is edited, the others become read-only by default to prevent reaching a confusing state. Set to true to remove this safeguard, if you know what you're doing.
     """
     global _fmt
     _fmt = fmt
-    global _modules
-    _modules = modules
+    global _filter
+    _filter = filter
     global _how_restart
     _how_restart = how_restart
     global _dangerously_bypass_readonly
@@ -227,14 +227,14 @@ def nodConfig(
 
 
 def notebook(
-    modules: list[str] = [],
+    filter: list[str] = [],
     # indent: int = 1,
     # on_condition: bool = True,
     # deep_copy: bool = False,
 ):
     """Invoke a Jupyter Notebook at this location in the source code, with code in the same indent block being editable.
-    modules:
-        list of modules (as strings) to include in the trace. __main__ included by default.
+    filter:
+        list of filter (as strings) to include in the trace. __main__ included by default.
 
 
     """
@@ -248,14 +248,18 @@ def notebook(
     # number of indent blocks to make editable
     # if not on_condition:
     #     return
-
     # Prevent Nested Nod Instances
     try:
         name = get_ipython().__class__.__name__
         if name != "NoneType":
             return
+        if "nodReturn" in globals():
+            return
+        # if "nodReturn" in locals():
+        #     return
     except NameError:
         pass
+    print("nod: reached notebook(), starting session...")
 
     # print("NB ENTER")
     runtime_dir = os.environ.get("NOD_RUNTIME_DIR", "")
@@ -322,10 +326,10 @@ def notebook(
         )
         for index, stackFrame in enumerate(relevant_stack_frames)
     ]
-    if modules == []:
-        module_filters = _modules
+    if filter == []:
+        module_filters = _filter
     else:
-        module_filters = modules
+        module_filters = filter
 
     c = Config()
     # so they get added to user namespace
@@ -338,6 +342,8 @@ def notebook(
     startingVariables = {}
     startingVariables.update(notebook_call.frame.f_globals)
     startingVariables.update(notebook_call.frame.f_locals)
+    from .ip_plugin import nodReturn
+
     startingVariables.update({"nodReturn": nodReturn})
 
     app = embed_kernel(
@@ -346,7 +352,20 @@ def notebook(
         no_stdout=False,
         no_stderr=False,
         quiet=False,  # (not DEBUG)
+        # transport="ipc",
     )
+
+    def quitOnExit():
+        print("Nod session exiting...", flush=True)
+        try:
+            shell: InteractiveShell = app.shell  # type: ignore
+            shell.exit_now = True
+            if _how_restart != "continue":
+                os.kill(os.getpid(), _how_restart)
+        except:
+            pass
+
+    atexit.register(quitOnExit)
 
     shell = cast(TerminalInteractiveShell, app.shell)
     shell.ast_transformers.append(returnTransformer())

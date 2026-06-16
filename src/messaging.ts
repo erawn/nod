@@ -14,7 +14,7 @@ import {
 } from '@jupyterlab/services/lib/kernel/messages';
 import { requestAPI } from './request';
 import { getNodKernel } from './kernelHelpers';
-import { nodSchema } from './types';
+import { nodSchema, nodSchemas } from './types';
 
 export function requestExecute(
   code: string
@@ -103,7 +103,7 @@ export async function writeChange(
     });
 }
 
-export async function getKernels() {
+export async function getKernels(): Promise<nodSchemas | undefined> {
   // console.log('sending kernels request');
   const res = await requestAPI<any>('kernels', {
     method: 'GET',
@@ -116,10 +116,9 @@ export async function getKernels() {
       if (reply !== undefined && reply !== "") {
         try {
           const jsonObj = JSON.parse(atob(reply));
-          const kernelFile = Object.keys(jsonObj).pop()
-          const val = Object.values(jsonObj).pop()
+          // const val = Object.values(jsonObj).pop()
           // console.log(kernelFile, val)
-          const schema = nodSchema.parse(val);
+          const schema = nodSchemas.parse(jsonObj);
           return schema
         } catch (e) {
           console.error(

@@ -37,6 +37,9 @@ export const nodSchema = z.object({
   key: z.string()
 });
 export type nodSchema = z.infer<typeof nodSchema>;
+
+export const nodSchemas = z.array(nodSchema)
+export type nodSchemas = z.infer<typeof nodSchemas>;
 export type stackInfo = nodSchema['stack_info'];
 export const hasFileInfo = (
   frame: NonNullable<nodState['currentFrame']>

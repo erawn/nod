@@ -27,15 +27,12 @@ NODCONFIG
 - if you want to test your program output after quit, you just gotta use the command line version
 
 TODO
-
+- on nod switch, kill the previous kernel
 <!-- - make other frames read only after edit -->
 <!-- - add banner at the top on read only NBs  -->
-- move restart button -- make it a "refresh" button?
-  - maybe a "push and pull" setup?
-  - or maybe integrate jupytext more fully?( maybe not, I think thats more confusing tbh)
 - test unlock
 - nod on exception https://ipython.readthedocs.io/en/stable/interactive/magics.html#magic-pdb
-- rename nb files to function--class
+<!-- - rename nb files to function--class (nah) -->
 - throw warning if spec not installed
 - Maybe have the current NOD Instance notebook be undeleteable and a different color?
 - frozen modules?
@@ -49,26 +46,9 @@ task: <Task pending name='Task-72' coro=<Kernel.dispatch_control() running at /U
 /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py:744: RuntimeWarning: coroutine 'Kernel.dispatch_control' was never awaited
   self._ready.clear()
 RuntimeWarning: Enable tracemalloc to get the object allocation traceback
-- JupyterHub Integration?
-  - paste CWD of JupyterLab for --existing?
-  - how to get CWD string to subprocess? Pass as env variable? yes this should work
-  - can we add as a CMD from the front end?
-  - or an --existing flag to the nod call, then we add the command to the connection file
-  - left hand pane that users can add CWD (or just specify the command to run directly from the pane?)
-  - how to get info from pane to kernel provisioner?
-  - if the python program is being run as a subprocess, we can set an enviornment variable for the connection directory
-  - print CWD on bottom pane to paste into existing arg
-    - problem with this is that we can't use existing provisioner architecture, bc the kernel doesn't own the subprocess
-    - but we probably want stdout in some way
-    - we can pipe the subprocess to the terminal? Can Jupyterhub people access the console?
-    - no they can't, but maybe stdout doesn't matter? people can debug their programs to hit the notebook call ahead of time? If theres a bug before notebook we're gonna have a problem anyways
-    - on the other hand, being able to continue with a program and see the output is cool
-    — existing is working and we can see the data show up on the web front end, now we just need to 1. Check on the server side whether the process is actually running, 2. Build a ui to show any open sessions in the bottom left corner of the nod panel (copy the kernel menu?), and 3. Set a runner to continually check for new kernel files. 
 
 - add exit without saving to menu
-- "continue" option now that the provisioner is handling the subprocess?
 - rename setting to "how_exit"?
-  - maybe we don't need this -- people can just send a "quit" manually if they want to continue the program
 
 Nice to have
 

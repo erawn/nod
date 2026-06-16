@@ -9,9 +9,10 @@ import shlex
 import subprocess
 import sys
 import atexit
+import signal
 from tempfile import TemporaryDirectory
 from typing import List, Optional
-import psutil
+import psutil  # type: ignore[import-untyped]
 from typing_extensions import Annotated
 import typer
 from nodpy import DRY_RUN, DEBUG
@@ -19,11 +20,13 @@ from nodpy.file_helpers import PathManager
 from jupyter_client.kernelspec import KernelSpecManager
 
 app = typer.Typer(no_args_is_help=False)
-_log = logging.getLogger(__name__)
+
 logging.basicConfig(
-    format="%(asctime)s,%(msecs)03d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s",
+    format="%(asctime)s:%(msecs)03d %(levelname)s[%(filename)s:%(lineno)d] %(message)s",
     datefmt="%Y-%m-%dT%H:%M:%S",
+    force=True,
 )
+_log = logging.getLogger(__name__)
 _log.setLevel(logging.INFO)
 
 if DEBUG:
@@ -42,7 +45,6 @@ kernel_json = {
     "metadata": {
         "debugger": True,
         "kernel_provisioner": {"provisioner_name": "NodProvisioner"},
-        "supported_encryption": "curve",
     },
     "kernel_protocol_version": "5.5",
 }
@@ -179,34 +181,39 @@ def main(
     def cleanup():
 
         if pythonProcess is not None:
-            _log.info("Cleanup")
+            _log.debug("Cleanup")
             stdout = pythonProcess.stdout
             stderr = pythonProcess.stderr
-            _log.info(
+            _log.debug(
                 f"pid {pythonProcess.pid} exists {psutil.pid_exists(pythonProcess.pid)}"
             )
-            pythonProcess.communicate("exit")
-            if stdout is not None and stderr is not None:
-                _log.info("Fixing Pipes")
+            if stdout is not None:
+                _log.debug("Fixing stdout")
                 stdout.flush()
-                stderr.flush()
                 os.set_blocking(stdout.fileno(), True)  # type: ignore
+            if stderr is not None:
+                _log.debug("Fixing stderr")
                 os.set_blocking(stderr.fileno(), True)  # type: ignore
+                stderr.flush()
+            # pythonProcess.send_signal(signal.SIGKILL)
+            pythonProcess.wait()
 
     atexit.register(cleanup)
     if existing:
         nb_env = os.environ.copy()
         nb_env["NOD_CLI_ARGS"] = cli_cmds_64
         nb_env["NOD_RUNTIME_DIR"] = pm.connection_dir
+        nb_env["JPY_PARENT_PID"] = str(os.getpid())
+        print(f"nod: running command: [{" ".join(commands)}]")
         pythonProcess = subprocess.Popen(
             commands,
             env=nb_env,
-            stdin=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             stdout=subprocess.PIPE,
+            stdin=subprocess.PIPE,
             text=True,
             bufsize=1,
         )
-
         while pythonProcess.poll() is None:
             # if pythonProcess is not None:
             import time
@@ -220,21 +227,14 @@ def main(
                 os.set_blocking(stderr.fileno(), False)  # type: ignore
                 stdout.flush()
                 stderr.flush()
-                out_lines = []
                 for line in iter(stdout.readline, ""):
                     if len(line) == 0:
                         break
-                    out_lines.append(line)
-                if len(out_lines) > 0:
-                    _log.error("".join(out_lines))
-                    # _log.debug("".join(out_lines))
-                error_lines = []
+                    print(line)
                 for line in iter(stderr.readline, ""):
                     if len(line) == 0:
                         break
-                    error_lines.append(line)
-                if len(error_lines) > 0:
-                    _log.error("".join(error_lines))
+                    print(line)
         pythonProcess.wait()
 
         # app.nod_notebook_process = notebookProcess  # type: ignore
