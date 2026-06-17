@@ -16,7 +16,15 @@ export async function openNotebookWithNodKernel(
   docManager: IDocumentManager
 ) {
   const state = nodState.Instance();
-  const normalized = docManager.services.contents.normalize(notebookFile);
+  // console.log(state.nod_cwd)
+  if (!notebookFile.startsWith(state.nod_cwd)) {
+    console.error("file not under jupyter filetree!")
+    return
+  }
+  const normalized = docManager.services.contents.normalize(notebookFile.replace(state.nod_cwd, ""));
+  console.log(normalized)
+
+  // const relPath = normalized.replace(state.nod_cwd, "")
   await state.app.serviceManager.kernels.refreshRunning();
   const nodKernelId = await getNodKernel();
 

@@ -9,5 +9,10 @@ def f():
 
     assert 1 == 2
 
+    import time 
+    time.sleep(10)
+
+
+
 
 f()

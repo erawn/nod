@@ -165,6 +165,7 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
                 return
             # We can't use the process group because the existing kernel cannot handle a SIGINT
             # Prefer process-group over process
+            signal_pgid = os.getpgid(self.nod_info.kernel_pid)
             if signal_pgid and hasattr(os, "killpg") and signum != signal.SIGINT:
                 try:
                     _log.info(f"Sending {signum} to pgid {signal_pgid}")
@@ -477,7 +478,7 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
         if not restart:
             km: KernelManager = self.parent  # type: ignore
             km.stop_restarter()
-            self.kill
+            # self.kill
         # self.nod_info.__class__._instances.clear()
 
     @staticmethod

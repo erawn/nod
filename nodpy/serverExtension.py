@@ -322,6 +322,7 @@ class Nod(ExtensionApp):
         page_config = settings.setdefault("page_config_data", {})
         page_config["nod_active"] = self.active
         page_config["nod_connection_dir"] = self.connection_dir
+        page_config["nod_CWD"] = os.getcwd()
         info_decoded = base64.b64decode(self.cli_cmd).decode("utf-8")
         self.cli_cmd = info_decoded
         page_config["cli_cmd"] = self.cli_cmd

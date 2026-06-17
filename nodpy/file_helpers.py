@@ -33,7 +33,7 @@ class FileInfo(DataClassJsonMixin):
     text_body: List[str]
     text_above: List[str]
     text_below: List[str]
-    notebook_file: str = ""  # rel path of generated .ipynb file
+    notebook_file: str = ""  # abs path of generated .ipynb file
     notebook_content: str = ""
 
 
@@ -170,12 +170,13 @@ def writeNotebook(
         }
         jupytext.write(
             notebook,
-            os.path.join(
-                program_info.connection_dir,
-                os.path.relpath(
-                    program_info.file_info.notebook_file, program_info.connection_dir
-                ),
-            ),
+            program_info.file_info.notebook_file,
+            # os.path.join(
+            #     program_info.connection_dir,
+            #     os.path.relpath(
+            #         , program_info.connection_dir
+            #     ),
+            # ),
             fmt=".ipynb",
         )
         content = jupytext.writes(
@@ -236,7 +237,7 @@ def makeProgramInfo(
                     text_body=no_position_source_lines,
                     text_above=[],
                     text_below=[],
-                    notebook_file=os.path.relpath(tempNotebook, os.getcwd()),
+                    notebook_file=os.path.join(os.getcwd(), tempNotebook),
                 ),
             )
         )
@@ -271,7 +272,7 @@ def makeProgramInfo(
             text_below=source_lines[
                 min(func_end, len(source_lines) - 1) : len(source_lines)
             ],
-            notebook_file=os.path.relpath(tempNotebook, os.getcwd()),
+            notebook_file=os.path.join(os.getcwd(), tempNotebook),
         ),
     )
     return writeNotebook(info)

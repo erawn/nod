@@ -1,7 +1,8 @@
 # NOD: Notebook-On-Demand
-Nod is a JupyterLab extension for injecting a Jupyter notebook editor anywhere in a running Python program, allowing you to make edits while interacting with the real state of your program. Nod is like a breakpoint with a notebook inside.
+#### Put a Notebook Anywhere
+Nod is a JupyterLab extension for inserting a notebook anywhere in a running Python program, allowing you to make edits while interacting with the real state of your program wherever you want. Nod is like a breakpoint with a notebook inside.
 
-To install just run ```pip install nodpy && nod --install-kernel```
+To install run ```pip install nodpy && nod --install-kernel```
 
 ## Usage
 
@@ -17,7 +18,7 @@ def f():
 f()
 ```
 
-then run the python program with nod <command>
+then run the python program with ```nod <command>```:
 
 ```bash
 nod python -m myfile
@@ -25,16 +26,16 @@ nod python -m myfile
 and you'll see a Jupyter editor with the current state of your program when you called ```notebook()```: 
 ![](media/nod_demo.png)
 
-Nod will open everything in the current function body to edit
+Nod will open everything in the *current function body* to edit. 
 
 On the left side is a panel to navigate up and down your callstack---your notebook state will switch automatically to the variables at that place in the program. You'll notice three buttons at the top of the Nod Panel:
 - <img src="media/nod_dl.png" alt="markdown language" height="30" > Sends any text changes made in the notebook back to your source files. By default, the notebook is converted to [light](https://jupytext.org/formats/scripts/#the-light-format) format \(see [Config]( #nodconfig) for more options.\)
-- <img src="media/nod_restart.png" alt="markdown language" height="30" > Restarts your original python program by re-executing whatever follows your ```nod``` command line invocation, and updates the Jupyter editor to match. If you want to make changes directly to your source file and pull them to your Nod Jupyter session, just press "Restart without Saving" at the prompt when you restart. 
-- <img src="media/nod_exit.png" alt="markdown language" height="30" > Exits the current nod session and quits the kernel. 
+- <img src="media/nod_restart.png" alt="markdown language" height="30" > Restarts your original python program by re-executing the ```<command>``` from your ```nod <command>``` command line invocation, and updates the Jupyter editor to match. If you want to make changes directly to your source file and pull them to your Nod Jupyter session, just press "Restart without Saving" at the prompt when you restart. 
+- <img src="media/nod_exit.png" alt="markdown language" height="30" > Quits the current Nod kernel. 
 
 ### JupyterHub Integration
 JupyterHub users (and anyone else who doesn't want a new Jupyter window to spawn for every Nod session) can use ```-e``` or ```-existing``` in their ```nod``` call: 
-```nod -e python -m myfile```
+```nod -e python -m module```
 and the session will appear in the left panel under "Sessions":
 
 <img src="media/nod_existing.png" alt="markdown language" width="300" >

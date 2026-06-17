@@ -108,6 +108,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
 
     console.log('JupyterLab extension nod is activated!');
     const connection_dir = PageConfig.getOption('nod_connection_dir');
+    const nod_CWD = PageConfig.getOption('nod_CWD')
     console.log('connection_dir', connection_dir);
     const callStackModel = new CallstackModel({});
     const runningModel = new NodRunningModel({})
@@ -127,7 +128,8 @@ const plugin: JupyterFrontEndPlugin<void> = {
       settingRegistry,
       docManager,
       paths,
-      isActive ? "from_cli" : "existing"
+      isActive ? "from_cli" : "existing",
+      nod_CWD
     );
     console.log(state)
     addCommands(app.commands, mainMenu, translator, palette, consoleTracker, notebookTracker);

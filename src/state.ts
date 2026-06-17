@@ -24,7 +24,8 @@ export class nodState {
     settingRegistry: ISettingRegistry,
     docManager: IDocumentManager,
     paths: JupyterFrontEnd.IPaths,
-    mode: "existing" | "from_cli"
+    mode: "existing" | "from_cli",
+    nod_cwd: string
   ) {
     this._notebookTracker = tracker;
     this._app = app;
@@ -37,7 +38,8 @@ export class nodState {
     this.settingRegistry = settingRegistry;
     this.docManager = docManager;
     this.paths = paths;
-    this.mode = mode
+    this.mode = mode;
+    this.nod_cwd = nod_cwd;
   }
   public static Instance(
   ): nodState;
@@ -50,7 +52,8 @@ export class nodState {
     settingRegistry: ISettingRegistry,
     docManager: IDocumentManager,
     paths: JupyterFrontEnd.IPaths,
-    mode: "existing" | "from_cli"
+    mode: "existing" | "from_cli",
+    nod_cwd: string
   ): nodState;
   public static Instance(tracker?: INotebookTracker,
     app?: JupyterFrontEnd<JupyterFrontEnd.IShell, 'desktop' | 'mobile'>,
@@ -61,7 +64,8 @@ export class nodState {
     settingRegistry?: ISettingRegistry,
     docManager?: IDocumentManager,
     paths?: JupyterFrontEnd.IPaths,
-    mode?: "existing" | "from_cli"
+    mode?: "existing" | "from_cli",
+    nod_cwd?: string
   ): nodState {
     if (
       tracker &&
@@ -73,7 +77,8 @@ export class nodState {
       settingRegistry &&
       docManager &&
       paths &&
-      mode
+      mode &&
+      nod_cwd
     ) {
       this._instance = new this(
         tracker,
@@ -85,11 +90,13 @@ export class nodState {
         settingRegistry,
         docManager,
         paths,
-        mode
+        mode,
+        nod_cwd
       );
     }
     return this._instance;
   }
+
   private _notebookTracker: INotebookTracker;
   private _status: pluginStatus = 'unset';
   private _pythonInfo: nodSchema | null = null;
@@ -106,7 +113,7 @@ export class nodState {
   settingRegistry: ISettingRegistry;
   callstackSidebar: NodSidebar;
   mode: "existing" | "from_cli"
-
+  nod_cwd: string
   private _currentFrameIndex: number = 0;
   private _nodKernelId: string = '';
   private _lockNotebookId: string = '';

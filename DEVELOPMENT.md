@@ -27,6 +27,9 @@ NODCONFIG
 - if you want to test your program output after quit, you just gotta use the command line version
 
 TODO
+- switch stdout and stderr back to blocking when jupyter starts?
+  - cant wait on a non-blocking process, so set to nonblocking at cli enter so we get the program execution, then switch back to blocking on notebook enter, then on notebook exit switch back to non-blocking to print out the rest of the program
+  - maybe just disabling it is fine
 - on nod switch, kill the previous kernel
 <!-- - make other frames read only after edit -->
 <!-- - add banner at the top on read only NBs  -->
