@@ -83,7 +83,7 @@ export function disableKernelSwitching(
   toolbarRegistry.addFactory<NotebookPanel>('Notebook', 'kernelName', panel => {
     return new ToolbarButton({
       className: 'nod-kernelName',
-      onClick: (): void => { },
+      onClick: (): void => {},
       tooltip: 'Cannot Switch Kernel In Embedded Mode',
       label: 'Nod Kernel'
     });

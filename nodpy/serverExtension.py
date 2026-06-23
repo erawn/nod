@@ -11,7 +11,7 @@ import psutil  # type: ignore[import-untyped]
 from traitlets.traitlets import Bool, Unicode
 import base64
 from dacite import from_dict
-from nodpy.file_helpers import (
+from nodpy.nodTypes import (
     NodConnectionInfo,
     NodInfo,
     ProgramInfo,
@@ -118,7 +118,7 @@ def findNodRuntimeFile(
                         nod_info.nod_info_rel_path = os.path.relpath(
                             nod_info.nod_info_local_path, os.getcwd()
                         )
-                        _log.info(nod_info.nod_info_rel_path)
+                        # _log.info(nod_info.nod_info_rel_path)
                         nod_info.connection_file_path = file_path
                         if (
                             len(
@@ -154,14 +154,14 @@ class ExistingKernelsRouteHandler(APIHandler):
     @tornado.web.authenticated
     def get(self):
         # paths.jupyter_runtime_dir
-        _log.info(paths.jupyter_runtime_dir())
-        _log.info(paths.get_home_dir())
-        _log.info(paths.jupyter_path())
-        _log.info(os.getcwd())
+        # _log.info(paths.jupyter_runtime_dir())
+        # _log.info(paths.get_home_dir())
+        # _log.info(paths.jupyter_path())
+        # _log.info(os.getcwd())
         metadata_fields = findNodRuntimeFile(
             paths.jupyter_runtime_dir(), paths.get_home_dir()
         )
-        _log.info(metadata_fields)
+        # _log.info(metadata_fields)
         metadata_fields = [info.to_dict(True) for info in metadata_fields]
         out = base64.b64encode(
             orjson.dumps(

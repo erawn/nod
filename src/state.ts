@@ -1,7 +1,7 @@
 import { nodSchema } from './types';
 import { INotebookTracker, NotebookPanel } from '@jupyterlab/notebook';
 import { JupyterFrontEnd, LabShell } from '@jupyterlab/application';
-import { Contents } from '@jupyterlab/services';
+import { Contents, KernelMessage } from '@jupyterlab/services';
 import { ITranslator } from '@jupyterlab/translation';
 import type { ISignal } from '@lumino/signaling';
 import { Signal } from '@lumino/signaling';
@@ -11,6 +11,12 @@ import { ISettingRegistry } from '@jupyterlab/settingregistry';
 import { IDocumentManager } from '@jupyterlab/docmanager';
 export type pluginStatus = 'active' | 'inactive' | 'unset';
 import { PathExt } from '@jupyterlab/coreutils';
+import { NodLogSidebar } from './nodLog/nodLog';
+import { getNodKernel } from './kernelHelpers';
+import { requestDebug } from './messaging';
+import { PromiseDelegate } from '@lumino/coreutils';
+import { DebugProtocol } from '@vscode/debugprotocol';
+import { IDebugger } from '@jupyterlab/debugger';
 export class nodState {
   private static _instance: nodState;
 
@@ -21,10 +27,11 @@ export class nodState {
     translator: ITranslator,
     connection_dir: string,
     callstackSidebar: NodSidebar,
+    nodLogSidebar: NodLogSidebar,
     settingRegistry: ISettingRegistry,
     docManager: IDocumentManager,
     paths: JupyterFrontEnd.IPaths,
-    mode: "existing" | "from_cli",
+    mode: 'existing' | 'from_cli',
     nod_cwd: string
   ) {
     this._notebookTracker = tracker;
@@ -35,36 +42,40 @@ export class nodState {
     this._readOnlyHeader = new ReadOnlyHeader();
     this._readOnlyHeader.setHidden(true);
     this.callstackSidebar = callstackSidebar;
+    this.nodLogSidebar = nodLogSidebar;
     this.settingRegistry = settingRegistry;
     this.docManager = docManager;
     this.paths = paths;
     this.mode = mode;
     this.nod_cwd = nod_cwd;
   }
+  public static Instance(): nodState;
   public static Instance(
-  ): nodState;
-  public static Instance(tracker: INotebookTracker,
+    tracker: INotebookTracker,
     app: JupyterFrontEnd<JupyterFrontEnd.IShell, 'desktop' | 'mobile'>,
     contents: Contents.IManager,
     translator: ITranslator,
     connection_dir: string,
     callstackSidebar: NodSidebar,
+    nodLogSidebar: NodLogSidebar,
     settingRegistry: ISettingRegistry,
     docManager: IDocumentManager,
     paths: JupyterFrontEnd.IPaths,
-    mode: "existing" | "from_cli",
+    mode: 'existing' | 'from_cli',
     nod_cwd: string
   ): nodState;
-  public static Instance(tracker?: INotebookTracker,
+  public static Instance(
+    tracker?: INotebookTracker,
     app?: JupyterFrontEnd<JupyterFrontEnd.IShell, 'desktop' | 'mobile'>,
     contents?: Contents.IManager,
     translator?: ITranslator,
     connection_dir?: string,
     callstackSidebar?: NodSidebar,
+    nodLogSidebar?: NodLogSidebar,
     settingRegistry?: ISettingRegistry,
     docManager?: IDocumentManager,
     paths?: JupyterFrontEnd.IPaths,
-    mode?: "existing" | "from_cli",
+    mode?: 'existing' | 'from_cli',
     nod_cwd?: string
   ): nodState {
     if (
@@ -74,11 +85,12 @@ export class nodState {
       translator &&
       connection_dir !== undefined &&
       callstackSidebar &&
+      nodLogSidebar &&
       settingRegistry &&
       docManager &&
       paths &&
       mode &&
-      nod_cwd
+      nod_cwd !== undefined
     ) {
       this._instance = new this(
         tracker,
@@ -87,6 +99,23 @@ export class nodState {
         translator,
         connection_dir,
         callstackSidebar,
+        nodLogSidebar,
+        settingRegistry,
+        docManager,
+        paths,
+        mode,
+        nod_cwd
+      );
+    } else if (app) {
+      console.error('Failed to create nodState!');
+      console.error(
+        tracker,
+        app,
+        contents,
+        translator,
+        connection_dir,
+        callstackSidebar,
+        nodLogSidebar,
         settingRegistry,
         docManager,
         paths,
@@ -108,12 +137,13 @@ export class nodState {
   private _lockChanged = new Signal<this, string>(this);
   private _statusChanged = new Signal<this, pluginStatus>(this);
   private _readOnlyHeader: ReadOnlyHeader;
-  paths: JupyterFrontEnd.IPaths
+  paths: JupyterFrontEnd.IPaths;
   docManager: IDocumentManager;
   settingRegistry: ISettingRegistry;
   callstackSidebar: NodSidebar;
-  mode: "existing" | "from_cli"
-  nod_cwd: string
+  nodLogSidebar: NodLogSidebar;
+  mode: 'existing' | 'from_cli';
+  nod_cwd: string;
   private _currentFrameIndex: number = 0;
   private _nodKernelId: string = '';
   private _lockNotebookId: string = '';
@@ -162,10 +192,10 @@ export class nodState {
     this._lockChanged.emit(this._lockNotebookId);
   }
   public reset(schema: nodSchema, kernelId: string) {
-    this.unlock()
+    this.unlock();
     this._currentFrameIndex = 0;
-    this._nodKernelId = kernelId
-    this.connection_dir = schema.nod_info_local_path.split("/nodInfo.json")[0]
+    this._nodKernelId = kernelId;
+    this.connection_dir = schema.nod_info_local_path.split('/nodInfo.json')[0];
   }
   get lockChanged(): Signal<this, string> {
     return this._lockChanged;
@@ -253,7 +283,6 @@ export class nodState {
 
   public activateSidebars() {
     (this._app.shell as LabShell).activateById(this.callstackSidebar.id);
-
-
+    (this._app.shell as LabShell).activateById(this.nodLogSidebar.id);
   }
 }

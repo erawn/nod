@@ -27,18 +27,22 @@ import {
   ISessionContextDialogs,
   IToolbarWidgetRegistry
 } from '@jupyterlab/apputils';
-import { IRunningSessions } from "@jupyterlab/running";
+import { IRunningSessions } from '@jupyterlab/running';
 import { IConsoleTracker } from '@jupyterlab/console';
 import { INodStackFrame, nodSchema } from './types';
 import { IDocumentManager, PathStatus } from '@jupyterlab/docmanager';
-import { IDebugger } from '@jupyterlab/debugger';
-import { CallstackModel, NodSessionItem, NodRunningModel } from './callstack/model';
+import {
+  CallstackModel,
+  NodSessionItem,
+  NodRunningModel
+} from './callstack/model';
 import { NodSidebar } from './callstack';
 import {
   checkKernelStatus,
   onCurrentNotebookChanged
 } from './interfaceHelpers';
 import { openNotebookWithNodKernel, restart } from './kernelHelpers';
+import { NodLogModel, NodLogSidebar } from './nodLog/nodLog';
 /**
  * Initialization data for the nod extension.
  */
@@ -58,12 +62,11 @@ const plugin: JupyterFrontEndPlugin<void> = {
     ISessionContextDialogs,
     ICommandPalette,
     IConsoleTracker,
-    IDebugger,
     IDocumentManager,
     ISessionManager,
     JupyterFrontEnd.IPaths
   ],
-  optional: [ISettingRegistry],
+  optional: [],
   activate: (
     app: JupyterFrontEnd,
     notebookTracker: INotebookTracker,
@@ -76,29 +79,31 @@ const plugin: JupyterFrontEndPlugin<void> = {
     sessionContextDialogs: ISessionContextDialogs,
     palette: ICommandPalette,
     consoleTracker: IConsoleTracker,
-    debuggerService: IDebugger,
     docManager: IDocumentManager,
     sessionManager: Session.IManager,
     paths: JupyterFrontEnd.IPaths
   ) => {
-    console.log(PageConfig.getOption('nod_active'))
-    const isActive = (PageConfig.getOption('nod_active') === "true");
+    console.log(PageConfig.getOption('nod_active'));
+    const isActive = PageConfig.getOption('nod_active') === 'true';
     console.log('nod_active', isActive);
-    const trans = (translator ?? nullTranslator).load('jupyterlab')
+    // const trans = (translator ?? nullTranslator).load('jupyterlab');
     notebookTracker.activeCellChanged.connect(() => {
-
       // getKernels().then((reply) => {
       //   console.log(reply)
-      console.log(contentsManager.normalize(state.paths.directories.serverRoot))
+      // console.log(
+      //   contentsManager.normalize(state.paths.directories.serverRoot)
+      // );
       // console.log(contentsManager.get(state.paths.directories.serverRoot))
-      console.log(notebookTracker.currentWidget?.sessionContext.session?.kernel?.status)
+      // console.log(
+      //   notebookTracker.currentWidget?.sessionContext.session?.kernel?.status
+      // );
       // })
       console.log(
         Array.from(nodState.Instance().app.serviceManager.kernels.running())
       );
-      nodState.Instance().tracker.forEach(panel => {
-        console.log(panel.context.path, panel);
-      });
+      // nodState.Instance().tracker.forEach(panel => {
+      //   console.log(panel.context.path, panel);
+      // });
     });
     if (!isActive) {
       console.log(
@@ -108,16 +113,38 @@ const plugin: JupyterFrontEndPlugin<void> = {
 
     console.log('JupyterLab extension nod is activated!');
     const connection_dir = PageConfig.getOption('nod_connection_dir');
-    const nod_CWD = PageConfig.getOption('nod_CWD')
+    const nod_CWD = PageConfig.getOption('nod_CWD');
     console.log('connection_dir', connection_dir);
+    console.log('nod_CWD', nod_CWD);
     const callStackModel = new CallstackModel({});
-    const runningModel = new NodRunningModel({})
+    const runningModel = new NodRunningModel({});
     const callstackSidebar = new NodSidebar({
       translator,
-      service: debuggerService,
       model: callStackModel,
       runningModel: runningModel
     });
+    const commandRegistry = app.commands;
+    const nodLogModel = new NodLogModel();
+    const nodLogSidebar = new NodLogSidebar({
+      translator,
+      model: nodLogModel,
+      commands: commandRegistry
+    });
+    console.log(nodLogModel, nodLogSidebar);
+    console.log(
+      notebookTracker,
+      app,
+      contentsManager,
+      translator,
+      connection_dir,
+      callstackSidebar,
+      nodLogSidebar,
+      settingRegistry,
+      docManager,
+      paths,
+      isActive ? 'from_cli' : 'existing',
+      nod_CWD
+    );
     const state = nodState.Instance(
       notebookTracker,
       app,
@@ -125,16 +152,32 @@ const plugin: JupyterFrontEndPlugin<void> = {
       translator,
       connection_dir,
       callstackSidebar,
+      nodLogSidebar,
       settingRegistry,
       docManager,
       paths,
-      isActive ? "from_cli" : "existing",
+      isActive ? 'from_cli' : 'existing',
       nod_CWD
     );
-    console.log(state)
-    addCommands(app.commands, mainMenu, translator, palette, consoleTracker, notebookTracker);
+    // if (restorer) {
+    //   restorer.add(nodLogSidebar, 'nod-log-sidebar');
+    //   restorer.add(callstackSidebar, 'nod-callstack-sidebar');
+    // }
+    console.log(state);
+    addCommands(
+      app.commands,
+      mainMenu,
+      translator,
+      palette,
+      consoleTracker,
+      notebookTracker
+    );
     app.docRegistry.addWidgetExtension('Notebook', new CodeViewers());
     app.shell.add(state.callstackSidebar, 'left', {
+      type: 'Debugger',
+      rank: 400
+    });
+    app.shell.add(state.nodLogSidebar, 'right', {
       type: 'Debugger',
       rank: 400
     });
@@ -156,10 +199,10 @@ const plugin: JupyterFrontEndPlugin<void> = {
         checkKernelStatus();
         state.activateSidebars();
         (state.callstackSidebar.content as AccordionPanel).expand(0);
+        (state.nodLogSidebar.content as AccordionPanel).expand(0);
       }
       sessionContextDialogs.restart = restart;
     });
-
 
     notebookTracker.widgetUpdated.connect((tracker, panel) => {
       panel.sessionContext.kernelPreference = {
@@ -167,7 +210,6 @@ const plugin: JupyterFrontEndPlugin<void> = {
         shutdownOnDispose: false
       };
     });
-
 
     notebookTracker.currentChanged.connect((tracker, panel) => {
       console.log('current Changed');
@@ -185,11 +227,13 @@ const plugin: JupyterFrontEndPlugin<void> = {
           //   {
           //   }
           // } else
-          if ( //todo -- make this less temperamental
+          if (
+            //todo -- make this less temperamental
             [
-              // 'unknown', 
-              'dead'].includes(status) &&
-            (context.session?.kernel?.name === 'nod')
+              // 'unknown',
+              'dead'
+            ].includes(status) &&
+            context.session?.kernel?.name === 'nod'
           ) {
             console.log('status changed to dead');
             checkKernelStatus();
@@ -243,7 +287,6 @@ const plugin: JupyterFrontEndPlugin<void> = {
           });
         }
 
-
         // const options = {
         //   ignoreAttributes: false,
         //   attributeNamePrefix: "@_",
@@ -281,17 +324,30 @@ const plugin: JupyterFrontEndPlugin<void> = {
         }
       }
       if (status === 'inactive') {
-        runningModel.selectedKernelKey = ""
+        runningModel.selectedKernelKey = '';
       }
     });
 
     nodState.Instance().currentFrameChanged.connect((state, frameNum) => {
+      //update right sidebar
       callStackModel.frame = callStackModel.frames[frameNum];
+
+      //update left sidebar
+      const newId = state.currentFrame?.function_id;
+      if (newId !== undefined) {
+        nodLogSidebar.log.updateVariables(newId);
+        nodLogSidebar.update();
+      }
+
+      //open the new notebook
       const notebookFile =
         nodState.Instance().currentFrame?.file_info?.notebook_file;
       notebookFile ? openNotebookWithNodKernel(notebookFile, docManager) : {};
+
       console.debug('Switching to frame ', frameNum);
-      requestDebug('nod_switch', frameNum);
+      //Update User Ipython state
+      const stackIndex = frameNum;
+      requestDebug('nod_switch', { stackIndex });
     });
     nodState.Instance().lockChanged.connect((state, id) => {
       const path = notebookTracker.find(panel => panel.id === id)?.context.path;
@@ -306,6 +362,12 @@ const plugin: JupyterFrontEndPlugin<void> = {
       }
     });
     nodState.Instance().pythonInfoChanged.connect((state, info) => {
+      const newId = state.currentFrame?.function_id;
+      if (newId !== undefined) {
+        nodLogSidebar.log.updateVariables(newId);
+        nodLogSidebar.update();
+      }
+
       const frames = state.pythonInfo?.stack_info.map((frame, index) => {
         return {
           id: index,
@@ -328,7 +390,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
           state.currentFrameIndex,
           state.pythonInfo?.module_filters ?? ['']
         );
-        runningModel.selectedKernelKey = state.pythonInfo?.key ?? ""
+        runningModel.selectedKernelKey = state.pythonInfo?.key ?? '';
       }
     });
 

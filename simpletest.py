@@ -1,19 +1,29 @@
 import pathlib
 
-from nodpy import notebook, nodPrint
+from nodpy import notebook, nodLog
+
+x = 0
 
 
-def baller(a: int, b: int, c: int):
-    b = 20
-    var = 3
-    # nodPrint(b)
-    c = 40
-    c += 1
-    notebook()
+def baller(a, b: int, c: int):
+    nodLog(a, b)
+    nodLog(a, b)
+    nodLog(a, b)
+    nodLog(a, b)
+    nodLog(c)
+    global x
+    x += 1
+    if x > 4:
+        notebook()
 
 
 def caller():
-    baller(a, 10, 20)
+    nodLog(b)
+    baller({"test": 112, "tset": {"sdf": 10}}, 14, 18)
+    baller(11, 15, 19)
+    baller(12, 16, 20)
+    baller(13, 17, 21)
+    baller(13, 17, 21)
 
 
 global a

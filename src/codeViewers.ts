@@ -98,11 +98,8 @@ export function makeCodeViewer(
   let editor;
   switch (className) {
     case NOD_HEADER_CLASS:
-      const text_above = currentFrame.file_info.text_above
-      source = text_above.slice(-10)
-        .join('')
-        .split('\\n')
-        .join('\n');
+      const text_above = currentFrame.file_info.text_above;
+      source = text_above.slice(-10).join('').split('\\n').join('\n');
       if (source.startsWith('\n')) {
         source = source.slice(source.indexOf('\n'));
       }

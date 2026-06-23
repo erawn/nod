@@ -10,6 +10,7 @@ export const nodSchema = z.object({
       relative_source_file: z.string(),
       connection_dir: z.string(),
       function_name: z.string(),
+      function_id: z.string(),
       frame_xml: z.array(z.string()),
       fmt: z.string(),
       file_info: z.optional(
@@ -35,10 +36,21 @@ export const nodSchema = z.object({
   python_pid: z.number(),
   nod_info_rel_path: z.optional(z.string()),
   key: z.string()
+  // nod_log: z.object({
+  //   entries: z.array(
+  //     z.object({
+  //       function_id: z.string(),
+  //       entry_id: z.string(),
+  //       vars: z.array(
+  //         z.object({ id: z.string(), name: z.string(), val: z.string(), type: z.string() })
+  //       )
+  //     })
+  //   )
+  // })
 });
 export type nodSchema = z.infer<typeof nodSchema>;
 
-export const nodSchemas = z.array(nodSchema)
+export const nodSchemas = z.array(nodSchema);
 export type nodSchemas = z.infer<typeof nodSchemas>;
 export type stackInfo = nodSchema['stack_info'];
 export const hasFileInfo = (

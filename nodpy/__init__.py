@@ -17,51 +17,46 @@ import types
 
 import jupytext  # type: ignore
 import orjson
-import shlex
-import sys
 import copy
-import signal
 import re
-import tempfile
-import typing
-import ipykernel
-
-# from jupyter_client import KernelProvisionerBase
+import typing as t
 import os
 import logging
 import json
 import os
-import subprocess
 from traitlets.config import Config
 import uuid
 from pathlib import Path
 import libcst as cst
-from libcst.display import dump
-from IPython.core.error import UsageError
+from varname.utils import ArgSourceType
+from nodpy.ast_tools import FunctionFinder
 from nodpy.exceptions import NodException
 from nodpy.ip_plugin import returnTransformer
+from nodpy.nodTypes import (
+    FrameIdentifiers,
+    NodConnectionInfo,
+    NodInfo,
+    NodLog,
+    NodLogEntry,
+    NodLogEntryJSON,
+    NodLogJSON,
+    NodLogVariable,
+    NodLogVariableJSON,
+)
 from .serverExtension import Nod
-from libcst.metadata import CodePosition, CodeRange
-from libcst.metadata import PositionProvider, ParentNodeProvider
 from IPython.core.interactiveshell import InteractiveShell
 from dataclasses import dataclass
 from typing import List, Literal, IO, Any, cast
+from nodpy.provisioner import NodProvisioner  # DON'T REMOVE THIS
 from IPython.core.getipython import get_ipython
-from ipykernel.connect import get_connection_info
 from .embed_kernel import embed_kernel
-from .ast_tools import FunctionFinder, NodFinder
 from .file_helpers import (
     PathManager,
-    ProgramInfo,
     makeProgramInfo,
-    NodInfo,
-    NodConnectionInfo,
 )
-from inspect import FrameInfo, Traceback
-from types import FrameType, TracebackType
-from jupytext.formats import long_form_one_format  # type: ignore
+
 from IPython.terminal.interactiveshell import TerminalInteractiveShell
-from .provisioner import NodProvisioner
+from varname import argname, nameof, varname
 
 # if TYPE_CHECKING:
 #     # False at run time, only for type checker
@@ -69,7 +64,7 @@ from .provisioner import NodProvisioner
 
 _log = logging.getLogger(__name__)
 logging.basicConfig()
-_log.setLevel(logging.WARNING)
+_log.setLevel(logging.INFO)
 _log.addHandler(logging.FileHandler("log.txt"))
 
 DRY_RUN = False
@@ -78,32 +73,6 @@ DEBUG: bool = False
 
 if DEBUG:
     _log.setLevel(logging.DEBUG)
-
-
-@dataclass
-class FrameIdentifiers:
-    function: str
-    lineno: int
-    filename: str
-
-    def get_id(self) -> str:
-        return self.function + str(self.lineno) + self.filename
-
-    def __init__(self, frame_info: FrameInfo | Traceback):
-        self.function = frame_info.function
-        self.lineno = frame_info.lineno
-        self.filename = frame_info.filename
-
-
-def compare_identifiers(
-    frame_id: FrameInfo | Traceback | FrameIdentifiers,
-    frame_info: FrameInfo | Traceback | FrameIdentifiers,
-) -> bool:
-    return (
-        frame_info.function == frame_id.function
-        and frame_info.lineno == frame_id.lineno
-        and frame_info.filename == frame_id.filename
-    )
 
 
 # def loadState(frame_identifier:FrameIdentifiers, state:dict[dict]):
@@ -185,19 +154,101 @@ def compare_identifiers(
 #     SIGINT: int
 #     SIGKILL: int
 #     SIGTERM: int
+_nod_log: dict[str, dict[str, t.Any]] = {}
+_nod_log_id_to_func: dict[str, str] = {}
+
+
+def nodLog(*args):
+    try:
+        name = get_ipython().__class__.__name__
+        if name != "NoneType":
+            return
+        if "nodReturn" in globals():
+            return
+    except NameError:
+        pass
+    # currentFrame = inspect.currentframe()
+    # _log.info(currentFrame.f_locals)
+    # _log.info(currentFrame.f_globals)
+    stack = inspect.stack()
+    log_call = next((frame for frame in stack if find_func(frame, "nodLog(")), None)
+
+    if log_call is None:
+        raise NodException("Cannot find notebook() function call in callstack")
+    program_text = open(log_call.filename).read()
+    module = cst.parse_module(program_text)
+    wrapper = cst.MetadataWrapper(module)
+    finder = FunctionFinder(log_call.function)
+    module = wrapper.visit(finder)
+    _log.info(f"log call {log_call.frame.f_locals}")
+
+    # currentFrame = inspect.currentframe()
+
+    frame_id = FrameIdentifiers(
+        log_call.function, finder.parent_pos.start.line, log_call.filename
+    )
+    # encoded_frame_id = base64.b64encode(frame_id.get_id().encode("utf-8")).decode(
+    #     "utf-8"
+    # )
+    function_id = frame_id.get_id()
+    # entry = NodLogEntry(
+    #     function_id=encoded_frame_id, entry_id=str(uuid.uuid1()), vars=[]
+    # )
+    argnames = t.cast(tuple[ArgSourceType], argname("args"))
+    entry_id = str(uuid.uuid1())
+    variables: dict[str, t.Any] = {}
+    for name, val in zip(argnames, args):
+        try:
+            _log.info(f"found var {name} with val {val}")
+            # _log.info(_get_variable_description(val))
+            deepCopy = copy.deepcopy(val)
+            variables.update({str(name): deepCopy})
+            # var = NodLogVariable(name=str(name), val=deepCopy, id=str(uuid.uuid1()))
+            # entry.vars.append(var)
+        except Exception as e:
+            _log.error(f"Deep Copy Failed! on var {name} with val {val} error:  {e}")
+    _nod_log.update({entry_id: variables})
+    _nod_log_id_to_func.update({entry_id: function_id})
+    _log.info(f"created entry {{entry_id: variables}}")
+
+
+# def get_type(var) -> str:
+#     t = _get_full_type(type(var))
+#     if t is None:
+#         return ""
+#     return t
+
+
+# def convertToJSON(nodLog: NodLog):
+#     newEntries: List[NodLogEntryJSON] = []
+#     for e in nodLog.entries:
+#         newVars = [
+#             NodLogVariableJSON(
+#                 v.id,
+#                 v.name,
+#                 _get_value(v.val),  # type: ignore[truthy-function]
+#                 get_type(v.val),
+#             )
+#             for v in e.vars
+#         ]
+#         newEntry = NodLogEntryJSON(
+#             function_id=e.function_id, entry_id=e.entry_id, vars=newVars
+#         )
+#         newEntries.append(newEntry)
+#     return NodLogJSON(newEntries)
 
 
 # _SIGNUM = typing.Union[int, Signals]
-_fmt: typing.Literal["light", "percent"] = "light"
+_fmt: t.Literal["light", "percent"] = "light"
 _filter: list[str] = [os.getcwd() + "/*"]
-_how_restart: typing.Union[typing.Literal["continue"], int] = "continue"
+_how_restart: t.Union[t.Literal["continue"], int] = "continue"
 _dangerously_bypass_readonly: bool = False
 
 
 def nodConfig(
-    fmt: typing.Literal["light", "percent"] = "light",
+    fmt: t.Literal["light", "percent"] = "light",
     filter: list[str] = [],
-    how_restart: typing.Union[typing.Literal["continue"], int] = "continue",
+    how_restart: t.Union[t.Literal["continue"], int] = "continue",
     dangerously_bypass_readonly: bool = False,
 ):
     """Configure Nod Settings
@@ -224,6 +275,17 @@ def nodConfig(
     _how_restart = how_restart
     global _dangerously_bypass_readonly
     _dangerously_bypass_readonly = dangerously_bypass_readonly
+
+
+def find_func(frame: inspect.FrameInfo, func: str):
+    if frame.code_context is None:
+        # raise RuntimeError
+        return False
+
+    for line in frame.code_context:
+        if line.find(func) > -1:  # TODO replace with regex
+            return True
+    return False
 
 
 def notebook(
@@ -270,17 +332,9 @@ def notebook(
     stack = inspect.stack()
     # print(stack)
 
-    def find_notebook_func(frame: inspect.FrameInfo):
-        if frame.code_context is None:
-            # raise RuntimeError
-            return False
-
-        for line in frame.code_context:
-            if line.find("notebook(") > -1:  # TODO replace with regex
-                return True
-        return False
-
-    notebook_call = next((frame for frame in stack if find_notebook_func(frame)), None)
+    notebook_call = next(
+        (frame for frame in stack if find_func(frame, "notebook(")), None
+    )
 
     if notebook_call is None:
         raise NodException("Cannot find notebook() function call in callstack")
@@ -405,6 +459,8 @@ def notebook(
     shell.showtraceback = types.MethodType(showtraceback, shell)  # type: ignore[method-assign]
 
     app.kernel.relevant_stack_frames = relevant_stack_frames
+    app.kernel.nod_log = _nod_log
+    app.kernel.nod_log_id_to_func = _nod_log_id_to_func
 
     ## COPY CONNECTION FILE, ADD KERNEL NAME
     connection_file = app.abs_connection_file
@@ -449,11 +505,13 @@ def notebook(
     shutil.copy(connection_file, nod_connection_file)
 
     jsonInfo = orjson.dumps(nod_info)
+    _log.info(jsonInfo)
     with open(nod_info_local_path, "x") as f:
         f.write(jsonInfo.decode("utf-8"))
 
     if not DRY_RUN:
         # atexit.register(close_notebook)
+
         app.start()
         app.reset_io()
         # if _how_restart == 'continue':

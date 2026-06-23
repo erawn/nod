@@ -24,13 +24,15 @@ classifiers = [
 ]
 dependencies = [
     "jupytext",
+    "debugpy>=1.6.5",
     "orjson",
     "libcst",
     "dacite",
     "typer",
     "nbformat",
     "jupyterlab>=4.5.6",
-    "dataclasses-json"
+    "dataclasses-json",
+    "varname"
 ]
 dynamic = ["version", "description", "authors", "urls", "keywords"]
 

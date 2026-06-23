@@ -18,11 +18,13 @@ export async function openNotebookWithNodKernel(
   const state = nodState.Instance();
   // console.log(state.nod_cwd)
   if (!notebookFile.startsWith(state.nod_cwd)) {
-    console.error("file not under jupyter filetree!")
-    return
+    console.error('file not under jupyter filetree!');
+    return;
   }
-  const normalized = docManager.services.contents.normalize(notebookFile.replace(state.nod_cwd, ""));
-  console.log(normalized)
+  const normalized = docManager.services.contents.normalize(
+    notebookFile.replace(state.nod_cwd, '')
+  );
+  console.log(normalized);
 
   // const relPath = normalized.replace(state.nod_cwd, "")
   await state.app.serviceManager.kernels.refreshRunning();
@@ -39,14 +41,16 @@ export async function openNotebookWithNodKernel(
       shutdownOnDispose: false
     };
     state.app.shell.activateById(existingNotebook.id);
-    existingNotebook.context.sessionContext.changeKernel({ name: 'nod', id: state.nodKernelId })
+    existingNotebook.context.sessionContext.changeKernel({
+      name: 'nod',
+      id: state.nodKernelId
+    });
   } else {
     console.log('opening', normalized, nodKernelId);
-    docManager.openOrReveal(
-      normalized,
-      'default',
-      { name: 'nod', id: nodKernelId },
-    );
+    docManager.openOrReveal(normalized, 'default', {
+      name: 'nod',
+      id: nodKernelId
+    });
   }
 }
 export async function getNodKernel(): Promise<string | undefined> {
@@ -109,12 +113,13 @@ export async function launchNodKernel(key?: string) {
       if (!launching && nodState.Instance().status !== 'active') {
         try {
           if (key !== undefined) {
-            await setKernelToOpen(key)
+            await setKernelToOpen(key);
           }
           launching = true;
           console.log('Launching Nod Kernel');
-          const connection = await app.serviceManager.kernels
-            .startNew({ name: 'nod' })
+          const connection = await app.serviceManager.kernels.startNew({
+            name: 'nod'
+          });
           launching = false;
           nodState.Instance().nodKernelId = connection.model.id;
           console.log(
@@ -126,7 +131,7 @@ export async function launchNodKernel(key?: string) {
           // if (key !== undefined) {
           //   await setKernelToOpen("")
           // }
-          console.log("launched kernel",)
+          console.log('launched kernel');
           return nodState.Instance().nodKernelId;
         } catch (e) {
           console.log(e);
@@ -139,20 +144,20 @@ export async function launchNodKernel(key?: string) {
 }
 
 export async function getNodInfo() {
-  const state = nodState.Instance()
+  const state = nodState.Instance();
   try {
-    const connection_path = nodState.Instance().connection_dir
-    if (connection_path === "") {
-      console.error("connection dir not provided")
-      return
+    const connection_path = nodState.Instance().connection_dir;
+    if (connection_path === '') {
+      console.error('connection dir not provided');
+      return;
     }
 
-    const pathToSearch = nodState.Instance().connection_dir + '/nodInfo.json'
-    console.log(pathToSearch)
+    const pathToSearch = nodState.Instance().connection_dir + '/nodInfo.json';
+    console.log(pathToSearch);
     const res = await requestAPI<any>('file', {
       body: pathToSearch,
       method: 'POST'
-    })
+    });
     const jsonObj = JSON.parse(atob(res));
     const schema = nodSchema.parse(jsonObj);
     console.log(schema);
@@ -164,17 +169,18 @@ export async function getNodInfo() {
       state.activateSidebars();
       state.tracker.forEach(panel => {
         if (state.getFrameFromPath(panel.context.path) !== undefined) {
-          panel.context.sessionContext.changeKernel({ name: 'nod', id: state.nodKernelId })
+          panel.context.sessionContext.changeKernel({
+            name: 'nod',
+            id: state.nodKernelId
+          });
         }
-      })
+      });
     }
-    return true
+    return true;
   } catch (e) {
-    console.log(e)
-    return false
+    console.log(e);
+    return false;
   }
-
-
 }
 
 /**
@@ -192,7 +198,7 @@ export async function default_restart(
   restartOptions?: ISessionContext.IRestartOptions
 ): Promise<boolean> {
   const trans = nodState.Instance().translator.load('jupyterlab');
-  console.log("default restart")
+  console.log('default restart');
   await sessionContext.initialize();
   if (sessionContext.isDisposed) {
     throw new Error('session already disposed');
@@ -284,9 +290,7 @@ export async function restart(
       'To restart your Nod Program, press the Restart button in the Nod panel on the left',
       sessionContext.name
     ),
-    buttons: [
-      Dialog.okButton({ ariaLabel: trans.__('OK') }),
-    ]
+    buttons: [Dialog.okButton({ ariaLabel: trans.__('OK') })]
     // checkbox: {
     //     label: trans.__('Do not ask me again.'),
     //     caption: trans.__(
@@ -294,16 +298,16 @@ export async function restart(
     //     )
     // }
   });
-  return false
+  return false;
 }
 
-export async function NodRestart(
+export async function NodRestart(): Promise<boolean> {
   // sessionContext: ISessionContext,
   // restartOptions?: ISessionContext.IRestartOptions
-): Promise<boolean> {
-  const sessionContext = nodState.Instance().tracker.currentWidget?.sessionContext
+  const sessionContext =
+    nodState.Instance().tracker.currentWidget?.sessionContext;
   if (sessionContext === undefined) {
-    return false
+    return false;
   }
   const trans = nodState.Instance().translator.load('jupyterlab');
   const kernel = sessionContext.session?.kernel;
@@ -380,9 +384,7 @@ export async function NodRestart(
   return false;
 }
 
-export async function NodSwitchSessions(
-  schema: nodSchema
-): Promise<boolean> {
+export async function NodSwitchSessions(schema: nodSchema): Promise<boolean> {
   const state = nodState.Instance();
   const trans = nodState.Instance().translator.load('jupyterlab');
 
@@ -408,7 +410,7 @@ export async function NodSwitchSessions(
       ]
     });
     if (!result.button.accept) {
-      return false
+      return false;
     }
     await nodState.Instance().app.commands.execute('docmanager:save-all');
     if (result.button.label === 'Export and Restart') {
@@ -428,12 +430,16 @@ export async function NodSwitchSessions(
     await nodState.Instance().app.commands.execute('docmanager:save-all');
   }
   nodState.Instance().status = 'inactive';
-  console.log("launching kernel", schema.key)
-  const nodKernelPromise = launchNodKernel(schema.key)
+  console.log('launching kernel', schema.key);
+  const nodKernelPromise = launchNodKernel(schema.key);
   kernelWaitDialog();
-  const id = await nodKernelPromise ?? "";
+  const id = (await nodKernelPromise) ?? '';
   console.log('POST RESTART', id);
-  state.reset(schema, id)
+  state.reset(schema, id);
+  state.tracker.currentWidget?.sessionContext.changeKernel({
+    name: 'nod',
+    id: state.nodKernelId
+  });
   checkKernelStatus();
   return true;
 }

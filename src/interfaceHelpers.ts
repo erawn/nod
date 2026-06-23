@@ -32,37 +32,34 @@ export async function checkKernelStatus() {
       checkKernelPromise = checkKernelStatusInner();
       await checkKernelPromise;
     } catch (e) {
-      console.error("Check Kernel Status", e)
+      console.error('Check Kernel Status', e);
     } finally {
-      checkKernelPromise = undefined
+      checkKernelPromise = undefined;
     }
-
   } else {
     console.log('checkKernelStatus rejected');
   }
 }
 async function checkKernelStatusInner() {
   console.log('Check Kernel Status');
-  const kernelSpecManager = nodState.Instance().app.serviceManager.kernelspecs
-  await kernelSpecManager.refreshSpecs()
+  const kernelSpecManager = nodState.Instance().app.serviceManager.kernelspecs;
+  await kernelSpecManager.refreshSpecs();
   const specs = kernelSpecManager.specs?.kernelspecs;
   if (!specs) {
-    console.error('NO KERNEL SPECS')
+    console.error('NO KERNEL SPECS');
     return;
   }
-  const nodKernelInstalled = Object.keys(specs).some(
-    name => name === 'nod'
-  );
+  const nodKernelInstalled = Object.keys(specs).some(name => name === 'nod');
   if (!nodKernelInstalled) {
-    console.error("No Nod Kernel Installed!")
+    console.error('No Nod Kernel Installed!');
     const dialog = new Dialog({
       title: 'Nod Kernel Not Installed!',
       body: 'Nod requires the Nod Kernel. Run \"nod --install-kernel\" in your terminal and restart.',
       buttons: [Dialog.okButton({ label: 'Ok' })],
       hasClose: false
     });
-    dialog.launch()
-    return
+    dialog.launch();
+    return;
   }
   const manager = nodState.Instance().app.serviceManager.kernels;
   await manager.refreshRunning().then(async () => {
@@ -75,7 +72,7 @@ async function checkKernelStatusInner() {
           await launchNodKernel().then(async id => {
             console.log('returned from launch');
 
-            await getNodInfo().then((success) => {
+            await getNodInfo().then(success => {
               if (success) {
                 const idSearch = Dialog.tracker.find(
                   dialog => dialog.id === nodState.Instance().dialogID
@@ -85,13 +82,11 @@ async function checkKernelStatusInner() {
                 }
               } else {
                 //TODO -- warning message
-                console.error("NOD LAUNCH FAILED")
+                console.error('NOD LAUNCH FAILED');
               }
-
-            })
+            });
           });
         }
-
       } else {
         const idSearch = Dialog.tracker.find(
           dialog => dialog.id === nodState.Instance().dialogID
@@ -99,7 +94,7 @@ async function checkKernelStatusInner() {
         if (idSearch !== undefined) {
           idSearch.reject();
         }
-        console.log("gettingNodInfo")
+        console.log('gettingNodInfo');
         await getNodInfo();
       }
     });

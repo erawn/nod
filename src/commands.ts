@@ -54,9 +54,8 @@ export function addCommands(
   translator: ITranslator,
   palette: ICommandPalette,
   consoleTracker: IConsoleTracker,
-  tracker: INotebookTracker,
+  tracker: INotebookTracker
 ) {
-
   const trans = translator.load('jupyterlab');
   // commands.addCommand(nodCommands.changeKernel, {
   //     label: trans.__('Cannot Change Kernel In Nod Notebook'),
@@ -85,7 +84,6 @@ export function addCommands(
 
   // });
   function isEnabled(): boolean {
-
     return tracker.currentWidget?.sessionContext.kernelDisplayName === 'nod';
     return true;
   }
@@ -146,7 +144,7 @@ export function addCommands(
       }
     },
     execute: args => {
-      NodRestart()
+      NodRestart();
     },
     isEnabled
   });
@@ -174,7 +172,8 @@ export function addCommands(
           }),
           Dialog.warnButton({
             ariaLabel: trans.__('Exit Without Saving'),
-            label: 'Shut Down Without Saving'
+            label: 'Shut Down Without Saving',
+            accept: true
           }),
           Dialog.okButton({
             ariaLabel: trans.__('Export and Shut Down'),
@@ -184,18 +183,19 @@ export function addCommands(
       }).then(result => {
         console.log(result);
         if (result.button.accept) {
+          const frame = nodState.Instance().currentFrame;
+          const panel = nodState.Instance().tracker.currentWidget;
+          const state = nodState.Instance();
+          state.unlock();
           if (result.button.label === 'Export and Shut Down') {
-            const frame = nodState.Instance().currentFrame;
-            const panel = nodState.Instance().tracker.currentWidget;
-            const state = nodState.Instance()
-            state.unlock()
+            state.unlock();
             if (frame !== undefined && panel !== null) {
               writeChange(panel, frame).then(() => {
-                console.log("Exiting Nod Session")
-                exitSession(state.nodKernelId)
+                console.log('Exiting Nod Session');
+                exitSession(state.nodKernelId);
               });
             } else {
-              console.log("Exiting Nod Session")
+              console.log('Exiting Nod Session');
               exitSession(state.nodKernelId);
             }
             // return commands
@@ -205,7 +205,8 @@ export function addCommands(
             //         return true;
             //     });
           } else {
-            return false;
+            console.log('Exiting Nod Session');
+            exitSession(state.nodKernelId);
           }
         }
       });
@@ -284,9 +285,11 @@ export function addCommands(
   // });
 
   const category = 'Nod';
-  [nodCommands.exitNotebook, nodCommands.exportNotebook, nodCommands.restart].forEach(
-    (cmd: string) => palette.addItem({ command: cmd, category })
-  );
+  [
+    nodCommands.exitNotebook,
+    nodCommands.exportNotebook,
+    nodCommands.restart
+  ].forEach((cmd: string) => palette.addItem({ command: cmd, category }));
 
   // mainMenu.kernelMenu.kernelUsers.changeKernel.add({
   //   id: nodCommands.changeKernel,

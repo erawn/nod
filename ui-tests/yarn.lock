@@ -4162,6 +4162,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"nod-ui-tests@workspace:.":
+  version: 0.0.0-use.local
+  resolution: "nod-ui-tests@workspace:."
+  dependencies:
+    "@jupyterlab/galata": ^5.0.5
+    "@playwright/test": ^1.37.0
+  languageName: unknown
+  linkType: soft
+
 "node-fetch@npm:^2.6.7":
   version: 2.7.0
   resolution: "node-fetch@npm:2.7.0"
@@ -4195,15 +4204,6 @@ __metadata:
   checksum: a696e8bf74e83126569b2b7a4deec1065e24dc8c6af84fe77e4211712dddf5b3052c1c98b01013fefda73f0191d1ab87bc2171c832edd34a0fcc6d111dc6f176
   languageName: node
   linkType: hard
-
-"nodjs-ui-tests@workspace:.":
-  version: 0.0.0-use.local
-  resolution: "nodjs-ui-tests@workspace:."
-  dependencies:
-    "@jupyterlab/galata": ^5.0.5
-    "@playwright/test": ^1.37.0
-  languageName: unknown
-  linkType: soft
 
 "nopt@npm:^9.0.0":
   version: 9.0.0

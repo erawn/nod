@@ -36,7 +36,7 @@ from jupyter_client import find_connection_file
 from subprocess import PIPE, Popen
 
 from nodpy.exceptions import NodException
-from nodpy.file_helpers import NodInfo
+from nodpy.nodTypes import NodInfo
 from nodpy.serverExtension import findNodRuntimeFile
 
 _log = logging.getLogger(__name__)
@@ -165,14 +165,17 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
                 return
             # We can't use the process group because the existing kernel cannot handle a SIGINT
             # Prefer process-group over process
-            signal_pgid = os.getpgid(self.nod_info.kernel_pid)
-            if signal_pgid and hasattr(os, "killpg") and signum != signal.SIGINT:
-                try:
-                    _log.info(f"Sending {signum} to pgid {signal_pgid}")
-                    os.killpg(signal_pgid, signum)
-                    return
-                except OSError:
-                    pass  # We'll retry sending the signal to only the process below
+            try:
+                signal_pgid = os.getpgid(self.nod_info.kernel_pid)
+                if signal_pgid and hasattr(os, "killpg") and signum != signal.SIGINT:
+                    try:
+                        _log.info(f"Sending {signum} to pgid {signal_pgid}")
+                        os.killpg(signal_pgid, signum)
+                        return
+                    except OSError:
+                        pass  # We'll retry sending the signal to only the process below
+            except ProcessLookupError:
+                pass
             _log.info(f"Sending {signum} to signal_route {signal_route.pid}")
             # If we're here, send the signal to the process and let caller handle exceptions
             if psutil.pid_exists(signal_route.pid):

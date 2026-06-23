@@ -1,4 +1,6 @@
+import base64
 from inspect import FrameInfo
+import inspect
 import json
 import os
 from pathlib import Path
@@ -9,6 +11,7 @@ import uuid
 import jupytext  # type: ignore
 from nbformat import NotebookNode
 import nbformat
+from nodpy.nodTypes import FrameIdentifiers
 from nodpy.ast_tools import FunctionFinder, NodFinder
 from libcst.metadata import CodePosition, CodeRange
 from dataclasses import dataclass, field
@@ -21,65 +24,10 @@ import sys
 from dataclasses_json import DataClassJsonMixin
 from dataclasses_json.mm import SchemaType
 
-# from _pydevd_bundle.pydevd_xml import frame_vars_to_xml
+
 from IPython.core.getipython import get_ipython
 
-
-@dataclass
-class FileInfo(DataClassJsonMixin):
-    function_body_position: CodeRange
-    indent: int
-    text_header: List[str]
-    text_body: List[str]
-    text_above: List[str]
-    text_below: List[str]
-    notebook_file: str = ""  # abs path of generated .ipynb file
-    notebook_content: str = ""
-
-
-@dataclass
-class ProgramInfo(DataClassJsonMixin):
-    index: int
-    source_file: str = ""  # abs path of original .py file
-    relative_source_file: str = ""  # rel path of original .py file
-    connection_dir: str = ""
-    function_name: str = ""
-    frame_xml: list[str] = field(default_factory=list)
-    fmt: t.Literal["light", "percent"] = "light"
-    file_info: Optional[FileInfo] = None
-
-
-@dataclass
-class NodInfo(DataClassJsonMixin):
-    stack_info: list[ProgramInfo]
-    module_filters: list[str]
-    fmt: str
-    how_restart: t.Union[t.Literal["continue"], int]
-    dangerously_bypass_readonly: bool
-    nod_info_local_path: str
-    cli_args: str
-    python_pid: int
-    kernel_pid: int
-    nod_info_rel_path: str = ""
-    key: Optional[str] = ""
-    connection_file_path: Optional[str] = ""
-
-
-@dataclass
-class NodConnectionInfo(DataClassJsonMixin):
-    control_port: int
-    hb_port: int
-    iopub_port: int
-    kernel_name: str
-    ip: str
-    key: str
-    shell_port: int
-    signature_scheme: str
-    stdin_port: int
-    transport: str
-    display_name: Optional[str] = ""
-    jupyter_session: Optional[str] = ""
-    metadata: Optional[t.Dict[str, t.Any]] = field(default_factory=dict)
+from nodpy.nodTypes import FileInfo, ProgramInfo
 
 
 class PathManager:
@@ -211,6 +159,12 @@ def makeProgramInfo(
             connection_dir=pm.connection_dir,
             relative_source_file=rel_source_file,
             function_name=stackFrame.function,
+            function_id=FrameIdentifiers(
+                stackFrame.function, 0, stackFrame.filename
+            ).get_id(),
+            # base64.b64encode(
+            #     FrameIdentifiers(stackFrame).get_id().encode("utf-8")
+            # ).decode("utf-8"),
             frame_xml=list(stackFrame.frame.f_locals.keys()),
             fmt=fmt,
         )
@@ -225,6 +179,12 @@ def makeProgramInfo(
                 connection_dir=pm.connection_dir,
                 relative_source_file=rel_source_file,
                 function_name="<module>",
+                function_id=FrameIdentifiers(
+                    stackFrame.function, 0, stackFrame.filename
+                ).get_id(),
+                # base64.b64encode(
+                #     FrameIdentifiers(stackFrame).get_id().encode("utf-8")
+                # ).decode("utf-8"),
                 frame_xml=list(stackFrame.frame.f_locals.keys()),
                 fmt=fmt,
                 file_info=FileInfo(
@@ -258,6 +218,12 @@ def makeProgramInfo(
         source_file=stackFrame.filename,
         connection_dir=pm.connection_dir,
         function_name=stackFrame.function,
+        function_id=FrameIdentifiers(
+            stackFrame.function, finder.parent_pos.start.line, stackFrame.filename
+        ).get_id(),
+        # base64.b64encode(
+        #     FrameIdentifiers(stackFrame).get_id().encode("utf-8")
+        # ).decode("utf-8"),
         frame_xml=list(stackFrame.frame.f_locals.keys()),
         fmt=fmt,
         file_info=FileInfo(

@@ -8,15 +8,116 @@ import typing
 from ipykernel.kernelapp import IPKernelApp
 from IPython.utils.frame import extract_module_locals
 from ipykernel.ipkernel import IPythonKernel
+from ipykernel.debugger import Debugger
 from IPython.core.interactiveshell import InteractiveShell
 import orjson
 from IPython.core.extensions import ExtensionManager
 from IPython.core.getipython import get_ipython
 from inspect import FrameInfo
-from typing import List, cast
+from typing import List, Type, cast
 from ipykernel.zmqshell import ZMQInteractiveShell
+from nodpy.nodTypes import NodLog, NodLogJSON
+import typing as t
+from ipykernel.debugger import _DummyPyDB
+from ipykernel.compiler import get_file_name
 
 _log = logging.getLogger(__name__)
+try:
+    # This import is required to have the next ones working...
+    from debugpy.server import api  # noqa: F401
+
+    from _pydevd_bundle import (  # type: ignore # pyright: ignore[reportMissingImports]
+        pydevd_frame_utils,
+    )  # isort: skip
+    from _pydevd_bundle.pydevd_suspended_frames import (  # type: ignore # isort: skip # pyright: ignore[reportMissingImports]
+        SuspendedFramesManager,
+        _FramesTracker,
+    )
+
+    _is_debugpy_available = True
+except ImportError:
+    _is_debugpy_available = False
+except Exception as e:
+    # We cannot import the module where the DebuggerInitializationError
+    # is defined
+    if e.__class__.__name__ == "DebuggerInitializationError":
+        _is_debugpy_available = False
+    else:
+        raise e
+
+
+class _FakeCode:
+    """Fake code class."""
+
+    def __init__(self, co_filename, co_name):
+        """Init."""
+        self.co_filename = co_filename
+        self.co_name = co_name
+
+
+class _FakeFrame:
+    """Fake frame class."""
+
+    def __init__(self, f_code, f_globals, f_locals):
+        """Init."""
+        self.f_code = f_code
+        self.f_globals = f_globals
+        self.f_locals = f_locals
+        self.f_back = None
+
+
+class VariableExplorer:
+    """A variable explorer."""
+
+    func_id: str
+    nod_log: dict[str, dict[str, t.Any]]
+    nod_log_id_to_func: dict[str, str]
+
+    def __init__(
+        self,
+        func_id: str,
+        nod_log: dict[str, dict[str, t.Any]],
+        nod_log_id_to_func: dict[str, str],
+    ):
+        """Initialize the explorer."""
+        self.suspended_frame_manager = SuspendedFramesManager()  # type: ignore
+        self.py_db = _DummyPyDB()
+        self.tracker = _FramesTracker(self.suspended_frame_manager, self.py_db)  # type: ignore
+        self.frame = None
+        self.func_id = func_id
+        self.nod_log = nod_log
+        self.nod_log_id_to_func = nod_log_id_to_func
+
+    def track(self):
+        """Start tracking."""
+        matches = {}
+
+        for key in self.nod_log:
+            if self.nod_log_id_to_func.get(key, "") == self.func_id:
+                matches.update({key: self.nod_log[key]})
+        _log.info(f"matches : {matches}")
+        # var = get_ipython().user_ns
+        self.frame = _FakeFrame(
+            _FakeCode("<module>", get_file_name("sys._getframe()")),
+            matches,
+            matches,
+        )
+        self.tracker.track(
+            "thread1",
+            pydevd_frame_utils.create_frames_list_from_frame(self.frame),  # type: ignore
+        )
+
+    def untrack_all(self):
+        """Stop tracking."""
+        self.tracker.untrack_all()
+
+    def get_children_variables(self, variable_ref=None):
+        """Get the child variables for a variable reference."""
+        var_ref = variable_ref
+        if not var_ref:
+            var_ref = id(self.frame)
+        variables = self.suspended_frame_manager.get_variable(var_ref)
+        return [x.get_var_data() for x in variables.get_children_variables()]
 
 
 # def loadFrame(frame_id: FrameIdentifiers, stack: list[inspect.FrameInfo]):
@@ -108,6 +209,8 @@ class nodKernel(IPythonKernel):
     def __init__(self, **kwargs):
         """Initialize the kernel."""
         super().__init__(**kwargs)
+        #         _nod_log: dict[str, dict[str, t.Any]] = {}
+        # _nod_log_id_to_func: dict[str, str] = {}
 
         # _log.info("NODKERNEL INIT")
 
@@ -120,6 +223,9 @@ class nodKernel(IPythonKernel):
 
         # self.shell.ask_exit = nod_exit
 
+    nod_log: dict[str, dict[str, t.Any]] = {}
+    nod_log_id_to_func: dict[str, str] = {}
+    variable_explorer: VariableExplorer | None = None
     # def close(self):
     #     print("CLOSE")
     #     _log.info("CLOSE")
@@ -220,6 +326,91 @@ class nodKernel(IPythonKernel):
                         "success": True,
                         "command": msg["command"],
                     }
+            case "nod_log_push":
+                _log.info(f"Kernel: Nod Log Adding: {msg}")
+                # if hasattr(self, "nod_log"):
+                #     nod_log = cast(NodLog, self.nod_log)  # type: ignore
+                #     entry_id = cast(str, msg["arguments"]["entry_id"])
+                #     _log.info(f"entry id : {entry_id}")
+                #     entry_list = [e for e in nod_log.entries if e.entry_id == entry_id]
+                #     if len(entry_list) != 1:
+                #         _log.error(
+                #             f"found multiple log entries for one ID {entry_id} {entry_list}"
+                #         )
+                #     entry = entry_list.pop()
+                #     update_dict = {v.name: v.val for v in entry.vars}
+                #     if self.shell is not None:
+                #         _log.info(f"nod_log_push {update_dict}")
+                #         self.shell.user_ns.update(update_dict)
+
+                #     return {
+                #         "type": "response",
+                #         "request_seq": msg["seq"],
+                #         "success": True,
+                #         "command": msg["command"],
+                #     }
+            case "nod_variables":
+                """Handle a variables message."""
+                reply = {}
+                debugger = t.cast(Debugger, self.debugger)
+                # if not self.stopped_threads:
+                if self.variable_explorer is not None:
+                    variables = self.variable_explorer.get_children_variables(
+                        msg["arguments"]["variablesReference"]
+                    )
+                    return debugger._build_variables_response(msg, variables)
+
+                # reply = await self._forward_message(msg)
+                # # TODO : check start and count arguments work as expected in debugpy
+                # reply["body"]["variables"] = [
+                #     var
+                #     for var in reply["body"]["variables"]
+                #     if self.accept_variable(var["name"])
+                # ]
+                # return reply
+            case "nod_inspect_variables":
+                """Handle an inspect variables message."""
+                if self.variable_explorer is not None:
+                    self.variable_explorer.untrack_all()
+                debugger = t.cast(Debugger, self.debugger)
+                # looks like the implementation of untrack_all in ptvsd
+                # destroys objects we nee din track. We have no choice but
+                # reinstantiate the object
+                self.variable_explorer = VariableExplorer(
+                    msg["arguments"]["function_id"],
+                    self.nod_log,
+                    self.nod_log_id_to_func,
+                )
+
+                self.variable_explorer.track()
+                variables = self.variable_explorer.get_children_variables()
+                return debugger._build_variables_response(msg, variables)
+            # """Handle a variables message."""
+            # reply = {}
+
+            # debugger = t.cast(Debugger, self.debugger)
+            # _log.info(f"nod variables called {msg}")
+            # # if not debugger.stopped_threads:
+            # explorer = VariableExplorer(self.nod_log)
+            # explorer.track(msg["arguments"]["var_id"])
+            # var_ref_list = list(
+            #     explorer.tracker._variable_reference_to_variable.keys()
+            # )
+            # if len(var_ref_list) != 1:
+            #     _log.error("wrong number of debug variables")
+            # var_ref = var_ref_list[0]
+            # variables = explorer.get_children_variables(var_ref)
+            # _log.info(f"variables {variables}")
+            # return debugger._build_variables_response(msg, variables)
+
+            # reply = await debugger._forward_message(msg)
+            # # TODO : check start and count arguments work as expected in debugpy
+            # reply["body"]["variables"] = [
+            #     var
+            #     for var in reply["body"]["variables"]
+            #     if debugger.accept_variable(var["name"])
+            # ]
+            # return reply
 
         return await super().do_debug_request(msg)
 

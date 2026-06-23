@@ -6,7 +6,6 @@
 
 Session not found: session_id='2e3651ad-e58a-41ec-8b90-ce370cf3d153'
 
-
 pip install --force-reinstall nodpy-0.2.0-py3-none-any.whl  
 NOTES:
 
@@ -20,49 +19,48 @@ NOTES:
 
 NODCONFIG
 
-- add restart time to nodConfig
-- Add to NodConfig how the program should be restarted — (i.e. allowed to finish or interrupted, and if interrupted, with what signal). Obv smart defaults are our friend here.
-- format for notebook converstion with jupytext (light, percent, etc)
-- allow optional bypassing of readonly after edits?
-- if you want to test your program output after quit, you just gotta use the command line version
+- add restart time to nodConfig? (hmm maybe)
 
 TODO
-- switch stdout and stderr back to blocking when jupyter starts?
-  - cant wait on a non-blocking process, so set to nonblocking at cli enter so we get the program execution, then switch back to blocking on notebook enter, then on notebook exit switch back to non-blocking to print out the rest of the program
-  - maybe just disabling it is fine
+
+- have to collapse/uncollapse grid to update it after notebook switch, but id's working correctly
+- reconnect to session after reload is starting a new kernel?
+- persist state through page refresh
 - on nod switch, kill the previous kernel
-<!-- - make other frames read only after edit -->
-<!-- - add banner at the top on read only NBs  -->
 - test unlock
 - nod on exception https://ipython.readthedocs.io/en/stable/interactive/magics.html#magic-pdb
-<!-- - rename nb files to function--class (nah) -->
 - throw warning if spec not installed
+- dont quit existing sessions if jupyter lab closes?
+- rename setting to "how_exit"?
+- add exit without saving to menu
+- change quit kernel to send quit first, stop process at notebook() if the setting is set
+- Change tracker --- which cells are unedited
+
 - Maybe have the current NOD Instance notebook be undeleteable and a different color?
 - frozen modules?
-[E 2026-06-09 16:28:22.375 ServerApp] 0.00s - Debugger warning: It seems that frozen modules are being used, which may
-    0.00s - make the debugger miss breakpoints. Please pass -Xfrozen_modules=off
-    0.00s - to python to disable frozen modules.
-    0.00s - Note: Debugging will proceed. Set PYDEVD_DISABLE_FILE_VALIDATION=1 to disable this validation.
-- dont quit existing sessions if jupyter lab closes?
--  ERROR:asyncio:Task was destroyed but it is pending!    130 ↵
-task: <Task pending name='Task-72' coro=<Kernel.dispatch_control() running at /Users/erawn/.virtualenvs/nod-vryx/lib/python3.14/site-packages/ipykernel/kernelbase.py:344> cb=[ZMQStream._run_callback.<locals>._log_error() at /Users/erawn/.virtualenvs/nod-vryx/lib/python3.14/site-packages/zmq/eventloop/zmqstream.py:563]>
-/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py:744: RuntimeWarning: coroutine 'Kernel.dispatch_control' was never awaited
-  self._ready.clear()
-RuntimeWarning: Enable tracemalloc to get the object allocation traceback
-
-- add exit without saving to menu
-- rename setting to "how_exit"?
+  [E 2026-06-09 16:28:22.375 ServerApp] 0.00s - Debugger warning: It seems that frozen modules are being used, which may
+  0.00s - make the debugger miss breakpoints. Please pass -Xfrozen_modules=off
+  0.00s - to python to disable frozen modules.
+  0.00s - Note: Debugging will proceed. Set PYDEVD_DISABLE_FILE_VALIDATION=1 to disable this validation.
+- ERROR:asyncio:Task was destroyed but it is pending! 130 ↵
+  task: <Task pending name='Task-72' coro=<Kernel.dispatch_control() running at /Users/erawn/.virtualenvs/nod-vryx/lib/python3.14/site-packages/ipykernel/kernelbase.py:344> cb=[ZMQStream._run_callback.<locals>._log_error() at /Users/erawn/.virtualenvs/nod-vryx/lib/python3.14/site-packages/zmq/eventloop/zmqstream.py:563]>
+  /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py:744: RuntimeWarning: coroutine 'Kernel.dispatch_control' was never awaited
+  self.\_ready.clear()
+  RuntimeWarning: Enable tracemalloc to get the object allocation traceback
 
 Nice to have
 
+- Add custom inspectVariable
 - persist lock through reload?
 - - clear old kernels from jupyter (get shutdown registering properly??)
     - layoutrestorer, restorablepool
+    - this is happening because old webpages are still trying to load stuff - we need to disable this? (maybe a hook on deactivate/disconnect)
+
 - test timeouts to optimize (and on networked connections?)
 - play with opacity on the surrounding code?
 - mode to create function at call site?
 - mark cells above nod() call as run?
-- Change tracker --- which cells are unedited
+
 - Add check interface where it shows side by side
   - final preview of exported code?
 - debug nod with nod!!
@@ -72,8 +70,6 @@ Nice to have
 NOD Log Todo
 nod.log(x)
 
-- Nod log right sidebar
-- just deep copy it and put it in a dict
 - clicking on the side panel puts it in state
 - have a 'unique' boolean in nod.log() that doesn't save if it compares equal to another obj in the list
 
@@ -88,7 +84,7 @@ nod.save_args(f, [x,y,z])
 - user can just rewrite the function to have an inner pure func to call save_args on.
 - allow_globals flag?
 
-Nod log
+<!-- Nod log
 
 - Look for cycles in taint analysis
 - Fallback — compare outputs of each log session, if on forward eval they change, raise a big warning
@@ -96,7 +92,7 @@ Nod log
   https://pyre-check.org/docs/pysa-basics/
 - maybe we just need forward eval, and log is nod.log(savevariables)
   - problem with this is that we want the stack frame at the _beginning_ of the run, not the end.
-  - maybe its just the user's problem if they don't include something that matters in the function call?
+  - maybe its just the user's problem if they don't include something that matters in the function call? -->
 
 Stretch
 

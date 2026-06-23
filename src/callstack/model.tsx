@@ -10,9 +10,18 @@ import type { INotebookTracker } from '@jupyterlab/notebook';
 import type { IConsoleTracker } from '@jupyterlab/console';
 import { INodStackFrame, nodSchema } from '../types';
 import { IRunningSessions } from '@jupyterlab/running';
-import { Button, jupyterIcon, kernelIcon, LabIcon } from '@jupyterlab/ui-components';
+import {
+  Button,
+  jupyterIcon,
+  kernelIcon,
+  LabIcon
+} from '@jupyterlab/ui-components';
 import React, { ReactNode } from 'react';
-import { getNodInfo, launchNodKernel, NodSwitchSessions } from '../kernelHelpers';
+import {
+  getNodInfo,
+  launchNodKernel,
+  NodSwitchSessions
+} from '../kernelHelpers';
 import { setKernelToOpen } from '../messaging';
 /**
  * A model for a callstack.
@@ -168,18 +177,18 @@ export namespace NodSessionItem {
     nodSchema: nodSchema;
   }
 }
-const KERNEL_ITEM_LABEL_CLASS = 'jp-RunningSessions-itemLabel'
-const CONNECT_BUTTON_CLASS = 'jp-Nod-ConnectButton'
+const KERNEL_ITEM_LABEL_CLASS = 'jp-RunningSessions-itemLabel';
+const CONNECT_BUTTON_CLASS = 'jp-Nod-ConnectButton';
 const KERNEL_LABEL_ID = 'jp-RunningSessions-item-label-kernel-id';
 const KERNEL_ITEM_CLASS = 'jp-mod-kernel';
 const KERNELSPEC_ITEM_CLASS = 'jp-mod-kernelspec';
 export class NodSessionItem implements IRunningSessions.IRunningItem {
   constructor(options: NodSessionItem.IOptions) {
     this._name = options.name;
-    this.rel_path = options.rel_path
-    this.full_path = options.full_path
+    this.rel_path = options.rel_path;
+    this.full_path = options.full_path;
     this.className = KERNELSPEC_ITEM_CLASS;
-    this.schema = options.nodSchema
+    this.schema = options.nodSchema;
   }
 
   readonly className: string;
@@ -192,7 +201,7 @@ export class NodSessionItem implements IRunningSessions.IRunningItem {
     return kernelIcon;
   }
   open(): void {
-    console.log('called open from model')
+    console.log('called open from model');
   }
 
   label(): ReactNode {
@@ -201,19 +210,16 @@ export class NodSessionItem implements IRunningSessions.IRunningItem {
     // {this._summary}{' '}
     return (
       <>
-        <span className={KERNEL_ITEM_LABEL_CLASS} > {this._name} </span>
+        <span className={KERNEL_ITEM_LABEL_CLASS}> {this._name} </span>
       </>
     );
   }
   async shutdown(): Promise<void> {
-    await NodSwitchSessions(this.schema)
+    await NodSwitchSessions(this.schema);
   }
 }
 export class NodRunningModel {
-  constructor(options: {}) {
-
-
-  }
+  constructor(options: {}) {}
   get items(): NodSessionItem[] {
     return this._items;
   }
@@ -221,13 +227,10 @@ export class NodRunningModel {
   /**
    * Set the frames.
    */
-  setItems(
-    newItems: NodSessionItem[],
-  ) {
+  setItems(newItems: NodSessionItem[]) {
     this._items = newItems;
     this._itemsChanged.emit(newItems);
   }
-
 
   /**
    * Signal emitted when the frames have changed.
@@ -237,19 +240,19 @@ export class NodRunningModel {
   }
 
   get selectedKernelKey(): string {
-    return this._selectedKernelKey
+    return this._selectedKernelKey;
   }
 
   set selectedKernelKey(newKey: string) {
-    this._selectedKernelKey = newKey
-    this._selectedChanged.emit(newKey)
+    this._selectedKernelKey = newKey;
+    this._selectedChanged.emit(newKey);
   }
 
   get selectedChanged(): ISignal<this, string> {
-    return this._selectedChanged
+    return this._selectedChanged;
   }
 
-  private _selectedKernelKey: string = ""
+  private _selectedKernelKey: string = '';
   private _items: NodSessionItem[] = [];
   private _itemsChanged = new Signal<this, NodSessionItem[]>(this);
   private _selectedChanged = new Signal<this, string>(this);

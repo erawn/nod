@@ -36,14 +36,16 @@
 
 .jp-Nod-CallStack-SearchBox {
   padding-left: 5px;
-  padding-top: 0px;
+  padding-top: 0;
   padding-right: 5px;
 }
+
 .jp-nod-label {
   padding-left: 5px;
   position: static;
   margin-right: auto;
 }
+
 /* .jp-DebuggerCallstackFrame {
 
 } */
@@ -67,12 +69,26 @@
   min-height: fit-content;
   overflow: auto;
 }
+
+.jp-NodRightPanel-section {
+  min-height: fit-content;
+  overflow: auto;
+}
+
+.jp-NodRightPanel {
+  min-height: fit-content;
+  overflow: auto;
+
+  /* flex: 1 1 auto; */
+}
+
 .jp-Nod-ConnectLabel-Span {
   text-align: center;
   line-height: 2px;
   padding-left: 4px;
   padding-right: 4px;
 }
+
 .jp-NodRunningSessions-itemLabel {
   font-size: var(--jp-ui-font-size1);
   flex: 1 0 auto;
@@ -80,6 +96,16 @@
   overflow: hidden;
   white-space: nowrap;
 }
+
+/* .jp-Nod-TreeView {
+} */
+
+.jp-NodLogEntry {
+  border: var(--jp-border-width) solid var(--jp-border-color1);
+}
+
+/* .jp-NodLogSection {
+} */
 
 .jp-NodRunningSessions-itemDetail {
   font-size: var(--jp-ui-font-size1);
@@ -89,18 +115,22 @@
   overflow: hidden;
   white-space: nowrap;
 }
+
 .jp-NodRunningSessions-itemShutdown {
   outline: none;
   color: var(--jp-ui-font-color1);
 }
+
 .jp-NodRunningSessions-itemShutdown:hover {
   outline: calc(var(--stroke-width) * 1px) solid var(--jp-brand-color1);
   outline-offset: calc(var(--stroke-width) * -1px);
 }
+
 .jp-NodItem:hover > .jp-NodItem {
   outline: calc(var(--stroke-width) * 1px) solid var(--jp-brand-color1);
   outline-offset: calc(var(--stroke-width) * -1px);
 }
+
 .jp-NodLeftPanel-sectionContainer {
   margin: 0;
   padding: 0;
@@ -113,6 +143,22 @@
   list-style-type: none;
   padding-left: 14px;
 }
+
+/* .jp-nodlog-exportVar {
+} */
+
+.jp-NodDebuggerVariables-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: auto;
+  min-width: auto;
+  overflow: auto;
+
+  /* For absolute positioning of jp-DebuggerVariables-buttons. */
+  position: relative;
+}
+
 /* .jp-DebuggerCallstackFrame-Changed{
 
 } */
