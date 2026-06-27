@@ -35,7 +35,23 @@ On the left side is a panel to navigate up and down your callstack---your notebo
 
 - <img src="media/nod_dl.png" alt="markdown language" height="30" > Sends any text changes made in the notebook back to your source files. By default, the notebook is converted to [light](https://jupytext.org/formats/scripts/#the-light-format) format \(see [Config](#nodconfig) for more options.\)
 - <img src="media/nod_restart.png" alt="markdown language" height="30" > Restarts your original python program by re-executing the `<command>` from your `nod <command>` command line invocation, and updates the Jupyter editor to match. If you want to make changes directly to your source file and pull them to your Nod Jupyter session, just press "Restart without Saving" at the prompt when you restart.
-- <img src="media/nod_exit.png" alt="markdown language" height="30" > Quits the current Nod kernel.
+- <img src="media/nod_exit.png" alt="markdown language" height="30" > Quits the current Nod kernel. By default, your python program will continue to run from `notebook()` until it exits itself. If you would like to signal the program instead, see [how_exit](#nodconfig).
+
+### NodLog 
+
+To save values to put into the Notebook state later, call `nodLog(var,var,...):
+```python
+from nodpy import notebook, nodLog
+def f():
+    for i in range(10):
+        nodLog(i)
+    notebook()
+f()
+```
+<img src="media/nod_log.png" align="right" width="200px"/>
+and you'll see a list in your Nod Session appear on the `Nod Log` panel on the right:
+
+Click the <img src="media/nod_log_button.png" alt="markdown language" height="30" > button to put that value into the notebook state.
 
 ### JupyterHub Integration
 
@@ -44,6 +60,8 @@ JupyterHub users (and anyone else who doesn't want a new Jupyter window to spawn
 and the session will appear in the left panel under "Sessions":
 
 <img src="media/nod_existing.png" alt="markdown language" width="300" >
+
+Press "Connect" to open the session in Jupyterlab.
 
 **Important**: JupyterLab can't open files located outside of its home directory or any subdirectories, so make sure you call `nod -e <cmd>` in a directory you can see in the JupyterLab file navigator.
 
@@ -58,13 +76,13 @@ To configure module-level settings for Nod, call `nodConfig()` at the top of a f
   notebook conversion format.
   Options: "light", "percent"
 
-- **how_restart**: (default 'continue')
-  how the python program should be restarted from the notebook.
-  "continue" returns to let the program finish, and "exit" will stop the program.
+- **how_exit**: (default 'continue')
+  how the Nod session should be exited from the notebook.
+  "continue" returns to let the program finish, and "exit" will stop the program. 
   Options: 'continue', 'exit'
 
 - **dangerously_bypass_readonly**: (default 'false')
-  Once the code in associated with one stack frame in a Nod Session is edited, the others become read-only by default to prevent reaching a confusing state. Set to true to remove this safeguard, if you know what you're doing.
+  Once the code in associated with one stack frame in a Nod Session is edited, the others become read-only by default to prevent reaching a confusing state. Set to true to remove this safeguard, if you know what you're doing. -->
 
 ### How do I recover files if I forget to send my changes back to the source, or Jupyter crashes?
 

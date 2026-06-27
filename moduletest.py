@@ -1,10 +1,10 @@
-from nodpy import notebook
-
-print(1010101)
-notebook()
-print(10)
-
-import time
-time.sleep(10)
+from nodpy import notebook, nodLog
 
 
+def f():
+    for i in range(10):
+        nodLog(i)
+    notebook()
+
+
+f()

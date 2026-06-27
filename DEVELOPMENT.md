@@ -22,30 +22,12 @@ NODCONFIG
 - add restart time to nodConfig? (hmm maybe)
 
 TODO
--found the startup bug --- when we don't find an existing info in prelaunch 274 we throw an error
 
-14/site-packages/zmq/sugar/socket.py", line 162, in __init__
-        super().__init__(
-        ~~~~~~~~~~~~~~~~^
-            ctx_or_socket,
-            ^^^^^^^^^^^^^^
-        ...<2 lines>...
-            copy_threshold=copy_threshold,
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-        )
-        ^
-      File "zmq/backend/cython/_zmq.py", line 740, in zmq.backend.cython._zmq.Socket.__init__
-        raise ZMQError()
-        
-    zmq.error.ZMQError: Too many open files
-- exit kernel isnt killing the process (or the list isn't getting refreshed? reloading page changes it)
 - nod on exception https://ipython.readthedocs.io/en/stable/interactive/magics.html#magic-pdb
-- dont quit existing sessions if jupyter lab closes?
 - rename setting to "how_exit"?
+  -and actually implement it
 - change quit kernel to send quit first, stop process at notebook() if the setting is set
 - Change tracker --- which cells are unedited
-
-- Maybe have the current NOD Instance notebook be undeleteable and a different color?
 - frozen modules?
   [E 2026-06-09 16:28:22.375 ServerApp] 0.00s - Debugger warning: It seems that frozen modules are being used, which may
   0.00s - make the debugger miss breakpoints. Please pass -Xfrozen_modules=off
