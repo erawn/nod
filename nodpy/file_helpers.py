@@ -1,12 +1,9 @@
 import base64
 from inspect import FrameInfo
-import inspect
-import json
 import os
 from pathlib import Path
 import shutil
 import typing as t
-import ast
 import uuid
 import jupytext  # type: ignore
 from nbformat import NotebookNode
@@ -14,19 +11,10 @@ import nbformat
 from nodpy.nodTypes import FrameIdentifiers
 from nodpy.ast_tools import FunctionFinder, NodFinder
 from libcst.metadata import CodePosition, CodeRange
-from dataclasses import dataclass, field
-from dataclasses_json import dataclass_json
 from typing import List, Optional, TypeVar
 from libcst import Module
 from jupytext.formats import long_form_one_format  # type: ignore
 import libcst as cst
-import sys
-from dataclasses_json import DataClassJsonMixin
-from dataclasses_json.mm import SchemaType
-
-
-from IPython.core.getipython import get_ipython
-
 from nodpy.nodTypes import FileInfo, ProgramInfo
 
 

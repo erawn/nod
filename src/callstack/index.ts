@@ -7,6 +7,7 @@ import {
   closeIcon,
   downloadIcon,
   fileUploadIcon,
+  openKernelSourceIcon,
   PanelWithToolbar,
   refreshIcon,
   stopIcon,
@@ -48,7 +49,7 @@ export class NodSidebar extends SidePanel {
     this.addClass('jp-DebuggerSidebar');
     this.addClass('jp-NodLeftPanel');
     this.content.addClass('jp-DebuggerSidebar-body');
-    (this.content as AccordionPanel).expand(0);
+    // (this.content as AccordionPanel).expand(0);
 
     const nodTitle = `<h3>${this._trans.__('NOD')}</h3>`;
     const titleWidget = new Widget();
@@ -63,7 +64,7 @@ export class NodSidebar extends SidePanel {
       'nod-export',
       new ToolbarButton({
         className: 'nod-export',
-        icon: downloadIcon,
+        icon: openKernelSourceIcon,
         onClick: (): void => {
           nodState.Instance().app.commands.execute(nodCommands.exportNotebook);
         },
@@ -132,31 +133,38 @@ export class NodSidebar extends SidePanel {
   }
   refreshKernels() {
     getKernels().then(reply => {
-      // console.log(reply)
+      console.log('refresh kernels', reply)
       if (reply === undefined) {
         nodState.Instance().callstackSidebar.runningModel.setItems([]);
       }
-      if (reply !== undefined && reply.length > 0) {
-        nodState.Instance().callstackSidebar.runningModel.setItems(
-          reply.map(info => {
-            const frame = info.stack_info[0];
-            return new NodSessionItem({
-              name: frame.function_name,
-              rel_path: frame.relative_source_file,
-              full_path: frame.source_file,
-              nodSchema: info
-            });
-          })
-        );
+      if (reply !== undefined) {
+        if (reply.length > 0) {
+          nodState.Instance().callstackSidebar.runningModel.setItems(
+            reply.map(info => {
+              const frame = info.stack_info[0];
+              return new NodSessionItem({
+                name: frame.function_name,
+                rel_path: frame.relative_source_file,
+                full_path: frame.source_file,
+                nodSchema: info
+              });
+            })
+          );
+        } else {
+          nodState.Instance().callstackSidebar.runningModel.setItems([]);
+        }
       }
     });
   }
   activate(): void {
     console.log('activating sidebar');
-    nodState.Instance().callstackSidebar.interval = setInterval(
-      nodState.Instance().callstackSidebar.refreshKernels,
-      1000
-    );
+    if (nodState.Instance().callstackSidebar.interval === undefined) {
+      nodState.Instance().callstackSidebar.interval = setInterval(
+        nodState.Instance().callstackSidebar.refreshKernels,
+        1000
+      );
+    }
+
     // (function loop() {
     //   setTimeout(() => {
     //     this.callstackSidebar.interval = setInterval(this.callstackSidebar.refreshKernels, 1000)

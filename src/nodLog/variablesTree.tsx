@@ -4,10 +4,11 @@
 import { ITranslator, nullTranslator } from '@jupyterlab/translation';
 
 import {
-  caretLeftIcon,
-  getTreeItemElement,
-  ReactWidget,
-  searchIcon
+    caretLeftIcon,
+    getTreeItemElement,
+    ReactWidget,
+    searchIcon,
+    stepIntoIcon
 } from '@jupyterlab/ui-components';
 
 import { Button, TreeItem, TreeView } from '@jupyter/react-components';
@@ -26,132 +27,118 @@ import { IDebugger } from '@jupyterlab/debugger/';
 
 import { NodLogModel } from './nodLog';
 import { nodState } from '../state';
-import { inspectVariable } from '../messaging';
+import { inspectVariable, pushVariable, renderNodMimeVariable } from '../messaging';
 
 export class VariablesBodyTree extends ReactWidget {
-  /**
-   * Instantiate a new Body for the tree of variables.
-   *
-   * @param options The instantiation options for a VariablesBodyTree.
-   */
-  constructor(options: VariablesBodyTree.IOptions) {
-    super();
-    this._commands = options.commands;
-    // this._service = options.service;
-    this._translator = options.translator;
+    /**
+     * Instantiate a new Body for the tree of variables.
+     *
+     * @param options The instantiation options for a VariablesBodyTree.
+     */
+    constructor(options: VariablesBodyTree.IOptions) {
+        super();
+        this._commands = options.commands;
+        // this._service = options.service;
+        this._translator = options.translator;
 
-    const model = (this.model = options.model);
-    model.changed.connect(this._updateScopes, this);
-    this.addClass('jp-DebuggerVariables-body');
-    this.addClass('jp-NodDebuggerVariables-body');
-  }
-
-  /**
-   * Render the VariablesBodyTree.
-   */
-  render(): JSX.Element {
-    const scope =
-      this._scopes.find(scope => scope.name === this._scope) ?? this._scopes[0];
-
-    const handleSelectVariable = (variable: IDebugger.IVariable) => {
-      this.model.selectedVariable = variable;
-    };
-    const trans = (this._translator ?? nullTranslator).load('jupyterlab');
-
-    if (scope?.name !== 'Globals') {
-      this.addClass('jp-debuggerVariables-local');
-    } else {
-      this.removeClass('jp-debuggerVariables-local');
+        const model = (this.model = options.model);
+        model.changed.connect(this._updateScopes, this);
+        this.addClass('jp-DebuggerVariables-body');
+        this.addClass('jp-NodDebuggerVariables-body');
     }
 
-    return scope ? (
-      <div className="jp-NodLogEntry">
-        <div className="jp-NodLogSection">
-          <Button
-            className="jp-DebuggerVariables-renderVariable"
-            appearance="stealth"
-            slot="start"
-            onClick={e => {
-              e.stopPropagation();
-              console.log('clicked!');
-            }}
-            title={trans.__('Put All Variables In State')}
-          >
-            <caretLeftIcon.react tag={null} />
-          </Button>
-          {/* <span >{Export All}</span> */}
-        </div>
-        <TreeView className="jp-TreeView">
-          <VariablesBranch
-            key={scope.name}
-            commands={this._commands}
-            // service={this._service}
-            data={scope.variables}
-            filter={this._filter}
-            translator={this._translator}
-            handleSelectVariable={handleSelectVariable}
-          />
-        </TreeView>
-      </div>
-    ) : (
-      <div></div>
-    );
-  }
+    /**
+     * Render the VariablesBodyTree.
+     */
+    render(): JSX.Element {
+        const scope =
+            this._scopes.find(scope => scope.name === this._scope) ?? this._scopes[0];
 
-  /**
-   * Set the variable filter list.
-   */
-  set filter(filter: Set<string>) {
-    this._filter = filter;
-    this.update();
-  }
+        const handleSelectVariable = (variable: IDebugger.IVariable) => {
+            this.model.selectedVariable = variable;
+        };
+        const trans = (this._translator ?? nullTranslator).load('jupyterlab');
 
-  /**
-   * Set the current scope
-   */
-  set scope(scope: string) {
-    this._scope = scope;
-    this.update();
-  }
+        if (scope?.name !== 'Globals') {
+            this.addClass('jp-debuggerVariables-local');
+        } else {
+            this.removeClass('jp-debuggerVariables-local');
+        }
 
-  /**
-   * Update the scopes and the tree of variables.
-   *
-   * @param model The variables model.
-   */
-  private _updateScopes(model: NodLogModel): void {
-    if (ArrayExt.shallowEqual(this._scopes, model.scopes)) {
-      return;
+        return scope ? (
+            <div className="jp-NodLogEntry">
+
+                <TreeView className="jp-TreeView">
+                    <VariablesBranch
+                        key={scope.name}
+                        commands={this._commands}
+                        // service={this._service}
+                        data={scope.variables}
+                        filter={this._filter}
+                        translator={this._translator}
+                        handleSelectVariable={handleSelectVariable}
+                    />
+                </TreeView>
+            </div>
+        ) : (
+            <div></div>
+        );
     }
-    this._scopes = model.scopes;
-    this.update();
-  }
 
-  protected model: NodLogModel;
-  private _commands: CommandRegistry;
-  private _scope = '';
-  private _scopes: IDebugger.IScope[] = [];
-  private _filter = new Set<string>();
-  // private _service: IDebugger;
-  private _translator: ITranslator | undefined;
+    /**
+     * Set the variable filter list.
+     */
+    set filter(filter: Set<string>) {
+        this._filter = filter;
+        this.update();
+    }
+
+    /**
+     * Set the current scope
+     */
+    set scope(scope: string) {
+        this._scope = scope;
+        this.update();
+    }
+
+    /**
+     * Update the scopes and the tree of variables.
+     *
+     * @param model The variables model.
+     */
+    private _updateScopes(model: NodLogModel): void {
+        if (ArrayExt.shallowEqual(this._scopes, model.scopes)) {
+            return;
+        }
+        this._scopes = model.scopes;
+        this.update();
+    }
+
+    protected model: NodLogModel;
+    private _commands: CommandRegistry;
+    private _scope = '';
+    private _scopes: IDebugger.IScope[] = [];
+    private _filter = new Set<string>();
+    // private _service: IDebugger;
+    private _translator: ITranslator | undefined;
 }
 
 interface IVariablesBranchProps {
-  /**
-   * The commands registry.
-   */
-  commands: CommandRegistry;
-  data: IDebugger.IVariable[];
-  // service: IDebugger;
-  filter?: Set<string>;
-  /**
-   * The application language translator
-   */
-  translator?: ITranslator;
-  /**
-   * Callback on variable selection
-   */
-  handleSelectVariable?: (variable: IDebugger.IVariable) => void;
+    /**
+     * The commands registry.
+     */
+    commands: CommandRegistry;
+    data: IDebugger.IVariable[];
+    // service: IDebugger;
+    filter?: Set<string>;
+    /**
+     * The application language translator
+     */
+    translator?: ITranslator;
+    /**
+     * Callback on variable selection
+     */
+    handleSelectVariable?: (variable: IDebugger.IVariable) => void;
 }
 
 /**
@@ -163,81 +150,81 @@ interface IVariablesBranchProps {
  * @param props.filter Optional variable filter list.
  */
 const VariablesBranch = (props: IVariablesBranchProps): JSX.Element => {
-  const { commands, data, filter, translator, handleSelectVariable } = props;
-  const [variables, setVariables] = useState(data);
+    const { commands, data, filter, translator, handleSelectVariable } = props;
+    const [variables, setVariables] = useState(data);
 
-  useEffect(() => {
-    setVariables(data);
-  }, [data]);
+    useEffect(() => {
+        setVariables(data);
+    }, [data]);
 
-  return (
-    <>
-      {variables
-        .filter(
-          variable => !(filter || new Set()).has(variable.evaluateName || '')
-        )
-        .map(variable => {
-          const key = `${variable.name}-${variable.evaluateName}-${variable.type}-${variable.value}-${variable.variablesReference}`;
-          return (
-            <VariableComponent
-              key={key}
-              commands={commands}
-              data={variable}
-              // service={service}
-              filter={filter}
-              translator={translator}
-              onSelect={handleSelectVariable}
-            />
-          );
-        })}
-    </>
-  );
+    return (
+        <>
+            {variables
+                .filter(
+                    variable => !(filter || new Set()).has(variable.evaluateName || '')
+                )
+                .map(variable => {
+                    const key = `${variable.name}-${variable.evaluateName}-${variable.type}-${variable.value}-${variable.variablesReference}`;
+                    return (
+                        <VariableComponent
+                            key={key}
+                            commands={commands}
+                            data={variable}
+                            // service={service}
+                            filter={filter}
+                            translator={translator}
+                            onSelect={handleSelectVariable}
+                        />
+                    );
+                })}
+        </>
+    );
 };
 
 /**
  * VariableComponent properties
  */
 interface IVariableComponentProps {
-  /**
-   * The commands registry.
-   */
-  commands: CommandRegistry;
-  /**
-   * Variable description
-   */
-  data: IDebugger.IVariable;
-  /**
-   * Filter applied on the variable list
-   */
-  filter?: Set<string>;
-  /**
-   * The Debugger service
-   */
-  // service: IDebugger;
-  /**
-   * The application language translator
-   */
-  translator?: ITranslator;
-  /**
-   * Callback on selection
-   */
-  onSelect?: (variable: IDebugger.IVariable) => void;
+    /**
+     * The commands registry.
+     */
+    commands: CommandRegistry;
+    /**
+     * Variable description
+     */
+    data: IDebugger.IVariable;
+    /**
+     * Filter applied on the variable list
+     */
+    filter?: Set<string>;
+    /**
+     * The Debugger service
+     */
+    // service: IDebugger;
+    /**
+     * The application language translator
+     */
+    translator?: ITranslator;
+    /**
+     * Callback on selection
+     */
+    onSelect?: (variable: IDebugger.IVariable) => void;
 }
 
 function _prepareDetail(variable: IDebugger.IVariable) {
-  if (
-    variable.type === 'float' &&
-    (variable.value == 'inf' || variable.value == '-inf')
-  ) {
-    return variable.value;
-  }
-  const detail = convertType(variable);
-  if (variable.type === 'float' && isNaN(detail as number)) {
-    // silence React warning:
-    // `Received NaN for the `children` attribute. If this is expected, cast the value to a string`
-    return 'NaN';
-  }
-  return detail;
+    if (
+        variable.type === 'float' &&
+        (variable.value == 'inf' || variable.value == '-inf')
+    ) {
+        return variable.value;
+    }
+    const detail = convertType(variable);
+    if (variable.type === 'float' && isNaN(detail as number)) {
+        // silence React warning:
+        // `Received NaN for the `children` attribute. If this is expected, cast the value to a string`
+        return 'NaN';
+    }
+    return detail;
 }
 
 /**
@@ -249,173 +236,197 @@ function _prepareDetail(variable: IDebugger.IVariable) {
  * @param props.filter Optional variable filter list.
  */
 const VariableComponent = (props: IVariableComponentProps): JSX.Element => {
-  const { commands, data, filter, translator, onSelect } = props;
-  const [variable] = useState(data);
-  const [showDetailsButton, setShowDetailsButton] = useState<boolean>(false);
-  const [expanded, setExpanded] = useState<boolean>(false);
-  const [variables, setVariables] = useState<DebugProtocol.Variable[] | null>(
-    null
-  );
+    const { commands, data, filter, translator, onSelect } = props;
+    const [variable] = useState(data);
+    const [showDetailsButton, setShowDetailsButton] = useState<boolean>(false);
+    const [expanded, setExpanded] = useState<boolean>(false);
+    const [variables, setVariables] = useState<DebugProtocol.Variable[] | null>(
+        null
+    );
+    const state = nodState.Instance()
 
-  const trans = useMemo(
-    () => (translator ?? nullTranslator).load('jupyterlab'),
-    [translator]
-  );
-  const onSelection = onSelect ?? (() => void 0);
+    const trans = useMemo(
+        () => (translator ?? nullTranslator).load('jupyterlab'),
+        [translator]
+    );
+    const onSelection = onSelect ?? (() => void 0);
 
-  const expandable = useMemo(
-    () => variable.variablesReference !== 0 || variable.type === 'function',
-    [variable.variablesReference, variable.type]
-  );
+    const expandable = useMemo(
+        () => variable.variablesReference !== 0 || variable.type === 'function',
+        [variable.variablesReference, variable.type]
+    );
 
-  const details = useMemo(() => _prepareDetail(variable), [variable]);
+    const details = useMemo(() => _prepareDetail(variable), [variable]);
 
-  const hasMimeRenderer = useMemo(
-    () =>
-      ![
-        'special variables',
-        'protected variables',
-        'function variables',
-        'class variables'
-      ].includes(variable.name),
-    [variable.name]
-  );
+    const hasMimeRenderer = useMemo(
+        () =>
+            ![
+                'special variables',
+                'protected variables',
+                'function variables',
+                'class variables'
+            ].includes(variable.name),
+        [variable.name]
+    );
 
-  const disableMimeRenderer = true;
-  // useMemo(
-  //     () =>
-  //         !service.model.hasRichVariableRendering ||
-  //         !commands.isEnabled(Debugger.CommandIDs.renderMimeVariable, {
-  //             name: variable.name,
-  //             frameID: service.model.callstack.frame?.id
-  //         } as any),
-  //     [
-  //         service.model.hasRichVariableRendering,
-  //         variable.name,
-  //         service.model.callstack.frame?.id
-  //     ]
-  // );
+    const disableMimeRenderer = useMemo(
+        () =>
+            !state.debuggerService.model.hasRichVariableRendering ||
+            !state.debuggerService.session?.isStarted,
+        // !commands.isEnabled(Debugger.CommandIDs.renderMimeVariable, {
+        //     name: variable.name,
+        //     frameID: state.debuggerService.model.callstack.frame?.id
+        // } as any),
+        [
+            state.debuggerService.model.hasRichVariableRendering,
+            variable.name,
+            // state.debuggerService.model.callstack.frame?.id
+        ]
+    );
 
-  const fetchChildren = useCallback(async () => {
-    if (expandable && !variables) {
-      setVariables(await inspectVariable(variable.variablesReference));
-    }
-  }, [expandable, variable.variablesReference, variables]);
+    const isDebuggerActive = true //useMemo(() => state.debuggerService.session?.isStarted, [state.debuggerService.session?.isStarted])
 
-  const onVariableClicked = useCallback(
-    async (event: React.MouseEvent): Promise<void> => {
-      const item = getTreeItemElement(event.target as HTMLElement);
-      if (event.currentTarget !== item) {
-        return;
-      }
+    const fetchChildren = useCallback(async () => {
+        if (expandable && !variables) {
+            setVariables(await inspectVariable(variable.variablesReference));
+        }
+    }, [expandable, variable.variablesReference, variables]);
 
-      if (!expandable) {
-        return;
-      }
-      setExpanded(!expanded);
-    },
-    [expandable, expanded]
-  );
+    const onVariableClicked = useCallback(
+        async (event: React.MouseEvent): Promise<void> => {
+            const item = getTreeItemElement(event.target as HTMLElement);
+            if (event.currentTarget !== item) {
+                return;
+            }
 
-  const onSelectChange = useCallback(
-    (event: CustomEvent) => {
-      if (event.currentTarget === event.detail && event.detail.selected) {
-        onSelection(variable);
-      }
-    },
-    [variable]
-  );
+            if (!expandable) {
+                return;
+            }
+            setExpanded(!expanded);
+        },
+        [expandable, expanded]
+    );
 
-  // const renderVariable = useCallback(() => {
-  //     commands
-  //         .execute(Debugger.CommandIDs.renderMimeVariable, {
-  //             name: variable.name,
-  //             frameID: service.model.callstack.frame?.id
-  //         } as any)
-  //         .catch(reason => {
-  //             console.error(`Failed to render variable ${variable?.name}`, reason);
-  //         });
-  // }, [commands, variable.name, service.model.callstack.frame?.id]);
+    const onSelectChange = useCallback(
+        (event: CustomEvent) => {
+            if (event.currentTarget === event.detail && event.detail.selected) {
+                onSelection(variable);
+            }
+        },
+        [variable]
+    );
 
-  const onContextMenu = useCallback(
-    (event: React.MouseEvent<HTMLElement, MouseEvent>): void => {
-      const item = getTreeItemElement(event.target as HTMLElement);
-      if (event.currentTarget !== item) {
-        return;
-      }
+    const renderVariable = useCallback(() => {
+        // commands
+        //     .execute(Debugger.CommandIDs.renderMimeVariable, {
+        //         name: variable.name,
+        //         frameID: service.model.callstack.frame?.id
+        //     } as any)
+        //     .catch(reason => {
+        //         console.error(`Failed to render variable ${variable?.name}`, reason);
+        //     });
+        renderNodMimeVariable(variable)
+    }, [commands, variable.name]);
 
-      onSelection(variable);
-    },
-    [variable]
-  );
+    const onContextMenu = useCallback(
+        (event: React.MouseEvent<HTMLElement, MouseEvent>): void => {
+            const item = getTreeItemElement(event.target as HTMLElement);
+            if (event.currentTarget !== item) {
+                return;
+            }
 
-  return (
-    <TreeItem
-      className="jp-TreeItem nested"
-      expanded={expanded}
-      onSelect={onSelectChange}
-      onExpand={fetchChildren}
-      onClick={(e): Promise<void> => onVariableClicked(e)}
-      onContextMenu={onContextMenu}
-      // onKeyDown={event => {
-      //     if (event.key == 'Enter') {
-      //         if (hasMimeRenderer && showDetailsButton) {
-      //             onSelection(variable);
-      //             renderVariable();
-      //         }
-      //     }
-      // }}
-      onFocus={event => {
-        setShowDetailsButton(!event.defaultPrevented);
-        event.preventDefault();
-      }}
-      onBlur={event => {
-        setShowDetailsButton(false);
-      }}
-      onMouseOver={(event: React.MouseEvent<HTMLElement, MouseEvent>) => {
-        setShowDetailsButton(!event.defaultPrevented);
-        event.preventDefault();
-      }}
-      onMouseLeave={(event: React.MouseEvent<HTMLElement, MouseEvent>) => {
-        setShowDetailsButton(false);
-      }}
-    >
-      <span className="jp-DebuggerVariables-name">{variable.name}</span>
-      {details != null && (
-        <span className="jp-DebuggerVariables-detail">{details}</span>
-      )}
-      {hasMimeRenderer && showDetailsButton && (
-        <Button
-          className="jp-DebuggerVariables-renderVariable"
-          appearance="stealth"
-          slot="end"
-          disabled={disableMimeRenderer}
-          // onClick={e => {
-          //     e.stopPropagation();
-          //     renderVariable();
-          // }}
-          title={trans.__('Render variable: %1', variable?.name)}
-        >
-          <searchIcon.react tag={null} />
-        </Button>
-      )}
-      {variables ? (
-        <VariablesBranch
-          key={variable.name}
-          commands={commands}
-          data={variables}
-          // service={service}
-          filter={filter}
-          translator={translator}
-          handleSelectVariable={onSelect}
-        />
-      ) : (
-        /* Trick to ensure collapse button is displayed
-                   when variables are not loaded yet */
-        expandable && <TreeItem />
-      )}
-    </TreeItem>
-  );
+            onSelection(variable);
+        },
+        [variable]
+    );
+
+    return (
+        <>
+            <TreeItem
+                className="jp-TreeItem nested"
+                expanded={expanded}
+                onSelect={onSelectChange}
+                onExpand={fetchChildren}
+                onClick={(e): Promise<void> => onVariableClicked(e)}
+                onContextMenu={onContextMenu}
+                onKeyDown={event => {
+                    if (event.key == 'Enter') {
+                        if (hasMimeRenderer && showDetailsButton) {
+                            onSelection(variable);
+                            renderVariable();
+                        }
+                    }
+                }}
+                onFocus={event => {
+                    setShowDetailsButton(!event.defaultPrevented);
+                    event.preventDefault();
+                }}
+                onBlur={event => {
+                    setShowDetailsButton(false);
+                }}
+                onMouseOver={(event: React.MouseEvent<HTMLElement, MouseEvent>) => {
+                    setShowDetailsButton(!event.defaultPrevented);
+                    event.preventDefault();
+                }}
+                onMouseLeave={(event: React.MouseEvent<HTMLElement, MouseEvent>) => {
+                    setShowDetailsButton(false);
+                }}
+
+            >
+
+
+
+                <span className="jp-DebuggerVariables-name">{variable.name}</span>
+                {details != null && (
+                    <span className="jp-DebuggerVariables-detail">{details}</span>
+                )}
+                {showDetailsButton && isDebuggerActive && (<Button
+                    className="jp-DebuggerVariables-renderVariable"
+                    appearance="stealth"
+                    // slot="start"
+                    onClick={e => {
+                        e.stopPropagation();
+                        console.log('clicked!', variable);
+                        pushVariable(variable)
+                    }}
+                    title={trans.__('Put Variable In State')}
+                >
+                    <stepIntoIcon.react className='jp-NodLog-SendVarsIcon' tag={null} />
+                </Button>)}
+                {hasMimeRenderer && showDetailsButton && (
+                    <Button
+                        className="jp-DebuggerVariables-renderVariable"
+                        appearance="stealth"
+                        slot="end"
+                        disabled={disableMimeRenderer}
+                        onClick={e => {
+                            e.stopPropagation();
+                            renderVariable();
+                        }}
+                        title={trans.__('Render variable: %1', variable?.name)}
+                    >
+                        <searchIcon.react tag={null} />
+                    </Button>
+                )}
+                {variables ? (
+                    <VariablesBranch
+                        key={variable.name}
+                        commands={commands}
+                        data={variables}
+                        // service={service}
+                        filter={filter}
+                        translator={translator}
+                        handleSelectVariable={onSelect}
+                    />
+                ) : (
+                    /* Trick to ensure collapse button is displayed
+                               when variables are not loaded yet */
+                    expandable && <TreeItem />
+                )}
+            </TreeItem>
+        </>
+
+    );
 };
 
 //     return (
@@ -495,45 +506,45 @@ const VariableComponent = (props: IVariableComponentProps): JSX.Element => {
  * A namespace for VariablesBodyTree `statics`.
  */
 namespace VariablesBodyTree {
-  /**
-   * Instantiation options for `VariablesBodyTree`.
-   */
-  export interface IOptions {
     /**
-     * The variables model.
+     * Instantiation options for `VariablesBodyTree`.
      */
-    model: NodLogModel;
-    /**
-     * The debugger service.
-     */
-    service?: IDebugger;
-    /**
-     * The commands registry.
-     */
-    commands: CommandRegistry;
-    /**
-     * The application language translator
-     */
-    translator?: ITranslator;
-  }
+    export interface IOptions {
+        /**
+         * The variables model.
+         */
+        model: NodLogModel;
+        /**
+         * The debugger service.
+         */
+        service?: IDebugger;
+        /**
+         * The commands registry.
+         */
+        commands: CommandRegistry;
+        /**
+         * The application language translator
+         */
+        translator?: ITranslator;
+    }
 }
 
 export const convertType = (variable: IDebugger.IVariable): string | number => {
-  const { type, value } = variable;
-  switch (type) {
-    case 'int':
-      return parseInt(value, 10);
-    case 'float':
-      return parseFloat(value);
-    case 'bool':
-      return value;
-    case 'str':
-      if (variable.presentationHint?.attributes?.includes('rawString')) {
-        return value.slice(1, value.length - 1);
-      } else {
-        return value;
-      }
-    default:
-      return type ?? value;
-  }
+    const { type, value } = variable;
+    switch (type) {
+        case 'int':
+            return parseInt(value, 10);
+        case 'float':
+            return parseFloat(value);
+        case 'bool':
+            return value;
+        case 'str':
+            if (variable.presentationHint?.attributes?.includes('rawString')) {
+                return value.slice(1, value.length - 1);
+            } else {
+                return value;
+            }
+        default:
+            return type ?? value;
+    }
 };

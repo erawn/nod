@@ -26,7 +26,6 @@ export async function openNotebookWithNodKernel(
   );
   console.log(normalized);
 
-  // const relPath = normalized.replace(state.nod_cwd, "")
   await state.app.serviceManager.kernels.refreshRunning();
   const nodKernelId = await getNodKernel();
 
@@ -36,11 +35,13 @@ export async function openNotebookWithNodKernel(
   if (existingNotebook) {
     console.log('Existing Notebook with Path', existingNotebook);
     existingNotebook.sessionContext.kernelPreference = {
-      autoStartDefault: false,
+      // autoStartDefault: false,
+      name: 'nod',
       id: nodKernelId,
       shutdownOnDispose: false
     };
     state.app.shell.activateById(existingNotebook.id);
+    // state.sessionManager.connectTo
     existingNotebook.context.sessionContext.changeKernel({
       name: 'nod',
       id: state.nodKernelId
@@ -117,20 +118,22 @@ export async function launchNodKernel(key?: string) {
           }
           launching = true;
           console.log('Launching Nod Kernel');
-          const connection = await app.serviceManager.kernels.startNew({
-            name: 'nod'
-          });
+          const currentSessionContext = nodState.Instance().tracker.currentWidget?.sessionContext
+          if (currentSessionContext !== undefined) {
+            currentSessionContext.changeKernel({
+              name: 'nod',
+            });
+          } else {
+            const connection = await app.serviceManager.kernels.startNew({
+              name: 'nod'
+            });
+          }
           launching = false;
-          nodState.Instance().nodKernelId = connection.model.id;
+          // nodState.Instance().nodKernelId = connection.model.id;
           console.log(
             ' LAUNCHNODKERNEL: Started Up New Nod!',
-            connection.model.id
+            nodState.Instance().nodKernelId
           );
-
-          //todo
-          // if (key !== undefined) {
-          //   await setKernelToOpen("")
-          // }
           console.log('launched kernel');
           return nodState.Instance().nodKernelId;
         } catch (e) {
@@ -143,7 +146,17 @@ export async function launchNodKernel(key?: string) {
   return undefined;
 }
 
-export async function getNodInfo() {
+export async function getNodInfoFromKey(key: string): Promise<nodSchema | undefined> {
+  const res = await requestAPI<any>('file', {
+    body: key,
+    method: 'POST'
+  });
+  const jsonObj = JSON.parse(atob(res));
+  const schema = nodSchema.parse(jsonObj);
+  return schema
+}
+
+export async function getNodInfo(): Promise<nodSchema | undefined> {
   const state = nodState.Instance();
   try {
     const connection_path = nodState.Instance().connection_dir;
@@ -176,10 +189,10 @@ export async function getNodInfo() {
         }
       });
     }
-    return true;
+    return schema;
   } catch (e) {
     console.log(e);
-    return false;
+    return;
   }
 }
 
@@ -430,16 +443,33 @@ export async function NodSwitchSessions(schema: nodSchema): Promise<boolean> {
     await nodState.Instance().app.commands.execute('docmanager:save-all');
   }
   nodState.Instance().status = 'inactive';
-  console.log('launching kernel', schema.key);
-  const nodKernelPromise = launchNodKernel(schema.key);
-  kernelWaitDialog();
-  const id = (await nodKernelPromise) ?? '';
-  console.log('POST RESTART', id);
+  const existing_schema = await getNodInfo()
+  const kernel_id = await getNodKernel()
+  console.log("current key", existing_schema?.key, " schema key ", schema.key, kernel_id)
+  let id = ""
+  if (schema.key === existing_schema?.key && kernel_id !== undefined) {
+    id = kernel_id
+    console.log("setting id to ", schema.key)
+  } else {
+    console.log('launching kernel', schema.key);
+    const nodKernelPromise = launchNodKernel(schema.key);
+    kernelWaitDialog();
+    id = (await nodKernelPromise) ?? '';
+    console.log('POST SWITCH SESSIONS', id);
+    const sessionContext = state.tracker.currentWidget?.sessionContext
+    if (sessionContext !== undefined && !sessionContext.isDisposed) {
+      try {
+        await sessionContext.changeKernel({
+          name: 'nod',
+          id: id
+        });
+      } catch (e) {
+        console.log('switch sessions error:', e)
+      }
+
+    }
+  }
   state.reset(schema, id);
-  state.tracker.currentWidget?.sessionContext.changeKernel({
-    name: 'nod',
-    id: state.nodKernelId
-  });
   checkKernelStatus();
   return true;
 }

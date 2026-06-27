@@ -26,10 +26,10 @@ export function kernelWaitDialog() {
   }
 }
 let checkKernelPromise: undefined | Promise<void> = undefined;
-export async function checkKernelStatus() {
+export async function checkKernelStatus(start_new: boolean = false) {
   if (checkKernelPromise === undefined) {
     try {
-      checkKernelPromise = checkKernelStatusInner();
+      checkKernelPromise = checkKernelStatusInner(start_new);
       await checkKernelPromise;
     } catch (e) {
       console.error('Check Kernel Status', e);
@@ -40,7 +40,7 @@ export async function checkKernelStatus() {
     console.log('checkKernelStatus rejected');
   }
 }
-async function checkKernelStatusInner() {
+async function checkKernelStatusInner(start_new: boolean) {
   console.log('Check Kernel Status');
   const kernelSpecManager = nodState.Instance().app.serviceManager.kernelspecs;
   await kernelSpecManager.refreshSpecs();
@@ -73,7 +73,7 @@ async function checkKernelStatusInner() {
             console.log('returned from launch');
 
             await getNodInfo().then(success => {
-              if (success) {
+              if (success !== undefined) {
                 const idSearch = Dialog.tracker.find(
                   dialog => dialog.id === nodState.Instance().dialogID
                 );

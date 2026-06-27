@@ -215,11 +215,12 @@ export class NodSessionItem implements IRunningSessions.IRunningItem {
     );
   }
   async shutdown(): Promise<void> {
+    console.log("opening ", this.schema)
     await NodSwitchSessions(this.schema);
   }
 }
 export class NodRunningModel {
-  constructor(options: {}) {}
+  constructor(options: {}) { }
   get items(): NodSessionItem[] {
     return this._items;
   }

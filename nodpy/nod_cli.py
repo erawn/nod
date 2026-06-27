@@ -92,7 +92,7 @@ def main(
     if install_kernel:
         install_nod_kernel()
         return
-    LEVEL = "INFO"
+    LEVEL = "DEBUG"
     pm = PathManager(clear=True)
     cli_cmds_64 = base64.b64encode(" ".join(commands).encode("utf-8")).decode("utf-8")
     cmd = (
@@ -156,9 +156,8 @@ def main(
         + "--NodProvisioner.nod_cwd="
         + str(cwd.absolute().resolve())
         + " "
-        # + "--NodProvisioner.stdin="
-        # + str(sys.stdin.fileno())
-        # + " "
+        + "--NodProvisioner.mode=non_existing"
+        + " "
         # + "--Nod.info="
         # + base64.b64encode(jsonInfo).decode("utf-8")
         + " "
@@ -196,7 +195,6 @@ def main(
                 os.set_blocking(stderr.fileno(), True)  # type: ignore
                 stderr.flush()
             # pythonProcess.send_signal(signal.SIGKILL)
-            pythonProcess.wait()
 
     atexit.register(cleanup)
     if existing:
@@ -218,7 +216,9 @@ def main(
             # if pythonProcess is not None:
             import time
 
-            time.sleep(0.1)
+            time.sleep(
+                0.1
+            )  # change to async to not block --- this is whats messing up the nudges and the waiting
             stdout = pythonProcess.stdout
             stderr = pythonProcess.stderr
 

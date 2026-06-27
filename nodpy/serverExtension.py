@@ -45,17 +45,29 @@ class NodServerFileRouteHandler(APIHandler):
     # Jupyter server
     @tornado.web.authenticated
     def post(self):
-        path = self.request.body.strip().decode("utf-8")
-        _log.info(path)
-        with open(path, "r") as f:
-            info_str = f.read()
-            nod_info = NodInfo.from_json(info_str)
-            _log.debug(nod_info)
+
+        key = self.request.body.strip().decode("utf-8")
+        # full_path = os.path.join(os.getcwd(), path)
+        _log.info(f"nod file route handler get nod info {key}")
+        file_list = findNodRuntimeFile(
+            paths.jupyter_runtime_dir(), paths.get_home_dir(), key=key, ignore_run=True
+        )
+        if len(file_list) > 0:
+            nodInfo = file_list.pop().to_dict(True)
             out = base64.b64encode(
                 orjson.dumps(
-                    nod_info,
+                    nodInfo,
                 )
             ).decode("utf-8")
+
+            # with open(full_path, "r") as f:
+            #     info_str = f.read()
+            #     nod_info = NodInfo.from_json(info_str)
+            #     out = base64.b64encode(
+            #         orjson.dumps(
+            #             nod_info,
+            #         )
+            #     ).decode("utf-8")
 
             self.finish(out)
             return
@@ -63,7 +75,7 @@ class NodServerFileRouteHandler(APIHandler):
 
 
 def findNodRuntimeFile(
-    runtime_dir: str, server_dir: str, key: str | None = None
+    runtime_dir: str, server_dir: str, key: str | None = None, ignore_run: bool = False
 ) -> List[NodInfo]:
     metadata_fields: List[NodInfo] = []
     if not os.path.exists(runtime_dir):
@@ -112,8 +124,8 @@ def findNodRuntimeFile(
                     local_info_string = l.read()
                     local_nod_info = NodInfo.from_json(local_info_string)
                     # _log.warning(nod_info)
-                    if local_nod_info.key == nod_info.key and psutil.pid_exists(
-                        local_nod_info.python_pid
+                    if local_nod_info.key == nod_info.key and (
+                        ignore_run or psutil.pid_exists(local_nod_info.python_pid)
                     ):
                         nod_info.nod_info_rel_path = os.path.relpath(
                             nod_info.nod_info_local_path, os.getcwd()
@@ -148,11 +160,9 @@ def findNodRuntimeFile(
 
 
 class ExistingKernelsRouteHandler(APIHandler):
-    # The following decorator should be present on all verb methods (head, get, post,
-    # patch, put, delete, options) to ensure only authorized user can request the
-    # Jupyter server
     @tornado.web.authenticated
     def get(self):
+        # _log.info(f"nod existing kernels get kernels")
         # paths.jupyter_runtime_dir
         # _log.info(paths.jupyter_runtime_dir())
         # _log.info(paths.get_home_dir())
@@ -173,6 +183,7 @@ class ExistingKernelsRouteHandler(APIHandler):
 
     @tornado.web.authenticated
     def post(self):
+        _log.info(f"nod existing kernels set kernel key")
         # input_data is a dictionary with a key "name"
         # Do we need to call body.decode('utf-8') here?
         body = self.request.body.strip().decode("utf-8")
@@ -180,8 +191,8 @@ class ExistingKernelsRouteHandler(APIHandler):
         if serverapp is not None:
             if "nod_key" not in serverapp.kernel_manager.trait_names():
                 serverapp.kernel_manager.add_traits(nod_key=Unicode())
-            _log.info(serverapp.kernel_manager)
-            _log.info(serverapp.kernel_manager.trait_names())
+            # _log.info(serverapp.kernel_manager)
+            # _log.info(serverapp.kernel_manager.trait_names())
             _log.info(f"Setting new Key: {body}")
             serverapp.kernel_manager.nod_key = body  # type: ignore
             self.finish(
@@ -204,30 +215,6 @@ class writeRequest:
 
 class WriteFileRouteHandler(APIHandler):
 
-    # @tornado.web.authenticated
-    # def get(self):
-    #     _log.info("Nod Server: Restart Program")
-    #     _log.info(self.settings.get("Nod"))
-    #     nodServer = self.settings.get("Nod")
-    #     if nodServer is not None and hasattr(nodServer, "user_program_process"):
-    #         nodProcess = nodServer.user_program_process
-    #         nodServer = cast(Nod, nodServer)
-    #         if nodProcess is not None:
-    #             nodProcess = cast(subprocess.Popen[bytes], nodProcess)
-    #             # nodProcess.terminate()
-    #         nodServer.runUserProgram(nodServer.cli_cmd)
-    #     self.finish(
-    #         json.dumps(
-    #             {
-    #                 "data": (
-    #                     "Hello, world!"
-    #                     " This is the '/nodpy/hello' endpoint."
-    #                     " Try visiting me in your browser!"
-    #                 ),
-    #             }
-    #         )
-    #     )
-
     @tornado.web.authenticated
     def post(self):
         # input_data is a dictionary with a key "name"
@@ -238,13 +225,6 @@ class WriteFileRouteHandler(APIHandler):
             json_load = json.loads(body)
             # _log.info(json_load)
             request = from_dict(writeRequest, json_load)
-            #  notebook: NotebookNode = jupytext.reads(
-            #         "".join(program_info.fileInfo.text_body),
-            #         fmt=long_form_one_format(f"py:{program_info.fmt}"),
-            #     )
-            # nb = jupytext.reads(py, "py")
-            #     py2 = jupytext.writes(nb, "py")
-            #             _log.info(request)
             _log.info("REQUEST")
             _log.debug(request)
             decoded_content = base64.b64decode(request.notebookContent).decode("utf-8")
@@ -275,8 +255,6 @@ class WriteFileRouteHandler(APIHandler):
             self.log.debug("Bad JSON: %r", body)
             self.log.error("Couldn't parse JSON", exc_info=True)
             raise web.HTTPError(400, "Invalid JSON in body of request") from e
-
-        # data = {"greetings": "Hello {}, enjoy JupyterLab!".format(input_data["name"])}
         self.finish()
 
 
@@ -292,10 +270,6 @@ class Nod(ExtensionApp):
     ).tag(config=True)
 
     connection_dir = Unicode("", help="Nod Connection Directory").tag(config=True)
-
-    # connection_dir = Unicode("", help="Directory for Nod Connection Files").tag(
-    #     config=True
-    # )
 
     def initialize_handlers(self):
         host_pattern = ".*$"

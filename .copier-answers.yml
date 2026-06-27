@@ -12,4 +12,3 @@ project_short_description: A JupyterLab extension.
 python_name: nodpy
 repository: ''
 test: true
-

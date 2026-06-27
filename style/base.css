@@ -67,21 +67,21 @@
 
 .jp-NodLeftPanel-section {
   min-height: fit-content;
-  overflow: auto;
+  overflow: scroll;
 }
 
 .jp-NodRightPanel-section {
-  min-height: fit-content;
-  overflow: auto;
+  overflow: scroll;
 }
 
 .jp-NodRightPanel {
-  min-height: fit-content;
-  overflow: auto;
+  min-height: 50%;
 
   /* flex: 1 1 auto; */
 }
-
+/* .jp-NodLog-Variables > .jp-DebuggerVariables-body {
+  flex: 0 1 30% !important;
+} */
 .jp-Nod-ConnectLabel-Span {
   text-align: center;
   line-height: 2px;
@@ -144,10 +144,11 @@
   padding-left: 14px;
 }
 
-/* .jp-nodlog-exportVar {
-} */
+.jp-NodLog-SendVarsIcon {
+  transform: rotate(90deg);
+}
 
-.jp-NodDebuggerVariables-body {
+/* .jp-NodDebuggerVariables-body {
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
@@ -155,9 +156,9 @@
   min-width: auto;
   overflow: auto;
 
-  /* For absolute positioning of jp-DebuggerVariables-buttons. */
+
   position: relative;
-}
+} */
 
 /* .jp-DebuggerCallstackFrame-Changed{
 

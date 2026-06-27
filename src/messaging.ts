@@ -17,7 +17,8 @@ import { getNodKernel } from './kernelHelpers';
 import { nodSchema, nodSchemas } from './types';
 import { DebugProtocol } from '@vscode/debugprotocol';
 import { PromiseDelegate } from '@lumino/coreutils';
-import { IDebugger } from '@jupyterlab/debugger';
+import { Debugger, IDebugger } from '@jupyterlab/debugger';
+import { WidgetTracker } from '@jupyterlab/apputils';
 export function requestExecute(
   code: string
 ): IShellFuture<IExecuteRequestMsg, IExecuteReplyMsg> | null {
@@ -42,6 +43,7 @@ export async function sendRequest<K extends keyof IDebugger.ISession.Request>(
   args: IDebugger.ISession.Request[K],
   type: K | any
 ): Promise<IDebugger.ISession.Response[K]> {
+  console.log("sending debug message : ", command, args)
   const message = await _sendDebugMessage({
     type: 'request',
     seq: _seq++,
@@ -56,6 +58,7 @@ async function _sendDebugMessage(
   const kernel =
     nodState.Instance().tracker.currentWidget?.sessionContext?.session?.kernel;
   if (!kernel) {
+    console.error("no kernel")
     return Promise.reject(
       new Error('A kernel is required to send debug messages.')
     );
@@ -99,11 +102,25 @@ export async function exitSession(id: string) {
   const state = nodState.Instance();
   const kernelManager = nodState.Instance().app.serviceManager.kernels;
   const nodKernel = await kernelManager.findById(id);
-  if (nodKernel !== undefined) {
-    await kernelManager.shutdown(id);
-    await kernelManager.refreshRunning();
-  }
   state.mode = 'existing';
+  if (nodKernel !== undefined) {
+    const content: KernelMessage.IExecuteRequestMsg['content'] = {
+      code: 'quit',
+      silent: true,
+      store_history: false
+    };
+    try {
+      const connection = state.app.serviceManager.kernels.connectTo({ model: nodKernel })
+      await connection.requestExecute(content).done
+      await kernelManager.shutdown(id);
+    } catch (e) {
+      console.log(e)
+    } finally {
+      await kernelManager.refreshRunning();
+      state.status = 'inactive'
+    }
+
+  }
 }
 
 export async function writeChange(
@@ -172,10 +189,10 @@ export async function setKernelToOpen(key: string) {
   console.log('sending kernelToOpen');
   const res = await requestAPI<any>('kernels', {
     method: 'POST',
-    body: key //JSON.stringify("t"),
+    body: key
   })
     .then(reply => {
-      console.log(reply);
+      console.log("Set kernel to open reply:", reply);
     })
     .catch(reason => {
       console.error(`Error on POST /nodpy/kernels.\n${reason}`);
@@ -204,12 +221,122 @@ export async function inspectVariable(
     throw new Error(reply.message);
   }
 }
-export async function getDefinedVariables(
-  function_id: string
-): Promise<DebugProtocol.Variable[]> {
+const trackerMime = new WidgetTracker<Debugger.VariableRenderer>({
+  namespace: 'debugger/render-variable'
+});
+export function renderNodMimeVariable(variable: IDebugger.IVariable) {
+  const state = nodState.Instance()
+  const activeWidget = state.debuggerHandler.activeWidget;
+  let activeRendermime =
+    activeWidget instanceof NotebookPanel
+      ? activeWidget.content.rendermime
+      : state.rendermime;
+
+  if (!activeRendermime) {
+    return;
+  }
+  const name = variable.name
+  const id = `jp-debugger-variable-mime-${name}-${state.debuggerService.session?.connection?.path.replace(
+    '/',
+    '-'
+  )}`;
+  if (
+    !name || // Name is mandatory
+    trackerMime.find(widget => widget.id === id) // Widget already exists
+    // (!frameId && service.hasStoppedThreads()) // frame id missing on breakpoint
+  ) {
+    return;
+  }
+  // const model = state.nodLogSidebar.log.model
+  const variablesModel = state.nodLogSidebar.log.model
+
+  const widget = new Debugger.VariableRenderer({
+    dataLoader: () => inspectRichNodVariable(variable.variablesReference),
+    rendermime: activeRendermime,
+    translator: state.translator
+  });
+  widget.addClass('jp-DebuggerRichVariable');
+  widget.id = id;
+  widget.title.icon = Debugger.Icons.variableIcon;
+  widget.title.label = `${name} - ${state.debuggerService.session?.connection?.name}`;
+  widget.title.caption = `${name} - ${state.debuggerService.session?.connection?.path}`;
+  void trackerMime.add(widget);
+  const disposeWidget = () => {
+    widget.dispose();
+    variablesModel.changed.disconnect(refreshWidget);
+    activeWidget?.disposed.disconnect(disposeWidget);
+  };
+  const refreshWidget = () => {
+    // Refresh the widget only if the active element is the same.
+    if (state.debuggerHandler.activeWidget === activeWidget) {
+      void widget.refresh();
+    }
+  };
+  widget.disposed.connect(disposeWidget);
+  variablesModel.changed.connect(refreshWidget);
+  activeWidget?.disposed.connect(disposeWidget);
+
+  state.app.shell.add(widget, 'main', {
+    mode: trackerMime.currentWidget ? 'split-right' : 'split-bottom',
+    activate: false,
+    type: 'Debugger Variables'
+  });
+}
+export async function inspectRichNodVariable(
+  variablesReference: number
+): Promise<IDebugger.IRichVariable> {
+  console.log('rich inspect variable', variablesReference);
   const kernelID = await getNodKernel();
   if (kernelID === undefined) {
     throw new Error('No active nod session');
+  }
+  const reply = await sendRequest(
+    'nod_inspect_rich_variable',
+    {
+      variablesReference
+    },
+    ''
+  );
+  if (reply.success) {
+    return reply.body;
+  } else {
+    throw new Error(reply.message);
+  }
+}
+export async function pushVariable(
+  variable: IDebugger.IVariable
+): Promise<boolean> {
+
+  const { variablesReference, name, evaluateName } = variable
+  console.log('push variable', variablesReference);
+  const kernelID = await getNodKernel();
+  if (kernelID === undefined) {
+    throw new Error('No active nod session');
+  }
+  const reply = await sendRequest(
+    'nod_log_push',
+    {
+      variablesReference, name, evaluateName
+    },
+    ''
+  );
+  console.log("sending push variable request", 'nod_log_push',
+    {
+      variablesReference, name, evaluateName
+    },
+    '')
+  if (!reply.success) {
+    console.error('Nod: push variable failed')
+  }
+  return reply.success
+}
+export async function getDefinedVariables(
+  function_id: string
+): Promise<DebugProtocol.Variable[] | undefined> {
+  const kernelID = await getNodKernel();
+  if (kernelID === undefined) {
+    console.log('No active nod session');
+    return
   }
   const inspectReply = await sendRequest(
     'nod_inspect_variables',
@@ -218,11 +345,4 @@ export async function getDefinedVariables(
   );
   const variables = inspectReply.body.variables;
   return variables;
-  // const variableScopes = [
-  //   {
-  //     name: this._trans.__('Globals'),
-  //     variables: variables
-  //   }
-  // ];
-  // this._model.variables.scopes = variableScopes;
 }

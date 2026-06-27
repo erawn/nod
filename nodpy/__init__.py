@@ -36,16 +36,9 @@ from nodpy.nodTypes import (
     FrameIdentifiers,
     NodConnectionInfo,
     NodInfo,
-    NodLog,
-    NodLogEntry,
-    NodLogEntryJSON,
-    NodLogJSON,
-    NodLogVariable,
-    NodLogVariableJSON,
 )
 from .serverExtension import Nod
 from IPython.core.interactiveshell import InteractiveShell
-from dataclasses import dataclass
 from typing import List, Literal, IO, Any, cast
 from nodpy.provisioner import NodProvisioner  # DON'T REMOVE THIS
 from IPython.core.getipython import get_ipython
@@ -56,11 +49,7 @@ from .file_helpers import (
 )
 
 from IPython.terminal.interactiveshell import TerminalInteractiveShell
-from varname import argname, nameof, varname
-
-# if TYPE_CHECKING:
-#     # False at run time, only for type checker
-#     from _typeshed import SupportsWrite
+from varname import argname
 
 _log = logging.getLogger(__name__)
 logging.basicConfig()
@@ -69,86 +58,10 @@ _log.addHandler(logging.FileHandler("log.txt"))
 
 DRY_RUN = False
 
-DEBUG: bool = False
+DEBUG: bool = True
 
 if DEBUG:
     _log.setLevel(logging.DEBUG)
-
-
-# def loadState(frame_identifier:FrameIdentifiers, state:dict[dict]):
-#     frame_id = frame_identifier.get_id()
-#     shell: InteractiveShell = get_ipython()
-#     if frame_id in state.keys():
-#         shell.push(state[frame_id])
-
-# def saveState(frame_identifier:FrameIdentifiers, state:dict[dict]):
-#     frame_id = frame_identifier.get_id()
-#     shell: InteractiveShell = get_ipython()
-#     if frame_id in state.keys():
-#         shell.
-
-# def clearState():
-
-
-# def resetState():
-#     """Clear all internal namespaces, and attempt to release references to
-#     user objects.
-
-#     If new_session is True, a new history session will be opened.
-#     """
-#     shell = get_ipython()
-#     shell.run_line_magic("reset", "-f -s")
-#     if shell.user_ns.get("__STARTINGVARIABLES", False):
-#         shell.push(shell.user_ns["__STARTINGVARIABLES"])
-
-
-# def log(*args, **kwargs):
-#     logStore = LogStore()
-#     logStore.logs.append()
-
-#     logStore.logs.append(dict(val))
-#     vars = locals() + globals()
-
-#     [k for k, v in locals.items() if v in args][0]
-
-#     for key, val in kwargs.items():
-#         logStore.logs.append(dict(key=val))
-#         print(key, val)
-# def nodConfig():
-
-
-# def nodPrint(
-#     *values: object,
-#     sep: str | None = " ",
-#     end: str | None = "\n",
-#     file: SupportsWrite[str] | None = None,
-#     flush: Literal[False] = False,
-# ):
-#     """Inside of an IPython Instance, prints the values to a stream, or to sys.stdout by default.
-
-#     sep
-#       string inserted between values, default a space.
-#     end
-#       string appended after the last value, default a newline.
-#     file
-#       a file-like object (stream); defaults to the current sys.stdout.
-#     flush
-#       whether to forcibly flush the stream.
-#     """
-#     # Prevent Nested Nod Instances
-#     try:
-#         name = get_ipython().__class__.__name__
-#         if name != "NoneType":
-#             print(
-#                 *values,
-#                 sep=sep,
-#                 end=end,
-#                 file=file,
-#                 flush=flush,
-#             )
-#     except NameError:
-#         pass
-
 
 # class Signals(IntEnum):
 #     SIGINT: int
@@ -175,12 +88,13 @@ def nodLog(*args):
 
     if log_call is None:
         raise NodException("Cannot find notebook() function call in callstack")
-    program_text = open(log_call.filename).read()
+    with open(log_call.filename) as f:
+        program_text = f.read()
     module = cst.parse_module(program_text)
     wrapper = cst.MetadataWrapper(module)
     finder = FunctionFinder(log_call.function)
     module = wrapper.visit(finder)
-    _log.info(f"log call {log_call.frame.f_locals}")
+    # _log.info(f"log call {log_call.frame.f_locals}")
 
     # currentFrame = inspect.currentframe()
 
@@ -191,54 +105,22 @@ def nodLog(*args):
     #     "utf-8"
     # )
     function_id = frame_id.get_id()
-    # entry = NodLogEntry(
-    #     function_id=encoded_frame_id, entry_id=str(uuid.uuid1()), vars=[]
-    # )
     argnames = t.cast(tuple[ArgSourceType], argname("args"))
-    entry_id = str(uuid.uuid1())
+    entry_id = "nl_" + uuid.uuid4().hex
     variables: dict[str, t.Any] = {}
     for name, val in zip(argnames, args):
         try:
-            _log.info(f"found var {name} with val {val}")
+            # _log.info(f"found var {name} with val {val}")
             # _log.info(_get_variable_description(val))
             deepCopy = copy.deepcopy(val)
             variables.update({str(name): deepCopy})
-            # var = NodLogVariable(name=str(name), val=deepCopy, id=str(uuid.uuid1()))
-            # entry.vars.append(var)
         except Exception as e:
             _log.error(f"Deep Copy Failed! on var {name} with val {val} error:  {e}")
     _nod_log.update({entry_id: variables})
     _nod_log_id_to_func.update({entry_id: function_id})
-    _log.info(f"created entry {{entry_id: variables}}")
+    _log.debug(f"added var to log: {entry_id}: {variables}")
 
 
-# def get_type(var) -> str:
-#     t = _get_full_type(type(var))
-#     if t is None:
-#         return ""
-#     return t
-
-
-# def convertToJSON(nodLog: NodLog):
-#     newEntries: List[NodLogEntryJSON] = []
-#     for e in nodLog.entries:
-#         newVars = [
-#             NodLogVariableJSON(
-#                 v.id,
-#                 v.name,
-#                 _get_value(v.val),  # type: ignore[truthy-function]
-#                 get_type(v.val),
-#             )
-#             for v in e.vars
-#         ]
-#         newEntry = NodLogEntryJSON(
-#             function_id=e.function_id, entry_id=e.entry_id, vars=newVars
-#         )
-#         newEntries.append(newEntry)
-#     return NodLogJSON(newEntries)
-
-
-# _SIGNUM = typing.Union[int, Signals]
 _fmt: t.Literal["light", "percent"] = "light"
 _filter: list[str] = [os.getcwd() + "/*"]
 _how_restart: t.Union[t.Literal["continue"], int] = "continue"
@@ -360,7 +242,8 @@ def notebook(
         if module_sources.get(stackFrame.filename) is None:
             try:
                 if os.path.isfile(stackFrame.filename):
-                    program_text = open(stackFrame.filename).read()
+                    with open(stackFrame.filename) as f:
+                        program_text = f.read()
                     module_sources.update(
                         {stackFrame.filename: cst.parse_module(program_text)}
                     )
@@ -505,7 +388,7 @@ def notebook(
     shutil.copy(connection_file, nod_connection_file)
 
     jsonInfo = orjson.dumps(nod_info)
-    _log.info(jsonInfo)
+    # _log.info(jsonInfo)
     with open(nod_info_local_path, "x") as f:
         f.write(jsonInfo.decode("utf-8"))
 

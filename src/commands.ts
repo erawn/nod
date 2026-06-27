@@ -125,7 +125,9 @@ export function addCommands(
       const frame = nodState.Instance().currentFrame;
       const panel = nodState.Instance().tracker.currentWidget;
       if (frame !== undefined && panel !== null) {
-        writeChange(panel, frame);
+        writeChange(panel, frame).then(() => {
+
+        });
       }
     },
     isEnabled

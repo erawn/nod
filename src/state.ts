@@ -1,7 +1,7 @@
 import { nodSchema } from './types';
 import { INotebookTracker, NotebookPanel } from '@jupyterlab/notebook';
 import { JupyterFrontEnd, LabShell } from '@jupyterlab/application';
-import { Contents, KernelMessage } from '@jupyterlab/services';
+import { Contents, KernelMessage, Session } from '@jupyterlab/services';
 import { ITranslator } from '@jupyterlab/translation';
 import type { ISignal } from '@lumino/signaling';
 import { Signal } from '@lumino/signaling';
@@ -12,11 +12,10 @@ import { IDocumentManager } from '@jupyterlab/docmanager';
 export type pluginStatus = 'active' | 'inactive' | 'unset';
 import { PathExt } from '@jupyterlab/coreutils';
 import { NodLogSidebar } from './nodLog/nodLog';
-import { getNodKernel } from './kernelHelpers';
-import { requestDebug } from './messaging';
-import { PromiseDelegate } from '@lumino/coreutils';
-import { DebugProtocol } from '@vscode/debugprotocol';
-import { IDebugger } from '@jupyterlab/debugger';
+import { AccordionPanel } from '@lumino/widgets';
+import { Debugger, IDebugger } from '@jupyterlab/debugger';
+import { IRenderMimeRegistry } from '@jupyterlab/rendermime';
+import { getNodInfo } from './kernelHelpers';
 export class nodState {
   private static _instance: nodState;
 
@@ -32,7 +31,11 @@ export class nodState {
     docManager: IDocumentManager,
     paths: JupyterFrontEnd.IPaths,
     mode: 'existing' | 'from_cli',
-    nod_cwd: string
+    nod_cwd: string,
+    debuggerService: IDebugger,
+    debuggerHandler: Debugger.Handler,
+    rendermime: IRenderMimeRegistry,
+    sessionManager: Session.IManager,
   ) {
     this._notebookTracker = tracker;
     this._app = app;
@@ -48,6 +51,10 @@ export class nodState {
     this.paths = paths;
     this.mode = mode;
     this.nod_cwd = nod_cwd;
+    this.debuggerService = debuggerService;
+    this.debuggerHandler = debuggerHandler;
+    this.rendermime = rendermime;
+    this.sessionManager = sessionManager;
   }
   public static Instance(): nodState;
   public static Instance(
@@ -62,7 +69,11 @@ export class nodState {
     docManager: IDocumentManager,
     paths: JupyterFrontEnd.IPaths,
     mode: 'existing' | 'from_cli',
-    nod_cwd: string
+    nod_cwd: string,
+    debuggerService: IDebugger,
+    handler: Debugger.Handler,
+    rendermime: IRenderMimeRegistry,
+    sessionManager: Session.IManager,
   ): nodState;
   public static Instance(
     tracker?: INotebookTracker,
@@ -76,7 +87,11 @@ export class nodState {
     docManager?: IDocumentManager,
     paths?: JupyterFrontEnd.IPaths,
     mode?: 'existing' | 'from_cli',
-    nod_cwd?: string
+    nod_cwd?: string,
+    debuggerService?: IDebugger,
+    handler?: Debugger.Handler,
+    rendermime?: IRenderMimeRegistry,
+    sessionManager?: Session.IManager,
   ): nodState {
     if (
       tracker &&
@@ -90,7 +105,11 @@ export class nodState {
       docManager &&
       paths &&
       mode &&
-      nod_cwd !== undefined
+      nod_cwd !== undefined &&
+      debuggerService &&
+      handler &&
+      rendermime &&
+      sessionManager
     ) {
       this._instance = new this(
         tracker,
@@ -104,7 +123,11 @@ export class nodState {
         docManager,
         paths,
         mode,
-        nod_cwd
+        nod_cwd,
+        debuggerService,
+        handler,
+        rendermime,
+        sessionManager
       );
     } else if (app) {
       console.error('Failed to create nodState!');
@@ -120,12 +143,13 @@ export class nodState {
         docManager,
         paths,
         mode,
-        nod_cwd
+        nod_cwd,
+        sessionManager
       );
     }
     return this._instance;
   }
-
+  sessionManager: Session.IManager;
   private _notebookTracker: INotebookTracker;
   private _status: pluginStatus = 'unset';
   private _pythonInfo: nodSchema | null = null;
@@ -146,9 +170,13 @@ export class nodState {
   nod_cwd: string;
   private _currentFrameIndex: number = 0;
   private _nodKernelId: string = '';
+  private _nodKernelIdChanged = new Signal<this, string>(this);
   private _lockNotebookId: string = '';
   connection_dir: string;
   dialogID = '';
+  debuggerService: IDebugger
+  debuggerHandler: Debugger.Handler
+  rendermime: IRenderMimeRegistry
 
   public isNodFile(panel: NotebookPanel) {
     const frame = this.getFrameFromPath(panel.context.path);
@@ -196,6 +224,7 @@ export class nodState {
     this._currentFrameIndex = 0;
     this._nodKernelId = kernelId;
     this.connection_dir = schema.nod_info_local_path.split('/nodInfo.json')[0];
+    getNodInfo()
   }
   get lockChanged(): Signal<this, string> {
     return this._lockChanged;
@@ -248,12 +277,15 @@ export class nodState {
       const panel = this._notebookTracker.currentWidget;
       if (panel && this.isNodFile(panel)) {
         panel.sessionContext.kernelPreference = {
-          autoStartDefault: false,
           id: kernelId
         };
       }
     }
     this._nodKernelId = kernelId;
+    this._nodKernelIdChanged.emit(kernelId)
+  }
+  get nodKernelIdChanged(): ISignal<this, string> {
+    return this._nodKernelIdChanged;
   }
   get status() {
     return this._status;
@@ -282,7 +314,17 @@ export class nodState {
   }
 
   public activateSidebars() {
+    console.log("activate sidebars");
+    const newId = this.currentFrame?.function_id;
+    if (newId !== undefined) {
+      this.nodLogSidebar.log.updateVariables(newId);
+      this.nodLogSidebar.update();
+    }
     (this._app.shell as LabShell).activateById(this.callstackSidebar.id);
     (this._app.shell as LabShell).activateById(this.nodLogSidebar.id);
+    // (this.callstackSidebar.content as AccordionPanel).expand(0);
+    // (this.nodLogSidebar.content as AccordionPanel).expand(0);
+    // (this.callstackSidebar.content as AccordionPanel).expand(1);
+    // (this.nodLogSidebar.content as AccordionPanel).expand(1);
   }
 }

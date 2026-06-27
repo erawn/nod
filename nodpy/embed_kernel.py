@@ -10,13 +10,11 @@ from IPython.utils.frame import extract_module_locals
 from ipykernel.ipkernel import IPythonKernel
 from ipykernel.debugger import Debugger
 from IPython.core.interactiveshell import InteractiveShell
-import orjson
 from IPython.core.extensions import ExtensionManager
 from IPython.core.getipython import get_ipython
 from inspect import FrameInfo
 from typing import List, Type, cast
 from ipykernel.zmqshell import ZMQInteractiveShell
-from nodpy.nodTypes import NodLog, NodLogJSON
 import typing as t
 from ipykernel.debugger import _DummyPyDB
 from ipykernel.compiler import get_file_name
@@ -33,8 +31,14 @@ try:
         SuspendedFramesManager,
         _FramesTracker,
     )
+    from _pydevd_bundle.pydevd_xml import (  # type: ignore
+        ExceptionOnEvaluate,
+    )
+    from _pydevd_bundle.pydevd_vars import eval_in_context  # type: ignore
 
     _is_debugpy_available = True
+    _is_debugpy_available = True
+
 except ImportError:
     _is_debugpy_available = False
 except Exception as e:
@@ -95,7 +99,7 @@ class VariableExplorer:
         for key in self.nod_log:
             if self.nod_log_id_to_func.get(key, "") == self.func_id:
                 matches.update({key: self.nod_log[key]})
-        _log.info(f"matches : {matches}")
+        # _log.info(f"matches : {matches}")
         # var = get_ipython().user_ns
         self.frame = _FakeFrame(
             _FakeCode("<module>", get_file_name("sys._getframe()")),
@@ -209,6 +213,14 @@ class nodKernel(IPythonKernel):
     def __init__(self, **kwargs):
         """Initialize the kernel."""
         super().__init__(**kwargs)
+
+        try:
+            _log.info(f"debugger? {self.debugger}")
+            _log.info(f"debugger started? {self.debugger.is_started}")
+            # if not self.debugger.is_started:
+            #     self.debugger.start()
+        except:
+            pass
         #         _nod_log: dict[str, dict[str, t.Any]] = {}
         # _nod_log_id_to_func: dict[str, str] = {}
 
@@ -284,42 +296,22 @@ class nodKernel(IPythonKernel):
         # return
 
     async def do_debug_request(self, msg):
-        # if msg["command"] == "nod_info":
-        #     _log.info("NOD DEBUG REQUEST")
-        #     # extension_manager: ExtensionManager = self.shell.extension_manager
-        #     # extension_manager.loaded.
-        #     nod_info = self.shell.user_ns.get("__NODINFO")
-        #     json_dump = orjson.dumps(nod_info)
-        #     encoded = base64.b64encode(json_dump).decode("utf-8")
-        #     return {
-        #         "type": "response",
-        #         "request_seq": msg["seq"],
-        #         "success": True,
-        #         "command": msg["command"],
-        #         "body": encoded,
-        #     }
+        _log.info(f"debug request { msg}")
+        _log.info(f"_is_debugpy_available { _is_debugpy_available}")
+        debugger = t.cast(Debugger, self.debugger)
         match msg["command"]:
             case "nod_switch":
-                # _log.info("Kernel: Switching Frame to")
-                # _log.info(msg)
                 if hasattr(self, "relevant_stack_frames"):
                     self.relevant_stack_frames = cast(
                         List[FrameInfo], self.relevant_stack_frames  # type: ignore
                     )
                     stackIndex = cast(int, msg["arguments"]["stackIndex"])
-                    # _log.info(stackIndex)
                     newStackFrame = self.relevant_stack_frames[stackIndex]
                     if self.shell is not None:
                         reset(self.shell, True, True)
                         self.shell.user_ns.update(newStackFrame.frame.f_locals)
                         self.shell.user_global_ns.update(newStackFrame.frame.f_globals)
                         self.shell.user_ns_hidden.update(newStackFrame.frame.f_builtins)
-                        # _log.info("locals")
-                        # _log.info(newStackFrame.frame.f_locals.keys())
-                        # _log.info("globals")
-                        # _log.info(newStackFrame.frame.f_globals.keys())
-                        # _log.info("builtins")
-                        # _log.info(newStackFrame.frame.f_builtins.keys())
                     return {
                         "type": "response",
                         "request_seq": msg["seq"],
@@ -327,52 +319,123 @@ class nodKernel(IPythonKernel):
                         "command": msg["command"],
                     }
             case "nod_log_push":
-                _log.info(f"Kernel: Nod Log Adding: {msg}")
-                # if hasattr(self, "nod_log"):
-                #     nod_log = cast(NodLog, self.nod_log)  # type: ignore
-                #     entry_id = cast(str, msg["arguments"]["entry_id"])
-                #     _log.info(f"entry id : {entry_id}")
-                #     entry_list = [e for e in nod_log.entries if e.entry_id == entry_id]
-                #     if len(entry_list) != 1:
-                #         _log.error(
-                #             f"found multiple log entries for one ID {entry_id} {entry_list}"
-                #         )
-                #     entry = entry_list.pop()
-                #     update_dict = {v.name: v.val for v in entry.vars}
-                #     if self.shell is not None:
-                #         _log.info(f"nod_log_push {update_dict}")
-                #         self.shell.user_ns.update(update_dict)
+                _log.info(f"Kernel: Nod Log Push: {msg}")
+                if (
+                    self.variable_explorer is not None
+                    and self.variable_explorer.frame is not None
+                    and self.shell is not None
+                    and _is_debugpy_available
+                ):
+                    variablesReference = t.cast(
+                        str, msg["arguments"]["variablesReference"]
+                    )
+                    name = t.cast(str, msg["arguments"]["name"])
+                    evaluateName = t.cast(str, msg["arguments"]["evaluateName"])
+                    if variablesReference == 0:
+                        frame = self.variable_explorer.frame
+                        updated_globals = {}
+                        updated_globals.update(frame.f_globals)
+                        updated_globals.update(frame.f_locals)
+                        if "globals" not in updated_globals:
+                            # If the user explicitly uses 'globals()' then we provide the
+                            # frame globals (unless he has shadowed it already).
+                            updated_globals["globals"] = lambda: frame.f_globals
+                        updated_locals = None
+                        ret = eval_in_context(  # pyright: ignore[reportPossiblyUnboundVariable]
+                            evaluateName,
+                            updated_globals,
+                            updated_locals,
+                            self.variable_explorer.py_db,
+                        )
+                        try:
+                            if (
+                                ret.__class__
+                                == ExceptionOnEvaluate  # pyright: ignore[reportPossiblyUnboundVariable]
+                            ):
+                                _log.error("Nod Log Error: Failed to Eval Variable")
+                                _log.error(ret.result)
+                                _log.error(ret.tb)
+                                _log.error(ret.etype)
+                        except:
+                            pass
+                        variable_name = "".join(c for c in name if c not in "'")
+                        _log.info(f"eval expression: {variable_name} : {ret}")
+                        self.shell.user_ns.update({variable_name: ret})
 
-                #     return {
-                #         "type": "response",
-                #         "request_seq": msg["seq"],
-                #         "success": True,
-                #         "command": msg["command"],
-                #     }
+                    else:
+                        top_variables_references = [
+                            v.get("variablesReference")
+                            for v in self.variable_explorer.get_children_variables()
+                        ]
+                        if variablesReference in top_variables_references:
+                            variables = [
+                                v
+                                for v in self.variable_explorer.get_children_variables(
+                                    variablesReference
+                                )
+                                if v.get("name")
+                                not in [
+                                    "special variables",
+                                    "function variables",
+                                    "len()",
+                                ]
+                            ]
+                            _log.info(
+                                f"Kernel: Nod Log Push Found Variables: {variables}"
+                            )
+                            variables_dict = {
+                                "".join(
+                                    c for c in v.get("name") if c not in "'"
+                                ): v.get("value")
+                                for v in variables
+                            }
+                            _log.info(f"Updating user_ns: {variables_dict}")
+                            self.shell.user_ns.update(variables_dict)
+                        else:
+                            variable = self.variable_explorer.tracker.get_variable(
+                                variablesReference
+                            )
+                            _log.info(
+                                f"Kernel: Nod Log Push Found Variable: {variable}"
+                            )
+                            variable_name = "".join(
+                                c for c in variable.name if c not in "'"
+                            )
+                            _log.info(
+                                f"Updating user_ns: {variable_name}: {variable.value}"
+                            )
+                            self.shell.user_ns.update({variable_name: variable.value})
+                return {
+                    "type": "response",
+                    "sequence_seq": msg["seq"],
+                    "success": True,
+                    "command": msg["command"],
+                }
             case "nod_variables":
                 """Handle a variables message."""
                 reply = {}
-                debugger = t.cast(Debugger, self.debugger)
                 # if not self.stopped_threads:
                 if self.variable_explorer is not None:
+                    variablesReference = msg["arguments"]["variablesReference"]
+                    top_variables_references = [
+                        v.get("variablesReference")
+                        for v in self.variable_explorer.get_children_variables()
+                    ]
                     variables = self.variable_explorer.get_children_variables(
-                        msg["arguments"]["variablesReference"]
+                        variablesReference
                     )
+                    if variablesReference in top_variables_references:
+                        variables = [
+                            v
+                            for v in variables
+                            if v.get("name")
+                            not in ["special variables", "function variables", "len()"]
+                        ]
                     return debugger._build_variables_response(msg, variables)
-
-                # reply = await self._forward_message(msg)
-                # # TODO : check start and count arguments work as expected in debugpy
-                # reply["body"]["variables"] = [
-                #     var
-                #     for var in reply["body"]["variables"]
-                #     if self.accept_variable(var["name"])
-                # ]
-                # return reply
             case "nod_inspect_variables":
                 """Handle an inspect variables message."""
                 if self.variable_explorer is not None:
                     self.variable_explorer.untrack_all()
-                debugger = t.cast(Debugger, self.debugger)
                 # looks like the implementation of untrack_all in ptvsd
                 # destroys objects we nee din track. We have no choice but
                 # reinstantiate the object
@@ -381,37 +444,92 @@ class nodKernel(IPythonKernel):
                     self.nod_log,
                     self.nod_log_id_to_func,
                 )
-
                 self.variable_explorer.track()
                 variables = self.variable_explorer.get_children_variables()
-                return debugger._build_variables_response(msg, variables)
-            # """Handle a variables message."""
-            # reply = {}
+                _log.info(variables)
+                formatted_variables = []
+                for variable in variables:
+                    var_ref = variable.get("variablesReference")
+                    if var_ref is not None:
+                        children = self.variable_explorer.get_children_variables(
+                            var_ref
+                        )
+                        child_variables = [
+                            c
+                            for c in children
+                            if c.get("name")
+                            not in [
+                                "special variables",
+                                "function variables",
+                                "len()",
+                            ]
+                        ]
+                        if len(child_variables) == 1:
+                            formatted_variables.append(child_variables[0])
+                        else:
+                            new_name = ", ".join(
+                                [c.get("name") for c in child_variables]
+                            )
+                            new_name = "".join(c for c in new_name if c not in "'")
+                            variable["name"] = new_name
+                            formatted_variables.append(variable)
+                _log.info(f"formatted variables: {formatted_variables}")
+                return debugger._build_variables_response(msg, formatted_variables)
 
-            # debugger = t.cast(Debugger, self.debugger)
-            # _log.info(f"nod variables called {msg}")
-            # # if not debugger.stopped_threads:
-            # explorer = VariableExplorer(self.nod_log)
-            # explorer.track(msg["arguments"]["var_id"])
-            # var_ref_list = list(
-            #     explorer.tracker._variable_reference_to_variable.keys()
-            # )
-            # if len(var_ref_list) != 1:
-            #     _log.error("wrong number of debug variables")
-            # var_ref = var_ref_list[0]
-            # variables = explorer.get_children_variables(var_ref)
-            # _log.info(f"variables {variables}")
-            # return debugger._build_variables_response(msg, variables)
+            case "nod_inspect_rich_variable":
+                """Handle a rich inspect variables message."""
+                reply = {
+                    "type": "response",
+                    "sequence_seq": msg["seq"],
+                    "success": False,
+                    "command": msg["command"],
+                }
+                _log.info("nod inspect rich variable")
+                variablesReference = t.cast(str, msg["arguments"]["variablesReference"])
+                if self.shell is not None and self.variable_explorer is not None:
+                    variable = self.variable_explorer.tracker.get_variable(
+                        variablesReference
+                    )
+                    var_name = variable.get("name")
+                    valid_name = str.isidentifier(var_name)
+                    if not valid_name:
+                        reply["body"] = {"data": {}, "metadata": {}}
+                        if (
+                            var_name == "special variables"
+                            or var_name == "function variables"
+                        ):
+                            reply["success"] = True
+                        return reply
 
-            # reply = await debugger._forward_message(msg)
-            # # TODO : check start and count arguments work as expected in debugpy
-            # reply["body"]["variables"] = [
-            #     var
-            #     for var in reply["body"]["variables"]
-            #     if debugger.accept_variable(var["name"])
-            # ]
-            # return reply
+                    repr_data = {}
+                    repr_metadata = {}
+                    # if not debugger.stopped_threads:
+                    # The code did not hit a breakpoint, we use the interpreter
+                    # to get the rich representation of the variable
+                    # if (
+                    #     self.shell is not None
+                    #     and self.variable_explorer is not None
+                    # ):
+                    try:
+                        value = self.shell._format_user_obj(variable)
+                    except:
+                        value = self.shell._user_obj_error()
+                    # out[key] = value
+                    _log.info(f"rich variable inspect {value}")
+                    result = value[var_name]
+                    if result.get("status", "error") == "ok":
+                        repr_data = result.get("data", {})
+                        repr_metadata = result.get("metadata", {})
+                        body = {
+                            "data": repr_data,
+                            "metadata": {
+                                k: v for k, v in repr_metadata.items() if k in repr_data
+                            },
+                        }
 
+                        reply["body"] = body
+                        reply["success"] = True
+                return reply
         return await super().do_debug_request(msg)
 
     # async def shutdown_request(self, stream, ident, parent):

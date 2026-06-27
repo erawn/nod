@@ -22,17 +22,26 @@ NODCONFIG
 - add restart time to nodConfig? (hmm maybe)
 
 TODO
+-found the startup bug --- when we don't find an existing info in prelaunch 274 we throw an error
 
-- have to collapse/uncollapse grid to update it after notebook switch, but id's working correctly
-- reconnect to session after reload is starting a new kernel?
-- persist state through page refresh
-- on nod switch, kill the previous kernel
-- test unlock
+14/site-packages/zmq/sugar/socket.py", line 162, in __init__
+        super().__init__(
+        ~~~~~~~~~~~~~~~~^
+            ctx_or_socket,
+            ^^^^^^^^^^^^^^
+        ...<2 lines>...
+            copy_threshold=copy_threshold,
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        )
+        ^
+      File "zmq/backend/cython/_zmq.py", line 740, in zmq.backend.cython._zmq.Socket.__init__
+        raise ZMQError()
+        
+    zmq.error.ZMQError: Too many open files
+- exit kernel isnt killing the process (or the list isn't getting refreshed? reloading page changes it)
 - nod on exception https://ipython.readthedocs.io/en/stable/interactive/magics.html#magic-pdb
-- throw warning if spec not installed
 - dont quit existing sessions if jupyter lab closes?
 - rename setting to "how_exit"?
-- add exit without saving to menu
 - change quit kernel to send quit first, stop process at notebook() if the setting is set
 - Change tracker --- which cells are unedited
 
@@ -42,15 +51,9 @@ TODO
   0.00s - make the debugger miss breakpoints. Please pass -Xfrozen_modules=off
   0.00s - to python to disable frozen modules.
   0.00s - Note: Debugging will proceed. Set PYDEVD_DISABLE_FILE_VALIDATION=1 to disable this validation.
-- ERROR:asyncio:Task was destroyed but it is pending! 130 ↵
-  task: <Task pending name='Task-72' coro=<Kernel.dispatch_control() running at /Users/erawn/.virtualenvs/nod-vryx/lib/python3.14/site-packages/ipykernel/kernelbase.py:344> cb=[ZMQStream._run_callback.<locals>._log_error() at /Users/erawn/.virtualenvs/nod-vryx/lib/python3.14/site-packages/zmq/eventloop/zmqstream.py:563]>
-  /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py:744: RuntimeWarning: coroutine 'Kernel.dispatch_control' was never awaited
-  self.\_ready.clear()
-  RuntimeWarning: Enable tracemalloc to get the object allocation traceback
 
 Nice to have
 
-- Add custom inspectVariable
 - persist lock through reload?
 - - clear old kernels from jupyter (get shutdown registering properly??)
     - layoutrestorer, restorablepool
