@@ -219,12 +219,13 @@ export class nodState {
     // })
     this._lockChanged.emit(this._lockNotebookId);
   }
-  public reset(schema: nodSchema, kernelId: string) {
+  public async reset(schema: nodSchema, kernelId: string) {
     this.unlock();
     this._currentFrameIndex = 0;
     this._nodKernelId = kernelId;
     this.connection_dir = schema.nod_info_local_path.split('/nodInfo.json')[0];
-    getNodInfo()
+    this.pythonInfo = schema
+    await getNodInfo()
   }
   get lockChanged(): Signal<this, string> {
     return this._lockChanged;

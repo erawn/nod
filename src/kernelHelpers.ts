@@ -10,6 +10,7 @@ import { info } from 'node:console';
 import { requestAPI } from './request';
 import { URLExt } from '@jupyterlab/coreutils';
 import { format } from 'node:path';
+import { Kernel, Session } from '@jupyterlab/services';
 
 export async function openNotebookWithNodKernel(
   notebookFile: string,
@@ -105,44 +106,56 @@ export async function getNodKernel(): Promise<string | undefined> {
 }
 
 let launching: boolean = false;
-export async function launchNodKernel(key?: string) {
+export async function launchNodKernel(key?: string): Promise<Kernel.IKernelConnection | undefined> {
   console.log('launch nod kernel enter');
   const app = nodState.Instance().app;
-  for (const name in app.serviceManager.kernelspecs.specs?.kernelspecs) {
-    const spec = app.serviceManager.kernelspecs.specs?.kernelspecs[name];
-    if (spec?.display_name === 'nod') {
-      if (!launching && nodState.Instance().status !== 'active') {
-        try {
-          if (key !== undefined) {
-            await setKernelToOpen(key);
-          }
-          launching = true;
-          console.log('Launching Nod Kernel');
-          const currentSessionContext = nodState.Instance().tracker.currentWidget?.sessionContext
-          if (currentSessionContext !== undefined) {
-            currentSessionContext.changeKernel({
-              name: 'nod',
-            });
-          } else {
-            const connection = await app.serviceManager.kernels.startNew({
-              name: 'nod'
-            });
-          }
-          launching = false;
-          // nodState.Instance().nodKernelId = connection.model.id;
-          console.log(
-            ' LAUNCHNODKERNEL: Started Up New Nod!',
-            nodState.Instance().nodKernelId
-          );
-          console.log('launched kernel');
-          return nodState.Instance().nodKernelId;
-        } catch (e) {
-          console.log(e);
-          return undefined;
-        }
-      }
-    }
+  const spec = app.serviceManager.kernelspecs.specs?.kernelspecs['nod']
+  if (spec === undefined) {
+    console.error("No Nod Spec!")
+    return
   }
+  // if (!launching && nodState.Instance().status !== 'active') {
+  try {
+    if (key !== undefined) {
+      await setKernelToOpen(key);
+    }
+    // launching = true;
+    console.log('Launching Nod Kernel');
+    nodState.Instance().tracker.currentWidget?.sessionContext
+    // const currentSessionContext = nodState.Instance().tracker.currentWidget?.sessionContext
+    // if (currentSessionContext !== undefined) {
+    //   if (currentSessionContext.isDisposed) {
+    //     await currentSessionContext.initialize()
+    //   }
+    // const connection = await currentSessionContext.changeKernel({
+    //   name: 'nod',
+    // });
+    const connection = await app.serviceManager.kernels.startNew({
+      name: 'nod'
+    }, {});
+    if (connection !== null) {
+      nodState.Instance().nodKernelId = connection.model.id
+      console.log(
+        ' LAUNCHNODKERNEL: Started Up New Nod!',
+        connection.model.id
+      );
+      return connection
+    }
+
+    // } else {
+    //   console.error("current session context is undefined/disposed!")
+    // }
+    // else {
+
+    // }
+    // launching = false;
+
+
+  } catch (e) {
+    console.log(e);
+    return undefined;
+  }
+  // }
   return undefined;
 }
 
@@ -180,14 +193,6 @@ export async function getNodInfo(): Promise<nodSchema | undefined> {
       state.status = 'active';
       state.dialogID = '';
       state.activateSidebars();
-      state.tracker.forEach(panel => {
-        if (state.getFrameFromPath(panel.context.path) !== undefined) {
-          panel.context.sessionContext.changeKernel({
-            name: 'nod',
-            id: state.nodKernelId
-          });
-        }
-      });
     }
     return schema;
   } catch (e) {
@@ -450,26 +455,59 @@ export async function NodSwitchSessions(schema: nodSchema): Promise<boolean> {
   if (schema.key === existing_schema?.key && kernel_id !== undefined) {
     id = kernel_id
     console.log("setting id to ", schema.key)
+    await state.reset(schema, id);
   } else {
     console.log('launching kernel', schema.key);
     const nodKernelPromise = launchNodKernel(schema.key);
     kernelWaitDialog();
-    id = (await nodKernelPromise) ?? '';
+    const connection = await nodKernelPromise;
     console.log('POST SWITCH SESSIONS', id);
-    const sessionContext = state.tracker.currentWidget?.sessionContext
-    if (sessionContext !== undefined && !sessionContext.isDisposed) {
-      try {
-        await sessionContext.changeKernel({
-          name: 'nod',
-          id: id
-        });
-      } catch (e) {
-        console.log('switch sessions error:', e)
-      }
+    await state.reset(schema, id);
 
-    }
+    // state.tracker.forEach(panel => {
+    //   if (state.getFrameFromPath(panel.context.path) !== undefined) {
+    //     const options: Session.ISessionOptions = {
+    //       kernel: {
+    //         name: 'python'
+    //       },
+    //       path: 'foo.ipynb',
+    //       type: 'notebook',
+    //       name: 'foo.ipynb'
+    //     };
+    //     panel.context.sessionContext.kernelPreference = {
+
+    //     }
+    //     panel.context.sessionContext.startKernel()
+    //     panel.context.sessionContext.path = connection.
+    //       .changeKernel({
+    //       name: 'nod',
+    //       id: state.nodKernelId
+    //     });
+    //   }
+    // });
+    // const sessionContext = state.tracker.currentWidget?.sessionContext
+    // if (sessionContext !== undefined && !sessionContext.isDisposed) {
+    //   try {
+    //     console.log("switching sessions ", id)
+    //     await sessionContext.changeKernel({
+    //       name: 'nod',
+    //       id: id
+    //     });
+    //   } catch (e) {
+    //     console.log('switch sessions error:', e)
+    //   }
+    // }
   }
-  state.reset(schema, id);
+
+  // state.tracker.forEach(panel => {
+  //   if (state.getFrameFromPath(panel.context.path) !== undefined) {
+  //     panel.context.sessionContext.path = 
+  //         .changeKernel({
+  //       name: 'nod',
+  //       id: state.nodKernelId
+  //     });
+  //   }
+  // });
   checkKernelStatus();
   return true;
 }

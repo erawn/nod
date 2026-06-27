@@ -239,7 +239,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
             kernel_id === existing_id.id
           ) {
             console.log("found existing state after reload")
-            state.reset(new_schema, kernel_id)
+            await state.reset(new_schema, kernel_id)
           }
           // }
         }
@@ -460,6 +460,9 @@ const plugin: JupyterFrontEndPlugin<void> = {
           // state.sessionManager.shutdown(session.id)
         }
       }
+      state.tracker.forEach(panel => {
+
+      })
       const newId = state.currentFrame?.function_id;
       if (newId !== undefined) {
         nodLogSidebar.log.updateVariables(newId);

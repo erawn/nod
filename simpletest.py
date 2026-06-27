@@ -13,7 +13,7 @@ def baller(a, b: int, c: int):
     nodLog(c)
     global x
 
-    # %who_ls 
+    c
 
     x += 2
     if x > 4:

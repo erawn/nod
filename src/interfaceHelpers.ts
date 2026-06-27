@@ -69,7 +69,7 @@ async function checkKernelStatusInner(start_new: boolean) {
         nodState.Instance().status = 'inactive';
         if (nodState.Instance().mode === 'from_cli') {
           kernelWaitDialog();
-          await launchNodKernel().then(async id => {
+          await launchNodKernel().then(async connection => {
             console.log('returned from launch');
 
             await getNodInfo().then(success => {

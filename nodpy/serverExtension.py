@@ -46,28 +46,29 @@ class NodServerFileRouteHandler(APIHandler):
     @tornado.web.authenticated
     def post(self):
 
-        key = self.request.body.strip().decode("utf-8")
-        # full_path = os.path.join(os.getcwd(), path)
-        _log.info(f"nod file route handler get nod info {key}")
-        file_list = findNodRuntimeFile(
-            paths.jupyter_runtime_dir(), paths.get_home_dir(), key=key, ignore_run=True
-        )
-        if len(file_list) > 0:
-            nodInfo = file_list.pop().to_dict(True)
+        path = self.request.body.strip().decode("utf-8")
+
+        full_path = os.path.abspath(path)
+        _log.info(f"nod file route handler get nod info {full_path}")
+        # file_list = findNodRuntimeFile(
+        #     paths.jupyter_runtime_dir(), paths.get_home_dir(), ignore_run=True
+        # )
+        # if len(file_list) > 0:
+        #     nodInfo = file_list.pop().to_dict(True)
+        #     out = base64.b64encode(
+        #         orjson.dumps(
+        #             nodInfo,
+        #         )
+        #     ).decode("utf-8")
+
+        with open(full_path, "r") as f:
+            info_str = f.read()
+            nod_info = NodInfo.from_json(info_str)
             out = base64.b64encode(
                 orjson.dumps(
-                    nodInfo,
+                    nod_info,
                 )
             ).decode("utf-8")
-
-            # with open(full_path, "r") as f:
-            #     info_str = f.read()
-            #     nod_info = NodInfo.from_json(info_str)
-            #     out = base64.b64encode(
-            #         orjson.dumps(
-            #             nod_info,
-            #         )
-            #     ).decode("utf-8")
 
             self.finish(out)
             return
