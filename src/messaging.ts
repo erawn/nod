@@ -14,7 +14,7 @@ import {
 } from '@jupyterlab/services/lib/kernel/messages';
 import { requestAPI } from './request';
 import { getNodKernel } from './kernelHelpers';
-import { nodSchema, nodSchemas } from './types';
+import { nodSchemas } from './types';
 import { DebugProtocol } from '@vscode/debugprotocol';
 import { PromiseDelegate } from '@lumino/coreutils';
 import { Debugger, IDebugger } from '@jupyterlab/debugger';
@@ -228,7 +228,7 @@ const trackerMime = new WidgetTracker<Debugger.VariableRenderer>({
 export function renderNodMimeVariable(variable: IDebugger.IVariable) {
   const state = nodState.Instance();
   const activeWidget = state.debuggerHandler.activeWidget;
-  let activeRendermime =
+  const activeRendermime =
     activeWidget instanceof NotebookPanel
       ? activeWidget.content.rendermime
       : state.rendermime;

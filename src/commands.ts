@@ -172,12 +172,12 @@ export function addCommands(
           }),
           Dialog.warnButton({
             ariaLabel: trans.__('Exit Without Saving'),
-            label: 'Shut Down Without Saving',
+            label: trans.__('Shut Down Without Saving'),
             accept: true
           }),
           Dialog.okButton({
             ariaLabel: trans.__('Export and Shut Down'),
-            label: 'Export and Shut Down'
+            label: trans.__('Export and Shut Down')
           })
         ]
       }).then(result => {

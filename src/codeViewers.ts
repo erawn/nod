@@ -97,7 +97,7 @@ export function makeCodeViewer(
   let source = '';
   let editor;
   switch (className) {
-    case NOD_HEADER_CLASS:
+    case NOD_HEADER_CLASS: {
       const text_above = currentFrame.file_info.text_above;
       source = text_above.slice(-10).join('').split('\\n').join('\n');
       if (source.startsWith('\n')) {
@@ -105,7 +105,9 @@ export function makeCodeViewer(
       }
       editor = makeCodeViewerWidget(className, source);
       return editor;
-    case NOD_FOOTER_CLASS:
+    }
+
+    case NOD_FOOTER_CLASS: {
       source = currentFrame.file_info.text_below
         .join('')
         .split('\\n')
@@ -115,7 +117,9 @@ export function makeCodeViewer(
       }
       editor = makeCodeViewerWidget(className, source);
       return editor;
-    case NOD_FUNC_CLASS:
+    }
+
+    case NOD_FUNC_CLASS: {
       source = currentFrame.file_info.text_header
         .join('')
         .split('\\n')
@@ -125,6 +129,7 @@ export function makeCodeViewer(
       }
       editor = makeCodeViewerWidget(className, source);
       return editor;
+    }
   }
 }
 

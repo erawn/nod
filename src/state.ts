@@ -1,7 +1,7 @@
 import { nodSchema } from './types';
 import { INotebookTracker, NotebookPanel } from '@jupyterlab/notebook';
 import { JupyterFrontEnd, LabShell } from '@jupyterlab/application';
-import { Contents, KernelMessage, Session } from '@jupyterlab/services';
+import { Contents, Session } from '@jupyterlab/services';
 import { ITranslator } from '@jupyterlab/translation';
 import type { ISignal } from '@lumino/signaling';
 import { Signal } from '@lumino/signaling';
@@ -10,10 +10,8 @@ import { NodSidebar } from './callstack';
 import { ISettingRegistry } from '@jupyterlab/settingregistry';
 import { IDocumentManager } from '@jupyterlab/docmanager';
 export type pluginStatus = 'active' | 'inactive' | 'unset';
-import { PathExt } from '@jupyterlab/coreutils';
 import { NodLogSidebar } from './nodLog/nodLog';
-import { AccordionPanel } from '@lumino/widgets';
-import { Debugger, IDebugger } from '@jupyterlab/debugger';
+import { IDebugger } from '@jupyterlab/debugger';
 import { IRenderMimeRegistry } from '@jupyterlab/rendermime';
 import { getNodInfo } from './kernelHelpers';
 export class nodState {
@@ -33,7 +31,7 @@ export class nodState {
     mode: 'existing' | 'from_cli',
     nod_cwd: string,
     debuggerService: IDebugger,
-    debuggerHandler: Debugger.Handler,
+    debuggerHandler: IDebugger.IHandler,
     rendermime: IRenderMimeRegistry,
     sessionManager: Session.IManager
   ) {
@@ -71,7 +69,7 @@ export class nodState {
     mode: 'existing' | 'from_cli',
     nod_cwd: string,
     debuggerService: IDebugger,
-    handler: Debugger.Handler,
+    handler: IDebugger.IHandler,
     rendermime: IRenderMimeRegistry,
     sessionManager: Session.IManager
   ): nodState;
@@ -89,7 +87,7 @@ export class nodState {
     mode?: 'existing' | 'from_cli',
     nod_cwd?: string,
     debuggerService?: IDebugger,
-    handler?: Debugger.Handler,
+    handler?: IDebugger.IHandler,
     rendermime?: IRenderMimeRegistry,
     sessionManager?: Session.IManager
   ): nodState {
@@ -175,7 +173,7 @@ export class nodState {
   connection_dir: string;
   dialogID = '';
   debuggerService: IDebugger;
-  debuggerHandler: Debugger.Handler;
+  debuggerHandler: IDebugger.IHandler;
   rendermime: IRenderMimeRegistry;
 
   public isNodFile(panel: NotebookPanel) {

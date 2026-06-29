@@ -1,8 +1,6 @@
-import { IRunningSessions } from '@jupyterlab/running';
 import { ITranslator } from '@jupyterlab/translation';
 import {
   classes,
-  closeIcon,
   getTreeItemElement,
   LabIcon,
   ReactWidget,
@@ -15,7 +13,6 @@ import React, { useCallback, useRef } from 'react';
 import { Button, TreeItem, TreeView } from '@jupyter/react-components';
 import { nullTranslator } from '@jupyterlab/translation';
 import { NodSidebar } from './index';
-import { IRenderMime } from '@jupyterlab/rendermime-interfaces';
 import { NodRunningModel, NodSessionItem } from './model';
 // type nodInstanceType = nodState
 
@@ -139,7 +136,7 @@ const ITEM_ICON_CLASS = 'jp-RunningSessions-icon';
 const ITEM_CLASS = 'jp-RunningSessions-item';
 const ITEM_LABEL_CLASS = 'jp-NodRunningSessions-itemLabel';
 const ITEM_DETAIL_CLASS = 'jp-NodRunningSessions-itemDetail';
-const SHUTDOWN_BUTTON_CLASS = 'jp-RunningSessions-itemShutdown';
+// const SHUTDOWN_BUTTON_CLASS = 'jp-RunningSessions-itemShutdown';
 const NOD_CONNECT_CLASS = 'jp-NodRunningSessions-itemShutdown';
 function Item(props: {
   child?: boolean;
@@ -162,7 +159,7 @@ function Item(props: {
   const trans = translator.load('jupyterlab');
 
   // Handle shutdown requests.
-  const shutdownItemIcon = props.shutdownItemIcon || closeIcon;
+  // const shutdownItemIcon = props.shutdownItemIcon || closeIcon;
   const shutdownLabel = trans.__('Connect');
   const connectedLabel = trans.__('Connected');
   const shutdown = useCallback(

@@ -3,26 +3,15 @@
 
 import type { ISignal } from '@lumino/signaling';
 import { Signal } from '@lumino/signaling';
-import { IRenderMime } from '@jupyterlab/rendermime-interfaces';
 import { DebuggerDisplayRegistry } from '@jupyterlab/debugger';
 import type { IDebugger, IDebuggerDisplayRegistry } from '@jupyterlab/debugger';
 import type { INotebookTracker } from '@jupyterlab/notebook';
 import type { IConsoleTracker } from '@jupyterlab/console';
 import { INodStackFrame, nodSchema } from '../types';
 import { IRunningSessions } from '@jupyterlab/running';
-import {
-  Button,
-  jupyterIcon,
-  kernelIcon,
-  LabIcon
-} from '@jupyterlab/ui-components';
+import { kernelIcon, LabIcon } from '@jupyterlab/ui-components';
 import React, { ReactNode } from 'react';
-import {
-  getNodInfo,
-  launchNodKernel,
-  NodSwitchSessions
-} from '../kernelHelpers';
-import { setKernelToOpen } from '../messaging';
+import { NodSwitchSessions } from '../kernelHelpers';
 /**
  * A model for a callstack.
  */
@@ -178,9 +167,9 @@ export namespace NodSessionItem {
   }
 }
 const KERNEL_ITEM_LABEL_CLASS = 'jp-RunningSessions-itemLabel';
-const CONNECT_BUTTON_CLASS = 'jp-Nod-ConnectButton';
-const KERNEL_LABEL_ID = 'jp-RunningSessions-item-label-kernel-id';
-const KERNEL_ITEM_CLASS = 'jp-mod-kernel';
+// const CONNECT_BUTTON_CLASS = 'jp-Nod-ConnectButton';
+// const KERNEL_LABEL_ID = 'jp-RunningSessions-item-label-kernel-id';
+// const KERNEL_ITEM_CLASS = 'jp-mod-kernel';
 const KERNELSPEC_ITEM_CLASS = 'jp-mod-kernelspec';
 export class NodSessionItem implements IRunningSessions.IRunningItem {
   constructor(options: NodSessionItem.IOptions) {
@@ -220,7 +209,7 @@ export class NodSessionItem implements IRunningSessions.IRunningItem {
   }
 }
 export class NodRunningModel {
-  constructor(options: {}) {}
+  constructor() {}
   get items(): NodSessionItem[] {
     return this._items;
   }

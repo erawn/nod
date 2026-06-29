@@ -37,9 +37,10 @@ On the left side is a panel to navigate up and down your callstack---your notebo
 - <img src="media/nod_restart.png" alt="markdown language" height="30" > Restarts your original python program by re-executing the `<command>` from your `nod <command>` command line invocation, and updates the Jupyter editor to match. If you want to make changes directly to your source file and pull them to your Nod Jupyter session, just press "Restart without Saving" at the prompt when you restart.
 - <img src="media/nod_exit.png" alt="markdown language" height="30" > Quits the current Nod kernel. By default, your python program will continue to run from `notebook()` until it exits itself. If you would like to signal the program instead, see [how_exit](#nodconfig).
 
-### NodLog 
+### NodLog
 
 To save values to put into the Notebook state later, call `nodLog(var,var,...):
+
 ```python
 from nodpy import notebook, nodLog
 def f():
@@ -48,6 +49,7 @@ def f():
     notebook()
 f()
 ```
+
 <img src="media/nod_log.png" align="right" width="200px"/>
 and you'll see a list in your Nod Session appear on the `Nod Log` panel on the right:
 
@@ -61,7 +63,7 @@ and the session will appear in the left panel under "Sessions":
 
 <img src="media/nod_existing.png" alt="markdown language" width="300" >
 
-Press "Connect" to open the session in Jupyterlab. JupyterHub users might have trouble installing the server extension portion of Nod. This is still a work in progress. Please make an issue if you are trying to get Nod working in a JupyterHub enviornment and I'll do my best to help.  
+Press "Connect" to open the session in Jupyterlab. JupyterHub users might have trouble installing the server extension portion of Nod. This is still a work in progress. Please make an issue if you are trying to get Nod working in a JupyterHub enviornment and I'll do my best to help.
 
 **Important**: JupyterLab can't open files located outside of its home directory or any subdirectories, so make sure you call `nod -e <cmd>` in a directory you can see in the JupyterLab file navigator.
 
@@ -78,7 +80,7 @@ To configure module-level settings for Nod, call `nodConfig()` at the top of a f
 
 - **how_exit**: (default 'continue')
   how the Nod session should be exited from the notebook.
-  "continue" returns to let the program finish, and "exit" will stop the program. 
+  "continue" returns to let the program finish, and "exit" will stop the program.
   Options: 'continue', 'exit'
 
 - **dangerously_bypass_readonly**: (default 'false')

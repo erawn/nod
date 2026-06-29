@@ -10,14 +10,12 @@ import {
   Contents,
   IContentsManager,
   ISessionManager,
-  ITerminalManager,
-  Session,
-  Terminal
+  Session
 } from '@jupyterlab/services';
 import { nodState } from './state';
 import { addCommands } from './commands';
 import { CodeViewers } from './codeViewers';
-import { getKernels, requestDebug, setKernelToOpen } from './messaging';
+import { getKernels, requestDebug } from './messaging';
 import { PageConfig } from '@jupyterlab/coreutils';
 import { IMainMenu } from '@jupyterlab/mainmenu';
 import { ITranslator, nullTranslator } from '@jupyterlab/translation';
@@ -27,28 +25,22 @@ import {
   ISessionContextDialogs,
   IToolbarWidgetRegistry
 } from '@jupyterlab/apputils';
-import { IRunningSessions } from '@jupyterlab/running';
 import { IConsoleTracker } from '@jupyterlab/console';
-import { INodStackFrame, nodSchema } from './types';
-import { IDocumentManager, PathStatus } from '@jupyterlab/docmanager';
-import {
-  CallstackModel,
-  NodSessionItem,
-  NodRunningModel
-} from './callstack/model';
+import { INodStackFrame } from './types';
+import { IDocumentManager } from '@jupyterlab/docmanager';
+import { CallstackModel, NodRunningModel } from './callstack/model';
 import { NodSidebar } from './callstack';
 import {
   checkKernelStatus,
   onCurrentNotebookChanged
 } from './interfaceHelpers';
 import {
-  getNodInfo,
   getNodKernel,
   openNotebookWithNodKernel,
   restart
 } from './kernelHelpers';
 import { NodLogModel, NodLogSidebar } from './nodLog/nodLog';
-import { Debugger, IDebugger, IDebuggerHandler } from '@jupyterlab/debugger';
+import { IDebugger, IDebuggerHandler } from '@jupyterlab/debugger';
 import { IRenderMimeRegistry } from '@jupyterlab/rendermime';
 /**
  * Initialization data for the nod extension.
@@ -93,7 +85,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
     sessionManager: Session.IManager,
     paths: JupyterFrontEnd.IPaths,
     debuggerService: IDebugger,
-    handler: Debugger.Handler,
+    handler: IDebugger.IHandler,
     rendermime: IRenderMimeRegistry,
     jupyter_state: IStateDB | null
   ) => {
@@ -148,7 +140,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
     console.log('connection_dir', connection_dir);
     console.log('nod_CWD', nod_CWD);
     const callStackModel = new CallstackModel({});
-    const runningModel = new NodRunningModel({});
+    const runningModel = new NodRunningModel();
     const callstackSidebar = new NodSidebar({
       translator,
       model: callStackModel,

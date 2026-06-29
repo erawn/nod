@@ -28,5 +28,5 @@
     "target": "esnext",
     "types": ["jest", "node"]
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "ui-tests/**/*"]
 }

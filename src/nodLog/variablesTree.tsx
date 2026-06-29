@@ -4,7 +4,6 @@
 import { ITranslator, nullTranslator } from '@jupyterlab/translation';
 
 import {
-  caretLeftIcon,
   getTreeItemElement,
   ReactWidget,
   searchIcon,
@@ -20,8 +19,6 @@ import { CommandRegistry } from '@lumino/commands';
 import { DebugProtocol } from '@vscode/debugprotocol';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-
-import { Debugger } from '@jupyterlab/debugger/';
 
 import { IDebugger } from '@jupyterlab/debugger/';
 
@@ -61,7 +58,6 @@ export class VariablesBodyTree extends ReactWidget {
     const handleSelectVariable = (variable: IDebugger.IVariable) => {
       this.model.selectedVariable = variable;
     };
-    const trans = (this._translator ?? nullTranslator).load('jupyterlab');
 
     if (scope?.name !== 'Globals') {
       this.addClass('jp-debuggerVariables-local');
@@ -217,7 +213,7 @@ interface IVariableComponentProps {
 function _prepareDetail(variable: IDebugger.IVariable) {
   if (
     variable.type === 'float' &&
-    (variable.value == 'inf' || variable.value == '-inf')
+    (variable.value === 'inf' || variable.value === '-inf')
   ) {
     return variable.value;
   }
@@ -353,7 +349,7 @@ const VariableComponent = (props: IVariableComponentProps): JSX.Element => {
         onClick={(e): Promise<void> => onVariableClicked(e)}
         onContextMenu={onContextMenu}
         onKeyDown={event => {
-          if (event.key == 'Enter') {
+          if (event.key === 'Enter') {
             if (hasMimeRenderer && showDetailsButton) {
               onSelection(variable);
               renderVariable();
@@ -376,7 +372,7 @@ const VariableComponent = (props: IVariableComponentProps): JSX.Element => {
         }}
       >
         <span className="jp-DebuggerVariables-name">{variable.name}</span>
-        {details != null && (
+        {details !== null && (
           <span className="jp-DebuggerVariables-detail">{details}</span>
         )}
         {showDetailsButton && isDebuggerActive && (

@@ -4,15 +4,18 @@ import { NotebookPanel } from '@jupyterlab/notebook';
 import { getNodInfo, getNodKernel, launchNodKernel } from './kernelHelpers';
 
 export function kernelWaitDialog() {
+  const trans = nodState.Instance().translator.load('jupyterlab');
   if (nodState.Instance().status === 'active') {
     return;
   }
   console.log('dialogID', nodState.Instance().dialogID);
   if (nodState.Instance().dialogID === '') {
     const dialog = new Dialog({
-      title: 'Waiting for Nod Kernel...',
-      body: 'Call notebook() from a Python file in the same directory',
-      buttons: [Dialog.okButton({ label: 'Refresh' })],
+      title: trans.__('Waiting for Nod Kernel...'),
+      body: trans.__(
+        'Call notebook() from a Python file in the same directory'
+      ),
+      buttons: [Dialog.okButton({ label: trans.__('Refresh') })],
       hasClose: false
     });
     nodState.Instance().dialogID = dialog.id;
@@ -42,6 +45,7 @@ export async function checkKernelStatus(start_new: boolean = false) {
 }
 async function checkKernelStatusInner(start_new: boolean) {
   console.log('Check Kernel Status');
+  const trans = nodState.Instance().translator.load('jupyterlab');
   const kernelSpecManager = nodState.Instance().app.serviceManager.kernelspecs;
   await kernelSpecManager.refreshSpecs();
   const specs = kernelSpecManager.specs?.kernelspecs;
@@ -53,9 +57,11 @@ async function checkKernelStatusInner(start_new: boolean) {
   if (!nodKernelInstalled) {
     console.error('No Nod Kernel Installed!');
     const dialog = new Dialog({
-      title: 'Nod Kernel Not Installed!',
-      body: 'Nod requires the Nod Kernel. Run \"nod --install-kernel\" in your terminal and restart.',
-      buttons: [Dialog.okButton({ label: 'Ok' })],
+      title: trans.__('Nod Kernel Not Installed!'),
+      body: trans.__(
+        'Nod requires the Nod Kernel. Run "nod --install-kernel" in your terminal and restart.'
+      ),
+      buttons: [Dialog.okButton({ label: trans.__('Ok') })],
       hasClose: false
     });
     dialog.launch();

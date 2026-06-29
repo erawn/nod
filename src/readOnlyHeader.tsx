@@ -1,6 +1,6 @@
 import { IDebugger } from '@jupyterlab/debugger';
 import { bugIcon, ReactWidget } from '@jupyterlab/ui-components';
-import React, { useEffect, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { nodState } from './state';
 
 export class ReadOnlyHeader extends ReactWidget {
@@ -10,15 +10,17 @@ export class ReadOnlyHeader extends ReactWidget {
     this.id = 'nod-plugin-status-header';
   }
   render() {
+    const trans = nodState.Instance().translator.load('jupyterlab');
     return (
       <>
         <span className="jp-nod-pluginstatus-maintext">
-          this notebook is readonly while another notebook has changes not
-          pushed to source
+          {trans.__(
+            'this notebook is readonly while another notebook has changes not pushed to source'
+          )}
         </span>
         <br></br>
         <span className="jp-nod-pluginstatus-bottomtext">
-          Export and Restart the edited Nod Notebook to Continue
+          {trans.__('Export and Restart the edited Nod Notebook to Continue')}
         </span>
       </>
     );
@@ -43,24 +45,25 @@ export class debugHeader extends ReactWidget {
     return <>{isDebuggerActive && <DebugComponent service={this.service} />}</>;
   }
 }
-interface DebugComponentProps {
+interface IDebugComponentProps {
   service: IDebugger;
 }
-const DebugComponent = (props: DebugComponentProps): JSX.Element => {
+const DebugComponent = (props: IDebugComponentProps): JSX.Element => {
   // const isDebuggerActive = useMemo(() => {
   //   console.log('isdebuggeractive fired')
   //   return props.service.isStarted ?? false
   // }, [props.service.model])
-
+  const trans = nodState.Instance().translator.load('jupyterlab');
   return (
     <>
       <div className="jp-nod-readOnly-header">
         <span className="jp-nod-pluginstatus-maintext">
-          Activate Debugger to Use Nod Log!
+          {trans.__('Activate Debugger to Use Nod Log!')}
         </span>
         <br></br>
         <span className="jp-nod-pluginstatus-bottomtext">
-          Press the <bugIcon.react tag="span" verticalAlign="middle" /> icon
+          {trans.__('Press the')}{' '}
+          <bugIcon.react tag="span" verticalAlign="middle" /> {trans.__('icon')}
         </span>
       </div>
     </>

@@ -4,13 +4,8 @@ import { nodSchema } from './types';
 import { Dialog, ISessionContext, showDialog } from '@jupyterlab/apputils';
 import { checkKernelStatus, kernelWaitDialog } from './interfaceHelpers';
 import { setKernelToOpen, writeChange } from './messaging';
-import { tr } from 'zod/v4/locales';
-import { exceptionsIcon } from '@jupyterlab/ui-components';
-import { info } from 'node:console';
 import { requestAPI } from './request';
-import { URLExt } from '@jupyterlab/coreutils';
-import { format } from 'node:path';
-import { Kernel, Session } from '@jupyterlab/services';
+import { Kernel } from '@jupyterlab/services';
 
 export async function openNotebookWithNodKernel(
   notebookFile: string,
@@ -105,7 +100,6 @@ export async function getNodKernel(): Promise<string | undefined> {
   return nodState.Instance().nodKernelId;
 }
 
-let launching: boolean = false;
 export async function launchNodKernel(
   key?: string
 ): Promise<Kernel.IKernelConnection | undefined> {
@@ -123,7 +117,7 @@ export async function launchNodKernel(
     }
     // launching = true;
     console.log('Launching Nod Kernel');
-    nodState.Instance().tracker.currentWidget?.sessionContext;
+    // nodState.Instance().tracker.currentWidget?.sessionContext;
     // const currentSessionContext = nodState.Instance().tracker.currentWidget?.sessionContext
     // if (currentSessionContext !== undefined) {
     //   if (currentSessionContext.isDisposed) {
@@ -468,7 +462,7 @@ export async function NodSwitchSessions(schema: nodSchema): Promise<boolean> {
     console.log('launching kernel', schema.key);
     const nodKernelPromise = launchNodKernel(schema.key);
     kernelWaitDialog();
-    const connection = await nodKernelPromise;
+    await nodKernelPromise;
     console.log('POST SWITCH SESSIONS', id);
     await state.reset(schema, id);
 

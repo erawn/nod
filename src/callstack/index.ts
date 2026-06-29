@@ -5,27 +5,22 @@ import type { ITranslator } from '@jupyterlab/translation';
 import { nullTranslator } from '@jupyterlab/translation';
 import {
   closeIcon,
-  downloadIcon,
-  fileUploadIcon,
   openKernelSourceIcon,
   PanelWithToolbar,
   refreshIcon,
-  stopIcon,
   ToolbarButton
 } from '@jupyterlab/ui-components';
 
-import { AccordionPanel, Widget, type Panel } from '@lumino/widgets';
+import { Widget, type Panel } from '@lumino/widgets';
 import type { IDebugger } from '@jupyterlab/debugger';
 import { CallstackBody } from './body';
 import { CallstackModel, NodRunningModel, NodSessionItem } from './model';
-import { bugIcon, SidePanel } from '@jupyterlab/ui-components';
+import { SidePanel } from '@jupyterlab/ui-components';
 import { nodState } from '../state';
 import { nodCommands } from '../commands';
 import { Signal } from '@lumino/signaling';
-import Section from '@jupyterlab/running';
 import { ListWidget } from './listWidget';
 import { getKernels } from '../messaging';
-import { run } from 'node:test';
 // import { Section } from "@jupyterlab/running"
 
 export class NodSidebar extends SidePanel {

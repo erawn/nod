@@ -1,24 +1,17 @@
 import type { ITranslator } from '@jupyterlab/translation';
 import { nullTranslator } from '@jupyterlab/translation';
-import {
-  bugIcon,
-  PanelWithToolbar,
-  ReactWidget
-} from '@jupyterlab/ui-components';
+import { PanelWithToolbar } from '@jupyterlab/ui-components';
 import { CommandRegistry } from '@lumino/commands';
 import type { ISignal } from '@lumino/signaling';
 import { Signal } from '@lumino/signaling';
-import type { IDebugger, IDebuggerDisplayRegistry } from '@jupyterlab/debugger';
+import type { IDebugger } from '@jupyterlab/debugger';
 import type { INotebookTracker } from '@jupyterlab/notebook';
 import type { IConsoleTracker } from '@jupyterlab/console';
 import { getDefinedVariables } from '../messaging';
-import { AccordionPanel, BoxPanel, Panel, Widget } from '@lumino/widgets';
+import { Panel, Widget } from '@lumino/widgets';
 import { SidePanel } from '@jupyterlab/ui-components';
-import { nodState } from '../state';
 import { VariablesBodyTree } from './variablesTree';
 import { Variables as VariablesPanel } from '@jupyterlab/debugger/lib/panels/variables';
-import React, { useEffect } from 'react';
-import { debugHeader } from '../readOnlyHeader';
 export class NodLogSidebar extends SidePanel {
   constructor(options: {
     translator: ITranslator;
