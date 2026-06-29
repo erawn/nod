@@ -6,6 +6,14 @@ Nod is a JupyterLab extension for inserting a notebook anywhere in a running Pyt
 
 To install run `pip install nodpy && nod --install-kernel`
 
+## Participate in Research!
+
+Interested in using Nod? Try it out in your own work for 3-6 weeks and chat with me about it! Participants recieve a gift card of $50-$100 (depending on how much time we chat for). All the details are in the [Sign Up Form](https://forms.gle/mDhWRuZwCBkG9TdE8).
+
+My name is Eric Rawn. I'm a PhD Student at UC Berkeley. To build the best system we can (and do some research along the way), we want to see how people use Nod in their own work, and we'd really love your insight! If you decide to participate, the extension will log some usage data locally on your machine, which you'll send to me manually at the end of the study. We'll have a few conversations along the way about your experience with the extension and the kind of work you do.
+
+If you have any questions at all, feel free to send me an email at erawn@berkeley.edu, and feel free to forward this to anyone you think might be interested! Thanks so much!
+
 ## Usage
 
 In a Python file call `notebook()` anywhere:
