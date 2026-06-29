@@ -10,7 +10,7 @@ import { NodSidebar } from './callstack';
 import { ISettingRegistry } from '@jupyterlab/settingregistry';
 import { IDocumentManager } from '@jupyterlab/docmanager';
 export type pluginStatus = 'active' | 'inactive' | 'unset';
-import { NodLogSidebar } from './nodLog/nodLog';
+import { NodLogSidebar } from './nodLog';
 import { IDebugger } from '@jupyterlab/debugger';
 import { IRenderMimeRegistry } from '@jupyterlab/rendermime';
 import { getNodInfo } from './kernelHelpers';

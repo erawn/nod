@@ -26,7 +26,13 @@
     "strict": true,
     "strictNullChecks": true,
     "target": "esnext",
-    "types": ["jest", "node"]
+    "types": [
+      "jest",
+      "node"
+    ]
   },
-  "include": ["src/**/*", "ui-tests/**/*"]
+  "include": [
+    "src/**/*",
+    "ui-tests/**/*"
+  ]
 }

@@ -28,7 +28,7 @@ import {
 import { IConsoleTracker } from '@jupyterlab/console';
 import { INodStackFrame } from './types';
 import { IDocumentManager } from '@jupyterlab/docmanager';
-import { CallstackModel, NodRunningModel } from './callstack/model';
+import { CallstackModel, NodRunningModel } from './model';
 import { NodSidebar } from './callstack';
 import {
   checkKernelStatus,
@@ -39,7 +39,7 @@ import {
   openNotebookWithNodKernel,
   restart
 } from './kernelHelpers';
-import { NodLogModel, NodLogSidebar } from './nodLog/nodLog';
+import { NodLogModel, NodLogSidebar } from './nodLog';
 import { IDebugger, IDebuggerHandler } from '@jupyterlab/debugger';
 import { IRenderMimeRegistry } from '@jupyterlab/rendermime';
 /**

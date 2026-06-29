@@ -7,7 +7,7 @@ import { Signal } from '@lumino/signaling';
 import type { IDebugger } from '@jupyterlab/debugger';
 import type { INotebookTracker } from '@jupyterlab/notebook';
 import type { IConsoleTracker } from '@jupyterlab/console';
-import { getDefinedVariables } from '../messaging';
+import { getDefinedVariables } from './messaging';
 import { Panel, Widget } from '@lumino/widgets';
 import { SidePanel } from '@jupyterlab/ui-components';
 import { VariablesBodyTree } from './variablesTree';

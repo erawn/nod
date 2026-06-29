@@ -12,7 +12,7 @@ import type { Message } from '@lumino/messaging';
 import React, { useCallback, useRef } from 'react';
 import { Button, TreeItem, TreeView } from '@jupyter/react-components';
 import { nullTranslator } from '@jupyterlab/translation';
-import { NodSidebar } from './index';
+import { NodSidebar } from './callstack';
 import { NodRunningModel, NodSessionItem } from './model';
 // type nodInstanceType = nodState
 

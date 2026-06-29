@@ -23,12 +23,12 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { IDebugger } from '@jupyterlab/debugger/';
 
 import { NodLogModel } from './nodLog';
-import { nodState } from '../state';
+import { nodState } from './state';
 import {
   inspectVariable,
   pushVariable,
   renderNodMimeVariable
-} from '../messaging';
+} from './messaging';
 
 export class VariablesBodyTree extends ReactWidget {
   /**

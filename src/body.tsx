@@ -4,7 +4,7 @@
 import { FilterBox, ReactWidget } from '@jupyterlab/ui-components';
 import React, { useEffect, useState } from 'react';
 import { CallstackModel } from './model';
-import { INodStackFrame } from '../types';
+import { INodStackFrame } from './types';
 import multimatch from 'multimatch';
 /**
  * The body for a Callstack Panel.

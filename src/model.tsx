@@ -7,11 +7,11 @@ import { DebuggerDisplayRegistry } from '@jupyterlab/debugger';
 import type { IDebugger, IDebuggerDisplayRegistry } from '@jupyterlab/debugger';
 import type { INotebookTracker } from '@jupyterlab/notebook';
 import type { IConsoleTracker } from '@jupyterlab/console';
-import { INodStackFrame, nodSchema } from '../types';
+import { INodStackFrame, nodSchema } from './types';
 import { IRunningSessions } from '@jupyterlab/running';
 import { kernelIcon, LabIcon } from '@jupyterlab/ui-components';
 import React, { ReactNode } from 'react';
-import { NodSwitchSessions } from '../kernelHelpers';
+import { NodSwitchSessions } from './kernelHelpers';
 /**
  * A model for a callstack.
  */

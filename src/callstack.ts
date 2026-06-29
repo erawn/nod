@@ -16,11 +16,11 @@ import type { IDebugger } from '@jupyterlab/debugger';
 import { CallstackBody } from './body';
 import { CallstackModel, NodRunningModel, NodSessionItem } from './model';
 import { SidePanel } from '@jupyterlab/ui-components';
-import { nodState } from '../state';
-import { nodCommands } from '../commands';
+import { nodState } from './state';
+import { nodCommands } from './commands';
 import { Signal } from '@lumino/signaling';
 import { ListWidget } from './listWidget';
-import { getKernels } from '../messaging';
+import { getKernels } from './messaging';
 // import { Section } from "@jupyterlab/running"
 
 export class NodSidebar extends SidePanel {
