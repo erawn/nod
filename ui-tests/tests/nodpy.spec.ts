@@ -16,7 +16,9 @@ test('should emit an activation console message', async ({ page }) => {
   await page.goto();
 
   expect(
-    logs.filter(s => s === 'JupyterLab extension {{ labextension_name }} is activated!')
+    logs.filter(
+      s => s === 'JupyterLab extension {{ labextension_name }} is activated!'
+    )
   ).toHaveLength(1);
 });
 test('should display {{ mimetype_name }} data file', async ({ page }) => {
@@ -38,9 +40,13 @@ test('should display {{ mimetype_name }} data file', async ({ page }) => {
 
   await page.filebrowser.open(filename);
 
-  const view = page.getByRole('main').locator('.mimerenderer-{{ mimetype_name }}');
+  const view = page
+    .getByRole('main')
+    .locator('.mimerenderer-{{ mimetype_name }}');
 
-  expect(await view.screenshot()).toMatchSnapshot('{{ mimetype_name }}-file.png');
+  expect(await view.screenshot()).toMatchSnapshot(
+    '{{ mimetype_name }}-file.png'
+  );
 });
 
 test('should display notebook {{ mimetype_name }} output', async ({ page }) => {

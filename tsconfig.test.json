@@ -1,7 +1,5 @@
 {
   "extends": "./tsconfig",
-  "include": [
-    "ui-tests/**/*"
-  ],
+  "include": ["ui-tests/**/*"],
   "exclude": []
 }
