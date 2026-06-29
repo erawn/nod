@@ -13,6 +13,7 @@ import base64
 import inspect
 from pprint import pprint
 import shutil
+import sys
 import types
 
 import jupytext  # type: ignore
@@ -50,15 +51,16 @@ from .file_helpers import (
 
 from IPython.terminal.interactiveshell import TerminalInteractiveShell
 from varname import argname
+import traceback
 
 _log = logging.getLogger(__name__)
 logging.basicConfig()
-_log.setLevel(logging.INFO)
+_log.setLevel(logging.WARN)
 _log.addHandler(logging.FileHandler("log.txt"))
 
 DRY_RUN = False
 
-DEBUG: bool = True
+DEBUG: bool = False
 
 if DEBUG:
     _log.setLevel(logging.DEBUG)
@@ -97,10 +99,11 @@ def nodLog(*args):
     # _log.info(f"log call {log_call.frame.f_locals}")
 
     # currentFrame = inspect.currentframe()
-
-    frame_id = FrameIdentifiers(
-        log_call.function, finder.parent_pos.start.line, log_call.filename
-    )
+    if log_call.function == "<module>":
+        start_line = 0
+    else:
+        start_line = finder.parent_pos.start.line
+    frame_id = FrameIdentifiers(log_call.function, start_line, log_call.filename)
     # encoded_frame_id = base64.b64encode(frame_id.get_id().encode("utf-8")).decode(
     #     "utf-8"
     # )
@@ -132,6 +135,7 @@ def nodConfig(
     filter: list[str] = [],
     how_restart: t.Union[t.Literal["continue"], int] = "continue",
     dangerously_bypass_readonly: bool = False,
+    notebook_on_exception=False,
 ):
     """Configure Nod Settings
     filter: (default ['<CWD>/**'])
@@ -157,6 +161,14 @@ def nodConfig(
     _how_restart = how_restart
     global _dangerously_bypass_readonly
     _dangerously_bypass_readonly = dangerously_bypass_readonly
+
+    if notebook_on_exception:
+
+        def nb(type, value, tb):
+            traceback.print_exception(type, value, tb)
+            notebook()
+
+        sys.excepthook = nb
 
 
 def find_func(frame: inspect.FrameInfo, func: str):
@@ -419,3 +431,23 @@ def _jupyter_server_extension_points():
             "app": Nod,
         }
     ]
+
+
+def _jupyter_server_extension_paths() -> list[dict[str, str]]:
+    return [{"module": "notebook"}]
+
+
+# def _load_jupyter_server_extension(self, serverapp):  # type: ignore
+#     """Registers the API handler to receive HTTP requests from the frontend extension.
+
+#     Parameters
+#     ----------
+#     server_app: jupyterlab.labapp.LabApp
+#         JupyterLab application instance
+#     """
+#     setup_route_handlers(serverapp.web_app)
+#     name = "nodpy"
+#     serverapp.log.info(f"Registered {name} server extension")
+
+
+# load_jupyter_server_extension = _load_jupyter_server_extension

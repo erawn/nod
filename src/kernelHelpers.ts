@@ -106,13 +106,15 @@ export async function getNodKernel(): Promise<string | undefined> {
 }
 
 let launching: boolean = false;
-export async function launchNodKernel(key?: string): Promise<Kernel.IKernelConnection | undefined> {
+export async function launchNodKernel(
+  key?: string
+): Promise<Kernel.IKernelConnection | undefined> {
   console.log('launch nod kernel enter');
   const app = nodState.Instance().app;
-  const spec = app.serviceManager.kernelspecs.specs?.kernelspecs['nod']
+  const spec = app.serviceManager.kernelspecs.specs?.kernelspecs['nod'];
   if (spec === undefined) {
-    console.error("No Nod Spec!")
-    return
+    console.error('No Nod Spec!');
+    return;
   }
   // if (!launching && nodState.Instance().status !== 'active') {
   try {
@@ -121,7 +123,7 @@ export async function launchNodKernel(key?: string): Promise<Kernel.IKernelConne
     }
     // launching = true;
     console.log('Launching Nod Kernel');
-    nodState.Instance().tracker.currentWidget?.sessionContext
+    nodState.Instance().tracker.currentWidget?.sessionContext;
     // const currentSessionContext = nodState.Instance().tracker.currentWidget?.sessionContext
     // if (currentSessionContext !== undefined) {
     //   if (currentSessionContext.isDisposed) {
@@ -130,16 +132,16 @@ export async function launchNodKernel(key?: string): Promise<Kernel.IKernelConne
     // const connection = await currentSessionContext.changeKernel({
     //   name: 'nod',
     // });
-    const connection = await app.serviceManager.kernels.startNew({
-      name: 'nod'
-    }, {});
+    const connection = await app.serviceManager.kernels.startNew(
+      {
+        name: 'nod'
+      },
+      {}
+    );
     if (connection !== null) {
-      nodState.Instance().nodKernelId = connection.model.id
-      console.log(
-        ' LAUNCHNODKERNEL: Started Up New Nod!',
-        connection.model.id
-      );
-      return connection
+      nodState.Instance().nodKernelId = connection.model.id;
+      console.log(' LAUNCHNODKERNEL: Started Up New Nod!', connection.model.id);
+      return connection;
     }
 
     // } else {
@@ -149,8 +151,6 @@ export async function launchNodKernel(key?: string): Promise<Kernel.IKernelConne
 
     // }
     // launching = false;
-
-
   } catch (e) {
     console.log(e);
     return undefined;
@@ -159,14 +159,16 @@ export async function launchNodKernel(key?: string): Promise<Kernel.IKernelConne
   return undefined;
 }
 
-export async function getNodInfoFromKey(key: string): Promise<nodSchema | undefined> {
+export async function getNodInfoFromKey(
+  key: string
+): Promise<nodSchema | undefined> {
   const res = await requestAPI<any>('file', {
     body: key,
     method: 'POST'
   });
   const jsonObj = JSON.parse(atob(res));
   const schema = nodSchema.parse(jsonObj);
-  return schema
+  return schema;
 }
 
 export async function getNodInfo(): Promise<nodSchema | undefined> {
@@ -448,13 +450,19 @@ export async function NodSwitchSessions(schema: nodSchema): Promise<boolean> {
     await nodState.Instance().app.commands.execute('docmanager:save-all');
   }
   nodState.Instance().status = 'inactive';
-  const existing_schema = await getNodInfo()
-  const kernel_id = await getNodKernel()
-  console.log("current key", existing_schema?.key, " schema key ", schema.key, kernel_id)
-  let id = ""
+  const existing_schema = await getNodInfo();
+  const kernel_id = await getNodKernel();
+  console.log(
+    'current key',
+    existing_schema?.key,
+    ' schema key ',
+    schema.key,
+    kernel_id
+  );
+  let id = '';
   if (schema.key === existing_schema?.key && kernel_id !== undefined) {
-    id = kernel_id
-    console.log("setting id to ", schema.key)
+    id = kernel_id;
+    console.log('setting id to ', schema.key);
     await state.reset(schema, id);
   } else {
     console.log('launching kernel', schema.key);
@@ -501,7 +509,7 @@ export async function NodSwitchSessions(schema: nodSchema): Promise<boolean> {
 
   // state.tracker.forEach(panel => {
   //   if (state.getFrameFromPath(panel.context.path) !== undefined) {
-  //     panel.context.sessionContext.path = 
+  //     panel.context.sessionContext.path =
   //         .changeKernel({
   //       name: 'nod',
   //       id: state.nodKernelId

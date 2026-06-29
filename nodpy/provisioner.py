@@ -41,7 +41,7 @@ from nodpy.serverExtension import findNodRuntimeFile
 
 _log = logging.getLogger(__name__)
 regex = re.compile(r".*kernel-(.{2,8})\.json")
-_log.setLevel(logging.INFO)
+_log.setLevel(logging.WARN)
 
 
 class NodProvisionerMeta(type(KernelProvisionerBase)):  # type: ignore[misc]

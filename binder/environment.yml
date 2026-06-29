@@ -17,5 +17,13 @@ dependencies:
   - nodejs >=22,<23
   - pip
   - wheel
+  - debugpy
+  - orjson
+  - libcst
+  - dacite
+  - typer
+  - nbformat
+  - dataclasses-json
+  - varname
   # additional packages for demos
   # - ipywidgets

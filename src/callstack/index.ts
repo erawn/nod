@@ -44,7 +44,7 @@ export class NodSidebar extends SidePanel {
     const trans = (options.translator ?? nullTranslator).load('jupyterlab');
     super({ translator });
     this.id = 'jp-debugger-sidebar';
-    this.title.icon = bugIcon;
+    this.title.label = trans.__('Nod');
     this.runningModel = options.runningModel;
     this.addClass('jp-DebuggerSidebar');
     this.addClass('jp-NodLeftPanel');
@@ -133,7 +133,7 @@ export class NodSidebar extends SidePanel {
   }
   refreshKernels() {
     getKernels().then(reply => {
-      console.log('refresh kernels', reply)
+      console.log('refresh kernels', reply);
       if (reply === undefined) {
         nodState.Instance().callstackSidebar.runningModel.setItems([]);
       }

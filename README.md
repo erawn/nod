@@ -61,7 +61,7 @@ and the session will appear in the left panel under "Sessions":
 
 <img src="media/nod_existing.png" alt="markdown language" width="300" >
 
-Press "Connect" to open the session in Jupyterlab.
+Press "Connect" to open the session in Jupyterlab. JupyterHub users might have trouble installing the server extension portion of Nod. This is still a work in progress. Please make an issue if you are trying to get Nod working in a JupyterHub enviornment and I'll do my best to help.  
 
 **Important**: JupyterLab can't open files located outside of its home directory or any subdirectories, so make sure you call `nod -e <cmd>` in a directory you can see in the JupyterLab file navigator.
 

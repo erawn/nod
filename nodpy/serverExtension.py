@@ -307,19 +307,6 @@ class Nod(ExtensionApp):
         # _log.info(self.cli_cmd)
         # self.runUserProgram(self.cli_cmd)
 
-    # def _load_jupyter_server_extension(self, serverapp):  # type: ignore
-    #     """Registers the API handler to receive HTTP requests from the frontend extension.
-
-    #     Parameters
-    #     ----------
-    #     server_app: jupyterlab.labapp.LabApp
-    #         JupyterLab application instance
-    #     """
-    #     super()._load
-    #     # setup_route_handlers(serverapp.web_app)
-    #     name = "nodpy"
-    #     serverapp.log.info(f"Registered {name} server extension")
-
     # async def _start_jupyter_server_extension(
     #     self,
     #     serverapp: ServerApp,

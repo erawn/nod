@@ -202,7 +202,7 @@ def main(
         nb_env["NOD_CLI_ARGS"] = cli_cmds_64
         nb_env["NOD_RUNTIME_DIR"] = pm.connection_dir
         nb_env["JPY_PARENT_PID"] = str(os.getpid())
-        print(f"nod: running command: [{" ".join(commands)}]")
+        print(f"nod: running command: {' '.join(commands)}")
         pythonProcess = subprocess.Popen(
             commands,
             env=nb_env,

@@ -35,7 +35,7 @@ export class nodState {
     debuggerService: IDebugger,
     debuggerHandler: Debugger.Handler,
     rendermime: IRenderMimeRegistry,
-    sessionManager: Session.IManager,
+    sessionManager: Session.IManager
   ) {
     this._notebookTracker = tracker;
     this._app = app;
@@ -73,7 +73,7 @@ export class nodState {
     debuggerService: IDebugger,
     handler: Debugger.Handler,
     rendermime: IRenderMimeRegistry,
-    sessionManager: Session.IManager,
+    sessionManager: Session.IManager
   ): nodState;
   public static Instance(
     tracker?: INotebookTracker,
@@ -91,7 +91,7 @@ export class nodState {
     debuggerService?: IDebugger,
     handler?: Debugger.Handler,
     rendermime?: IRenderMimeRegistry,
-    sessionManager?: Session.IManager,
+    sessionManager?: Session.IManager
   ): nodState {
     if (
       tracker &&
@@ -174,9 +174,9 @@ export class nodState {
   private _lockNotebookId: string = '';
   connection_dir: string;
   dialogID = '';
-  debuggerService: IDebugger
-  debuggerHandler: Debugger.Handler
-  rendermime: IRenderMimeRegistry
+  debuggerService: IDebugger;
+  debuggerHandler: Debugger.Handler;
+  rendermime: IRenderMimeRegistry;
 
   public isNodFile(panel: NotebookPanel) {
     const frame = this.getFrameFromPath(panel.context.path);
@@ -224,8 +224,8 @@ export class nodState {
     this._currentFrameIndex = 0;
     this._nodKernelId = kernelId;
     this.connection_dir = schema.nod_info_local_path.split('/nodInfo.json')[0];
-    this.pythonInfo = schema
-    await getNodInfo()
+    this.pythonInfo = schema;
+    await getNodInfo();
   }
   get lockChanged(): Signal<this, string> {
     return this._lockChanged;
@@ -283,7 +283,7 @@ export class nodState {
       }
     }
     this._nodKernelId = kernelId;
-    this._nodKernelIdChanged.emit(kernelId)
+    this._nodKernelIdChanged.emit(kernelId);
   }
   get nodKernelIdChanged(): ISignal<this, string> {
     return this._nodKernelIdChanged;
@@ -315,7 +315,7 @@ export class nodState {
   }
 
   public activateSidebars() {
-    console.log("activate sidebars");
+    console.log('activate sidebars');
     const newId = this.currentFrame?.function_id;
     if (newId !== undefined) {
       this.nodLogSidebar.log.updateVariables(newId);

@@ -41,12 +41,15 @@ import {
   checkKernelStatus,
   onCurrentNotebookChanged
 } from './interfaceHelpers';
-import { getNodInfo, getNodKernel, openNotebookWithNodKernel, restart } from './kernelHelpers';
+import {
+  getNodInfo,
+  getNodKernel,
+  openNotebookWithNodKernel,
+  restart
+} from './kernelHelpers';
 import { NodLogModel, NodLogSidebar } from './nodLog/nodLog';
 import { Debugger, IDebugger, IDebuggerHandler } from '@jupyterlab/debugger';
-import {
-  IRenderMimeRegistry,
-} from '@jupyterlab/rendermime';
+import { IRenderMimeRegistry } from '@jupyterlab/rendermime';
 /**
  * Initialization data for the nod extension.
  */
@@ -97,12 +100,26 @@ const plugin: JupyterFrontEndPlugin<void> = {
     console.log(PageConfig.getOption('nod_active'));
     const isActive = PageConfig.getOption('nod_active') === 'true';
     console.log('nod_active', isActive);
-    let previousStatus = ''
+    let previousStatus = '';
     // const trans = (translator ?? nullTranslator).load('jupyterlab');
-    debuggerService.sessionChanged.connect(() => console.log('debug sessionChanged'))
+    debuggerService.sessionChanged.connect(() =>
+      console.log('debug sessionChanged')
+    );
     notebookTracker.activeCellChanged.connect(() => {
-      nodState.Instance().app.serviceManager.kernels.refreshRunning().then(() => console.log('kernels', Array.from(nodState.Instance().app.serviceManager.kernels.running())))
-      sessionManager.refreshRunning().then(() => console.log("sessions", Array.from(sessionManager.running())))
+      nodState
+        .Instance()
+        .app.serviceManager.kernels.refreshRunning()
+        .then(() =>
+          console.log(
+            'kernels',
+            Array.from(nodState.Instance().app.serviceManager.kernels.running())
+          )
+        );
+      sessionManager
+        .refreshRunning()
+        .then(() =>
+          console.log('sessions', Array.from(sessionManager.running()))
+        );
       // getKernels().then((reply) => {
       //   console.log(reply)
       // console.log(
@@ -208,9 +225,9 @@ const plugin: JupyterFrontEndPlugin<void> = {
       if (isActive) {
         // checkKernelStatus();
         docManager.closeAll();
-      }
-      else {
-        let kernelPreference = notebookTracker.currentWidget?.sessionContext.kernelPreference
+      } else {
+        let kernelPreference =
+          notebookTracker.currentWidget?.sessionContext.kernelPreference;
         if (kernelPreference !== undefined) {
           kernelPreference = {
             autoStartDefault: false,
@@ -224,32 +241,34 @@ const plugin: JupyterFrontEndPlugin<void> = {
       //TODO close all besides the ones we want to open?
     });
     app.restored.then(async () => {
-      console.log('restored')
+      console.log('restored');
       //persist connected status through reload
       if (jupyter_state !== undefined) {
         try {
-          const existing_key = await jupyter_state?.fetch('nod_state_kernel_key') as { key: string }
-          const existing_id = await jupyter_state?.fetch('nod_state_kernel_id') as { id: string }
-          console.log(existing_key, existing_id)
+          const existing_key = (await jupyter_state?.fetch(
+            'nod_state_kernel_key'
+          )) as { key: string };
+          const existing_id = (await jupyter_state?.fetch(
+            'nod_state_kernel_id'
+          )) as { id: string };
+          console.log(existing_key, existing_id);
           // if (existing_state !== undefined) {
-          const kernels = await getKernels()
-          const kernel_id = await getNodKernel()
-          const new_schema = kernels?.find(kernel_info => kernel_info.key === existing_key.key)
-          if (new_schema !== undefined &&
-            kernel_id === existing_id.id
-          ) {
-            console.log("found existing state after reload")
-            await state.reset(new_schema, kernel_id)
+          const kernels = await getKernels();
+          const kernel_id = await getNodKernel();
+          const new_schema = kernels?.find(
+            kernel_info => kernel_info.key === existing_key.key
+          );
+          if (new_schema !== undefined && kernel_id === existing_id.id) {
+            console.log('found existing state after reload');
+            await state.reset(new_schema, kernel_id);
           }
           // }
+        } catch (e) {
+          console.log((e as Error).message);
         }
-        catch (e) {
-          console.log((e as Error).message)
-        }
-
       }
       if (isActive) {
-        console.log('restored')
+        console.log('restored');
         checkKernelStatus();
         state.activateSidebars();
       } else {
@@ -260,9 +279,9 @@ const plugin: JupyterFrontEndPlugin<void> = {
               autoStartDefault: false,
               shutdownOnDispose: false,
               shouldStart: false
-            }
+            };
           }
-        })
+        });
       }
       sessionContextDialogs.restart = restart;
     });
@@ -311,7 +330,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
             console.log('status changed to dead');
             checkKernelStatus();
           }
-          previousStatus = status
+          previousStatus = status;
         });
       }
     });
@@ -359,13 +378,11 @@ const plugin: JupyterFrontEndPlugin<void> = {
           notebookTracker.forEach(panel => {
             const selectedFrame = state.getFrameFromPath(panel.context.path);
             if (selectedFrame === undefined) {
-
               if (panel.context.path.includes('nod')) {
                 // docManager.closeFile(panel.context.path)
                 // docManager.deleteFile(panel.context.path)
                 panel.dispose();
               }
-
             }
           });
         }
@@ -398,12 +415,8 @@ const plugin: JupyterFrontEndPlugin<void> = {
       }
       if (status === 'inactive') {
         runningModel.selectedKernelKey = '';
-        callstackSidebar.refreshKernels()
-        callStackModel.setFrames(
-          [],
-          -1,
-          ['']
-        );
+        callstackSidebar.refreshKernels();
+        callStackModel.setFrames([], -1, ['']);
         const variableScopes = [
           {
             name: trans.__('Globals'),
@@ -418,8 +431,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
       console.debug('Switching to frame ', frameNum);
       callStackModel.frame = callStackModel.frames[frameNum];
 
-      const notebookFile =
-        state.currentFrame?.file_info?.notebook_file;
+      const notebookFile = state.currentFrame?.file_info?.notebook_file;
       if (notebookFile !== undefined) {
         openNotebookWithNodKernel(notebookFile, docManager).then(() => {
           requestDebug('nod_switch', { stackIndex: frameNum });
@@ -428,9 +440,9 @@ const plugin: JupyterFrontEndPlugin<void> = {
             nodLogSidebar.log.updateVariables(function_id);
             nodLogSidebar.update();
           }
-        })
+        });
       } else {
-        console.error("Notebook file is undefined", state.currentFrame)
+        console.error('Notebook file is undefined', state.currentFrame);
       }
     });
     nodState.Instance().lockChanged.connect((state, id) => {
@@ -446,23 +458,28 @@ const plugin: JupyterFrontEndPlugin<void> = {
       }
     });
     nodState.Instance().nodKernelIdChanged.connect((state, id) => {
-      console.log('setting nod_kernel_id to ', id)
-      jupyter_state?.save('nod_state_kernel_id', { id: id })
-    })
+      console.log('setting nod_kernel_id to ', id);
+      jupyter_state?.save('nod_state_kernel_id', { id: id });
+    });
     nodState.Instance().pythonInfoChanged.connect((state, info) => {
-      console.log("python info changed")
-      console.log('setting nod_kernel_key to ', info?.key)
-      jupyter_state?.save('nod_state_kernel_key', { key: info?.key })
+      console.log('python info changed');
+      console.log('setting nod_kernel_key to ', info?.key);
+      jupyter_state?.save('nod_state_kernel_key', { key: info?.key });
       for (const session of state.sessionManager.running()) {
-        console.log("looking at session:", session, state.getFrameFromPath(session.path))
-        if (session.kernel?.name === 'nod' && state.getFrameFromPath(session.path) === undefined) {
-          console.log("shutting down", session, session.kernel)
+        console.log(
+          'looking at session:',
+          session,
+          state.getFrameFromPath(session.path)
+        );
+        if (
+          session.kernel?.name === 'nod' &&
+          state.getFrameFromPath(session.path) === undefined
+        ) {
+          console.log('shutting down', session, session.kernel);
           // state.sessionManager.shutdown(session.id)
         }
       }
-      state.tracker.forEach(panel => {
-
-      })
+      state.tracker.forEach(panel => {});
       const newId = state.currentFrame?.function_id;
       if (newId !== undefined) {
         nodLogSidebar.log.updateVariables(newId);
