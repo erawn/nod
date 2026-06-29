@@ -58,8 +58,10 @@ def f():
 f()
 ```
 
-<img src="media/nod_log.png" align="right" width="200px"/>
+
 and you'll see a list in your Nod Session appear on the `Nod Log` panel on the right:
+
+<img src="media/nod_log.png" width="200px"/>
 
 Click the <img src="media/nod_log_button.png" alt="markdown language" height="30" > button to put that value into the notebook state.
 
