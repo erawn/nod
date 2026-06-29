@@ -33,7 +33,7 @@ Nod will open everything in the _current function body_ to edit.
 
 On the left side is a panel to navigate up and down your callstack---your notebook state will switch automatically to the variables at that place in the program. You'll notice three buttons at the top of the Nod Panel:
 
-- <img src="media/nod_dl.png" alt="markdown language" height="30" > Sends any text changes made in the notebook back to your source files. By default, the notebook is converted to [light](https://jupytext.org/formats/scripts/#the-light-format) format \(see [Config](#nodconfig) for more options.\)
+- <img src="media/nod_dl.png" alt="markdown language" height="30" > Sends any text changes made in the notebook back to your source files. By default, the notebook is converted to [light](https://jupytext.org/formats/scripts) format \(see [Config](#nodconfig) for more options.\)
 - <img src="media/nod_restart.png" alt="markdown language" height="30" > Restarts your original python program by re-executing the `<command>` from your `nod <command>` command line invocation, and updates the Jupyter editor to match. If you want to make changes directly to your source file and pull them to your Nod Jupyter session, just press "Restart without Saving" at the prompt when you restart.
 - <img src="media/nod_exit.png" alt="markdown language" height="30" > Quits the current Nod kernel. By default, your python program will continue to run from `notebook()` until it exits itself. If you would like to signal the program instead, see [how_exit](#nodconfig).
 
