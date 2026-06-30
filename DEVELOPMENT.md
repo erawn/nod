@@ -57,9 +57,6 @@ Nice to have
   - or just change the cwd in the outer command? aka nod cd folder && nod python -m module
 
 NOD Log Todo
-nod.log(x)
-
-- clicking on the side panel puts it in state
 - have a 'unique' boolean in nod.log() that doesn't save if it compares equal to another obj in the list
 
 Nod Save Args
