@@ -1,1 +1,1 @@
-jlpm lint
+jlpm lint-staged
