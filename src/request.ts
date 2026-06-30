@@ -34,8 +34,7 @@ export async function requestAPI<T>(
     try {
       data = JSON.parse(data);
     } catch (error) {
-      console.log(error);
-      // console.log('Not a JSON response body.', response);
+      console.error(`Error on RequestAPI. Schema Parsing \n${error} , ${data}`);
     }
   }
 

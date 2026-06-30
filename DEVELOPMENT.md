@@ -23,8 +23,7 @@ NODCONFIG
 
 TODO
 
-- add nod to JupyterLab [Marketplace](https://labextensions.dev/)
-- figure out how to install jupyter server extension in jupyter lab
+- figure out how to install jupyter server extension in jupyter hub
   - https://discourse.jupyter.org/t/how-to-enable-javascript-in-jupyter-notebook/20371
   - try to build nod from brand new template???
 - test on savio and tinyhub

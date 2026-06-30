@@ -1,5 +1,5 @@
 try:
-    from ._version import __version__
+    from nodpy._version import __version__
 except ImportError:
     # Fallback when using the package in dev mode without installing
     # in editable mode with pip. It is highly recommended to install
@@ -325,7 +325,7 @@ def notebook(
     startingVariables = {}
     startingVariables.update(notebook_call.frame.f_globals)
     startingVariables.update(notebook_call.frame.f_locals)
-    from .ip_plugin import nodReturn
+    from nodpy.ip_plugin import nodReturn
 
     startingVariables.update({"nodReturn": nodReturn})
 
