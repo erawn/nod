@@ -10,7 +10,9 @@ node_modules/
 nodpy/labextension
 # Version file is handled by hatchling
 nodpy/_version.py
-**/*.ipynb
+
+nod/**/*
+
 # Integration tests
 ui-tests/test-results/
 ui-tests/playwright-report/
@@ -126,19 +128,3 @@ dmypy.json
 
 # Yarn cache
 .yarn/
-
-test*.py
-nod/_version.py
-tsconfig.tsbuildinfo
-comp.txt
-.fileid.db
-nod/_version.py
-tsconfig.tsbuildinfo
-.nod/**
-.nod
-nod
-nod/**
-tsconfig.tsbuildinfo
-yarn.lock
-**/*.txt
-.nvmrc

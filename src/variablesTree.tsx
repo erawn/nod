@@ -20,7 +20,7 @@ import { DebugProtocol } from '@vscode/debugprotocol';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { IDebugger } from '@jupyterlab/debugger/';
+import { IDebugger } from '@jupyterlab/debugger';
 
 import { NodLogModel } from './nodLog';
 import { nodState } from './state';

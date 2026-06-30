@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling>=1.5.0", "jupyterlab>=4.5.0,<5", "hatch-nodejs-version>=0.3.2"]
+requires = ["hatchling>=1.5.0", "hatch-nodejs-version>=0.3.2", "jupyter-builder>=1.0.0,<2"]
 build-backend = "hatchling.build"
 
 [project]
@@ -23,24 +23,23 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
+    "jupyter_server>=2.4.0,<3",
+    "dataclasses-json",
+    "varname",
     "jupytext",
     "debugpy>=1.6.5",
     "orjson",
     "libcst",
-    "dacite",
     "typer",
-    "nbformat",
-    "jupyterlab>=4.5.6",
-    "dataclasses-json",
-    "varname"
+    "nbformat"
+
 ]
 dynamic = ["version", "description", "authors", "urls", "keywords"]
 
 [project.optional-dependencies]
 dev = [
-    "build",
-    "twine",
-    "hatch"
+    "jupyterlab>=4.0.0",
+    "jupyter-builder>=1.0.0",
 ]
 test = [
     "coverage",
@@ -49,14 +48,12 @@ test = [
     "pytest-cov",
     "pytest-jupyter[server]>=0.6.0"
 ]
-[project.scripts]
-nod = "nodpy.nod_cli:app"
-
-[project.entry-points."jupyter_client.kernel_provisioners"]
-NodProvisioner = "nodpy:NodProvisioner"
 
 [tool.hatch.version]
 source = "nodejs"
+
+[project.entry-points."jupyter_client.kernel_provisioners"]
+NodProvisioner = "nodpy:NodProvisioner"
 
 [tool.hatch.metadata.hooks.nodejs]
 fields = ["description", "authors", "urls", "keywords"]
@@ -95,9 +92,12 @@ build_dir = "nodpy/labextension"
 [tool.jupyter-releaser.options]
 version_cmd = "hatch version"
 
+[tool.hatch.metadata]
+allow-direct-references = true
+
 [tool.jupyter-releaser.hooks]
 before-build-npm = [
-    "python -m pip install 'jupyterlab>=4.5.0,<5'",
+    "python -m pip install 'jupyter-builder>=1.0.0,<2'",
     "jlpm",
     "jlpm build:prod"
 ]
@@ -105,8 +105,3 @@ before-build-python = ["jlpm clean:all"]
 
 [tool.check-wheel-contents]
 ignore = ["W002"]
-
-[tool.uv.workspace]
-members = [
-    "nod",
-]

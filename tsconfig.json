@@ -8,17 +8,14 @@
     "jsx": "react",
     "lib": [
       "DOM",
-      "DOM.Iterable",
       "ES2018",
-      "ES2020.BigInt",
-      "ES2020.Intl",
-      "ES2020.String"
+      "ES2020.Intl"
     ],
     "module": "esnext",
     "moduleResolution": "bundler",
     "noEmitOnError": true,
     "noImplicitAny": true,
-    "noUnusedLocals": false,
+    "noUnusedLocals": true,
     "preserveWatchOutput": true,
     "resolveJsonModule": true,
     "outDir": "lib",
@@ -26,7 +23,12 @@
     "strict": true,
     "strictNullChecks": true,
     "target": "esnext",
-    "types": ["jest", "node"]
+    "types": [
+      "jest",
+      "node"
+    ]
   },
-  "include": ["src/**/*"]
+  "include": [
+    "src/*"
+  ],
 }

@@ -85,3 +85,9 @@ class NodConnectionInfo(DataClassJsonMixin):
     display_name: Optional[str] = ""
     jupyter_session: Optional[str] = ""
     metadata: Optional[t.Dict[str, t.Any]] = field(default_factory=dict)
+
+
+@dataclass
+class writeRequest(DataClassJsonMixin):
+    program_info: ProgramInfo
+    notebookContent: str

@@ -10,11 +10,11 @@ import orjson
 import psutil  # type: ignore[import-untyped]
 from traitlets.traitlets import Bool, Unicode
 import base64
-from dacite import from_dict
 from nodpy.nodTypes import (
     NodConnectionInfo,
     NodInfo,
     ProgramInfo,
+    writeRequest,
 )
 from tornado import web
 import jupyter_core.paths as paths
@@ -208,12 +208,6 @@ class ExistingKernelsRouteHandler(APIHandler):
         )
 
 
-@dataclass
-class writeRequest:
-    program_info: ProgramInfo
-    notebookContent: str
-
-
 class WriteFileRouteHandler(APIHandler):
 
     @tornado.web.authenticated
@@ -225,7 +219,7 @@ class WriteFileRouteHandler(APIHandler):
             _log.info("RECEIVED WRITE REQUEST")
             json_load = json.loads(body)
             # _log.info(json_load)
-            request = from_dict(writeRequest, json_load)
+            request = writeRequest.from_dict(json_load)
             _log.info("REQUEST")
             _log.debug(request)
             decoded_content = base64.b64decode(request.notebookContent).decode("utf-8")
