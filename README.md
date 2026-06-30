@@ -37,6 +37,8 @@ nod python -m myfile
 and you'll see a Jupyter editor with the current state of your program when you called `notebook()`:
 ![](media/nod_demo.png)
 
+Notice above that we haven't executed `x = 1` yet, but `x` is in our kernel state. This is because `x` was in the current stack frame of the program when we called `notebook()`!
+
 Nod will open everything in the _current function body_ to edit.
 
 On the left side is a panel to navigate up and down your callstack---your notebook state will switch automatically to the variables at that place in the program. You'll notice three buttons at the top of the Nod Panel:
@@ -47,7 +49,7 @@ On the left side is a panel to navigate up and down your callstack---your notebo
 
 ### NodLog
 
-To save values to put into the Notebook state later, call `nodLog(var,var,...):
+To save values to put into the Notebook state later, call `nodLog(var,var,...)`:
 
 ```python
 from nodpy import notebook, nodLog
@@ -78,7 +80,7 @@ Press "Connect" to open the session in Jupyterlab. JupyterHub users might have t
 
 ### NodConfig
 
-To configure module-level settings for Nod, call `nodConfig()` at the top of a file:
+To configure module-level settings for Nod, call `nodConfig()` at the entry point for your Python program. Options are:
 
 - **filter**: (default ['\<CWD\>/**'])
   list of paths (as strings) to include in the trace filter. Accepts \*, ?, and [] as wildcards
