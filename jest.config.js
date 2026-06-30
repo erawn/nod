@@ -1,4 +1,3 @@
-const { rules } = require('@jupyter/eslint-plugin');
 const jestJupyterLab = require('@jupyterlab/testutils/lib/jest-config');
 
 const esModules = [
@@ -23,15 +22,10 @@ module.exports = {
     '!src/**/*.d.ts',
     '!src/**/.ipynb_checkpoints/*'
   ],
-  rules: [
-    {
-      test: /\.m?js$/,
-      resolve: {
-        fullySpecified: false
-      }
-    }
-  ],
   coverageReporters: ['lcov', 'text'],
   testRegex: 'src/.*/.*.spec.ts[x]?$',
-  transformIgnorePatterns: [`/node_modules/(?!${esModules}).+`]
+  transformIgnorePatterns: [`/node_modules/(?!${esModules}).+`],
+  transform: {
+    '^.+\\.tsx?$': ['ts-jest', { tsconfig: 'tsconfig.test.json' }]
+  }
 };

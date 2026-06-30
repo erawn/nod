@@ -58,7 +58,6 @@ def f():
 f()
 ```
 
-
 and you'll see a list in your Nod Session appear on the `Nod Log` panel on the right:
 
 <img src="media/nod_log.png" width="200px"/>
