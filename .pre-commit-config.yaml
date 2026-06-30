@@ -12,6 +12,6 @@ repos:
     hooks:
       - id: lint
         name: My Custom Linter
-        entry: jlpm lint
+        entry: ./lint.sh
         language: script
-        files: \.py$
+        files: \.*$
