@@ -1,0 +1,178 @@
+/*
+    See the JupyterLab Developer Guide for useful CSS Patterns:
+
+    https://jupyterlab.readthedocs.io/en/stable/developer/css.html
+*/
+
+.lm-Widget.jp-Cell.jp-Notebook-cell.nod-export {
+  opacity: 0.5;
+}
+
+.lm-Widget.jp-CodeMirrorEditor.jp-Editor.jp-nod-viewer {
+  background: var(--jp-cell-editor-background);
+  min-height: auto;
+}
+
+.jp-nod-readOnly-header {
+  background: var(--jp-rendermime-error-background);
+  text-align: center;
+  padding: 5px 0;
+  min-height: 40px;
+}
+
+.jp-NodFileEdited {
+  border-left: 5px solid;
+  border-color: var(--jp-warn-color1);
+}
+
+.jp-nod-pluginstatus-maintext {
+  color: var(--jp-error-color0);
+  font-weight: bold;
+}
+
+.jp-nod-pluginstatus-bottomtext {
+  color: var(--jp-content-font-color2);
+}
+
+.jp-Nod-CallStack-SearchBox {
+  padding-left: 5px;
+  padding-top: 0;
+  padding-right: 5px;
+}
+
+.jp-nod-label {
+  padding-left: 5px;
+  position: static;
+  margin-right: auto;
+}
+
+/* .jp-DebuggerCallstackFrame {
+
+} */
+.jp-NodLeftPanel {
+  display: flex;
+  flex-direction: column;
+  min-width: var(--jp-sidebar-min-width);
+  color: var(--jp-ui-font-color1);
+  background: var(--jp-layout-color1);
+
+  /* This is needed so that all font sizing of children done in ems is
+   * relative to this base size */
+  font-size: var(--jp-ui-font-size1);
+}
+
+.jp-NodLeftPanel > .jp-SidePanel-toolbar::part(positioning-region) {
+  justify-content: flex-end;
+}
+
+.jp-NodLeftPanel-section {
+  min-height: fit-content;
+  overflow: scroll;
+}
+
+.jp-NodRightPanel-section {
+  overflow: scroll;
+}
+
+.jp-NodRightPanel {
+  min-height: 50%;
+
+  /* flex: 1 1 auto; */
+}
+
+/* .jp-NodLog-Variables > .jp-DebuggerVariables-body {
+  flex: 0 1 30% !important;
+} */
+.jp-Nod-ConnectLabel-Span {
+  text-align: center;
+  line-height: 2px;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+.jp-NodRunningSessions-itemLabel {
+  font-size: var(--jp-ui-font-size1);
+  flex: 1 0 auto;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* .jp-Nod-TreeView {
+} */
+
+.jp-NodLogEntry {
+  border: var(--jp-border-width) solid var(--jp-border-color1);
+}
+
+/* .jp-NodLogSection {
+} */
+
+.jp-NodRunningSessions-itemDetail {
+  font-size: var(--jp-ui-font-size1);
+  flex: auto;
+  padding: 0 4px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.jp-NodRunningSessions-itemShutdown {
+  outline: none;
+  color: var(--jp-ui-font-color1);
+}
+
+.jp-NodRunningSessions-itemShutdown:hover {
+  outline: calc(var(--stroke-width) * 1px) solid var(--jp-brand-color1);
+  outline-offset: calc(var(--stroke-width) * -1px);
+}
+
+.jp-NodItem:hover > .jp-NodItem {
+  outline: calc(var(--stroke-width) * 1px) solid var(--jp-brand-color1);
+  outline-offset: calc(var(--stroke-width) * -1px);
+}
+
+.jp-NodLeftPanel-sectionContainer {
+  margin: 0;
+  padding: 0;
+}
+
+.jp-NodLeftPanel-sectionList {
+  display: block;
+  margin: 0;
+  padding: 0;
+  list-style-type: none;
+  padding-left: 14px;
+}
+
+.jp-NodLog-SendVarsIcon {
+  transform: rotate(90deg);
+}
+
+/* .jp-NodDebuggerVariables-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: auto;
+  min-width: auto;
+  overflow: auto;
+
+
+  position: relative;
+} */
+
+/* .jp-DebuggerCallstackFrame-Changed{
+
+} */
+
+/* .lm-Widget.jp-CodeMirrorEditor.jp-Editor.jp-nod-Header{
+    opacity:1
+}
+.lm-Widget.jp-CodeMirrorEditor.jp-Editor.jp-nod-Footer{
+    opacity:1
+} */
+
+/* .jp-myextension-myheader {
+  min-height: 20px;
+  background-color: lightsalmon;
+} */
