@@ -57,7 +57,7 @@
         "watch": "run-p watch:src watch:labextension",
         "watch:src": "tsc -w --sourceMap",
         "watch:labextension": "jupyter-builder watch .",
-        "prepare": "husky"
+        "prepare": "husky 2> /dev/null "
     },
     "dependencies": {
         "@jupyter/react-components": "^0.16.0",

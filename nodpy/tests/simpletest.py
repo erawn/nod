@@ -12,6 +12,9 @@ def baller(a, b: int, c: int):
     nodLog(a, b)
     nodLog(c)
     global x
+
+    c
+
     x += 2
     if x > 4:
         notebook()

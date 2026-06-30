@@ -172,7 +172,7 @@ export async function getKernels(): Promise<nodSchemas | undefined> {
           const schema = nodSchemas.parse(jsonObj);
           return schema;
         } catch (e) {
-          console.error(
+          console.warn(
             `Error on POST /nodpy/kernels. Schema Parsing \n${e} , ${reply}`
           );
         }
