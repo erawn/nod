@@ -192,6 +192,8 @@
         }
     },
     "lint-staged": {
-        "*.*": "jlpm eslint:check --fix && jlpm prettier:base --write --list-different && jlpm stylelint:check --fix"
+        "*.*": "eslint --fix",
+        "*.{.ts,.tsx,.js,.jsx,.css,.json,.md}}": "prettier --write",
+        "*.css": "stylelint"
     }
 }
