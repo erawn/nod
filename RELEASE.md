@@ -24,13 +24,7 @@ hatch version <new-version>
 Make sure to clean up all the development files before building the package:
 
 ```bash
-jlpm clean:all
-```
-
-You could also clean up the local git repository:
-
-```bash
-git clean -dfX
+jlpm deepclean
 ```
 
 To create a Python source package (`.tar.gz`) and the binary package (`.whl`) in the `dist/` directory, do:
