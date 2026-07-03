@@ -90,7 +90,6 @@ def _jupyter_labextension_paths():
 _log = logging.getLogger(__name__)
 logging.basicConfig()
 _log.setLevel(logging.WARN)
-_log.addHandler(logging.FileHandler("log.txt"))
 
 DRY_RUN = False
 
