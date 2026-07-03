@@ -8,32 +8,10 @@ import libcst.matchers as m
 from libcst.metadata import PositionProvider, ParentNodeProvider
 from libcst.metadata import CodePosition, CodeRange
 
-# def getCSTInfo(sourceProgram: str, frameInfo: FrameInfo):
-#     wrapper = cst.MetadataWrapper(cst.parse_module(sourceProgram))
-
-#     finder = NodFinder(frameInfo.lineno)
-#     metaAST = wrapper.visit(finder)
-#     func_body: CodeRange = finder.body_indent
-#     func_pos: CodeRange = finder.target_pos
-#     newWrapper = cst.MetadataWrapper(metaAST)
-#     filteredAST = newWrapper.visit(NodRemove(frameInfo.lineno))
-#     indent = func_body.start.column
-
-#     return filteredAST, func_body, func_pos, indent
 _log = logging.getLogger(__name__)
 _log.setLevel(logging.INFO)
 
-# class findIndent(cst.CSTVisitor):
-#     METADATA_DEPENDENCIES = (PositionProvider,)
 
-#     def __init__(self):
-#         super(__class__, self).__init__()
-#         self.block: cst.IndentedBlock = None
-
-
-#     def visit_IndentedBlock(self, node) -> Optional[bool]:
-#         self.block = node
-#         return False
 class FunctionFinder(m.MatcherDecoratableTransformer):
     METADATA_DEPENDENCIES = (
         ParentNodeProvider,
