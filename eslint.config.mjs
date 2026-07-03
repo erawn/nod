@@ -7,7 +7,17 @@ import jupyterPlugin from '@jupyter/eslint-plugin';
 
 export default defineConfig([
   {
-    ignores: ['node_modules', 'dist', 'coverage', '**/*.js', '**/*.d.ts']
+    ignores: [
+      'node_modules',
+      'dist',
+      'coverage',
+      '**/*.js',
+      '**/*.d.ts',
+      '.venv',
+      'tests',
+      '**/__tests__',
+      'ui-tests'
+    ]
   },
   js.configs.recommended,
   tseslint.configs.recommended,

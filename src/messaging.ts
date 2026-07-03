@@ -14,7 +14,7 @@ import {
 } from '@jupyterlab/services/lib/kernel/messages';
 import { requestAPI } from './request';
 import { getNodKernel } from './kernelHelpers';
-import { nodSchemas } from './types';
+import { nodSchemas, nodStudyLogRequest } from './types';
 import { DebugProtocol } from '@vscode/debugprotocol';
 import { PromiseDelegate } from '@lumino/coreutils';
 import { Debugger, IDebugger } from '@jupyterlab/debugger';
@@ -124,6 +124,28 @@ export async function exitSession(id: string) {
   }
 }
 
+export async function studyLogSend(request: nodStudyLogRequest) {
+  nodState
+    .Instance()
+    .getStudyLogEnabled()
+    .then(enabled => {
+      if (enabled) {
+        requestAPI<any>('study_log', {
+          body: JSON.stringify(request),
+          method: 'POST'
+        })
+          .then(reply => {
+            console.log('study_log successful');
+          })
+          .catch(reason => {
+            console.error(
+              `Error on POST /nodpy/study_log ${request}.\n${reason}`
+            );
+          });
+      }
+    });
+}
+
 export async function writeChange(
   panel: NotebookPanel,
   frame: NonNullable<nodState['currentFrame']>
@@ -132,11 +154,14 @@ export async function writeChange(
   await nodState.Instance().app.commands.execute('docmanager:save-all');
   await contentsManager
     .get(panel.context.path, { type: 'file', format: 'base64', content: true })
-    .then(nb_content => {
+    .then(async nb_content => {
+      const study_log = await nodState.Instance().getStudyLogEnabled();
       console.debug('nb_content', nb_content);
       const dataToSend = {
         program_info: frame,
-        notebookContent: nb_content.content
+        notebookContent: nb_content.content,
+        study_log: study_log,
+        key: nodState.Instance().pythonInfo?.key
       };
       console.debug('sending write request: ', dataToSend);
       requestAPI<any>('write_file', {
@@ -172,7 +197,7 @@ export async function getKernels(): Promise<nodSchemas | undefined> {
           const schema = nodSchemas.parse(jsonObj);
           return schema;
         } catch (e) {
-          console.error(
+          console.warn(
             `Error on POST /nodpy/kernels. Schema Parsing \n${e} , ${reply}`
           );
         }
@@ -307,12 +332,21 @@ export async function inspectRichNodVariable(
 export async function pushVariable(
   variable: IDebugger.IVariable
 ): Promise<boolean> {
-  const { variablesReference, name, evaluateName } = variable;
+  const { variablesReference, name, evaluateName, value } = variable;
   console.log('push variable', variablesReference);
   const kernelID = await getNodKernel();
   if (kernelID === undefined) {
     throw new Error('No active nod session');
   }
+  const state = nodState.Instance();
+  const data: nodStudyLogRequest = {
+    kind: 'nod_log_inject_state',
+    varname: name,
+    var_string: value,
+    function_id: state.currentFrame?.function_id,
+    key: state.pythonInfo?.key ?? ''
+  };
+  studyLogSend(data);
   const reply = await sendRequest(
     'nod_log_push',
     {

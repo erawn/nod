@@ -4,3 +4,5 @@ node_modules
 **/package.json
 !/package.json
 nodpy
+eslint.config.mjs
+.venv

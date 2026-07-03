@@ -28,16 +28,15 @@ export async function requestAPI<T>(
     throw new ServerConnection.NetworkError(error as any);
   }
 
-  let data: any = await response.text();
+  const data: any = await response.text();
 
-  if (data.length > 0) {
-    try {
-      data = JSON.parse(data);
-    } catch (error) {
-      console.log(error);
-      // console.log('Not a JSON response body.', response);
-    }
-  }
+  // if (data.length > 0) {
+  //   try {
+  //     data = JSON.parse(data);
+  //   } catch (error) {
+  //     console.warn(`Error on RequestAPI. Schema Parsing \n${error}, ${endPoint} , ${data}`);
+  //   }
+  // }
 
   if (!response.ok) {
     throw new ServerConnection.ResponseError(response, data.message || data);

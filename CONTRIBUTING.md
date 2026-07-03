@@ -1,8 +1,10 @@
-## Contributing
+# Contributing
 
-### Development install
+## Development install
 
-Note: You will need NodeJS to build the extension package.
+Note: You will need Node.js to build the extension package.
+You may install it from [nodejs.org](https://nodejs.org/en/download). We
+recommend using the latest LTS version of Node.js.
 
 The `jlpm` command is JupyterLab's pinned version of
 [yarn](https://yarnpkg.com/) that is installed with JupyterLab. You may use
@@ -16,9 +18,9 @@ The `jlpm` command is JupyterLab's pinned version of
 python -m venv .venv
 source .venv/bin/activate
 pip install --editable ".[dev,test]"
-
+pre-commit install
 # Link your development version of the extension with JupyterLab
-jupyter labextension develop . --overwrite
+jupyter-builder develop . --overwrite
 # Server extension must be manually installed in develop mode
 jupyter server extension enable nodpy
 
@@ -45,7 +47,7 @@ By default, the `jlpm build` command generates the source maps for this extensio
 jupyter lab build --minimize=False
 ```
 
-### Development uninstall
+## Development uninstall
 
 ```bash
 # Server extension must be manually disabled in develop mode
@@ -53,13 +55,13 @@ jupyter server extension disable nodpy
 pip uninstall nodpy
 ```
 
-In development mode, you will also need to remove the symlink created by `jupyter labextension develop`
+In development mode, you will also need to remove the symlink created by `jupyter-builder develop`
 command. To find its location, you can run `jupyter labextension list` to figure out where the `labextensions`
 folder is located. Then you can remove the symlink named `nod` within that folder.
 
-### Testing the extension
+## Testing the extension
 
-#### Server tests
+### Server tests
 
 This extension is using [Pytest](https://docs.pytest.org/) for Python code testing.
 
@@ -68,7 +70,7 @@ Install test dependencies (needed only once):
 ```sh
 pip install -e ".[test]"
 # Each time you install the Python package, you need to restore the front-end extension link
-jupyter labextension develop . --overwrite
+jupyter-builder develop . --overwrite
 ```
 
 To execute them, run:
@@ -88,9 +90,13 @@ jlpm
 jlpm test
 ```
 
-#### Integration tests
+### Integration tests
 
 This extension uses [Playwright](https://playwright.dev/docs/intro) for the integration tests (aka user level tests).
 More precisely, the JupyterLab helper [Galata](https://github.com/jupyterlab/jupyterlab/tree/master/galata) is used to handle testing the extension in JupyterLab.
 
-More information are provided within the [ui-tests](./ui-tests/README.md) README.
+More information is provided within the [ui-tests](./ui-tests/README.md) README.
+
+## Packaging the extension
+
+See [RELEASE](RELEASE.md)

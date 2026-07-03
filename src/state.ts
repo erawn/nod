@@ -189,6 +189,25 @@ export class nodState {
       frame => frame.file_info && frame.file_info.notebook_file.includes(path)
     );
   }
+  public async getStudyLogEnabled(): Promise<boolean> {
+    if (this.settingRegistry) {
+      const res = this.settingRegistry
+        .load('nod:plugin')
+        .then(settings => {
+          console.log('nod settings loaded:', settings.composite);
+          console.log(settings.get('enableStudyLog').composite);
+          const result = (settings.get('enableStudyLog').composite ??
+            false) as boolean;
+          return result;
+        })
+        .catch(reason => {
+          console.error('Failed to load settings for nod.', reason);
+          return false;
+        });
+      return await res;
+    }
+    return false;
+  }
 
   public lock(lockPanel: NotebookPanel) {
     this._lockNotebookId = lockPanel.id;

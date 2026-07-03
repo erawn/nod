@@ -1,5 +1,5 @@
 try:
-    from ._version import __version__
+    from nodpy._version import __version__
 except ImportError:
     # Fallback when using the package in dev mode without installing
     # in editable mode with pip. It is highly recommended to install
@@ -9,22 +9,16 @@ except ImportError:
     warnings.warn("Importing 'nodpy' outside a proper installation.")
     __version__ = "dev"
 import atexit
-import base64
 import inspect
-from pprint import pprint
 import shutil
 import sys
 import types
-
-import jupytext  # type: ignore
 import orjson
 import copy
 import re
-import typing as t
+
 import os
 import logging
-import json
-import os
 from traitlets.config import Config
 import uuid
 from pathlib import Path
@@ -38,20 +32,60 @@ from nodpy.nodTypes import (
     NodConnectionInfo,
     NodInfo,
 )
-from .serverExtension import Nod
-from IPython.core.interactiveshell import InteractiveShell
-from typing import List, Literal, IO, Any, cast
-from nodpy.provisioner import NodProvisioner  # DON'T REMOVE THIS
-from IPython.core.getipython import get_ipython
-from .embed_kernel import embed_kernel
-from .file_helpers import (
+from nodpy.embed_kernel import embed_kernel
+from nodpy.file_helpers import (
     PathManager,
     makeProgramInfo,
 )
+from nodpy.provisioner import NodProvisioner  # DON'T REMOVE THIS
+from nodpy.serverExtension import Nod
+from IPython.core.interactiveshell import InteractiveShell
+import typing as t
+from typing import Any, cast
+from IPython.core.getipython import get_ipython
+
 
 from IPython.terminal.interactiveshell import TerminalInteractiveShell
 from varname import argname
 import traceback
+
+
+def _jupyter_server_extension_points():
+    return [
+        {
+            "module": "nodpy",
+            "app": Nod,
+            "name": "nodpy",
+        }
+    ]
+
+
+# def _jupyter_server_extension_paths() -> list[dict[str, str]]:
+#     return [{"module": "notebook"}]
+
+
+def _jupyter_labextension_paths():
+    return [{"src": "labextension", "dest": "nod"}]
+
+
+# def _jupyter_server_extension_points():
+#     return [{
+#         "module": "nodpy"
+#     }]
+
+
+# def _load_jupyter_server_extension(server_app):
+#     """Registers the API handler to receive HTTP requests from the frontend extension.
+
+#     Parameters
+#     ----------
+#     server_app: jupyterlab.labapp.LabApp
+#         JupyterLab application instance
+#     """
+#     setup_route_handlers(server_app.web_app)
+#     name = "nodpy"
+#     server_app.log.info(f"Registered {name} server extension")
+
 
 _log = logging.getLogger(__name__)
 logging.basicConfig()
@@ -125,7 +159,7 @@ def nodLog(*args):
 
 
 _fmt: t.Literal["light", "percent"] = "light"
-_filter: list[str] = [os.getcwd() + "/*"]
+_filter: list[str] = [os.getcwd() + "/**"]
 _how_restart: t.Union[t.Literal["continue"], int] = "continue"
 _dangerously_bypass_readonly: bool = False
 
@@ -291,7 +325,7 @@ def notebook(
     startingVariables = {}
     startingVariables.update(notebook_call.frame.f_globals)
     startingVariables.update(notebook_call.frame.f_locals)
-    from .ip_plugin import nodReturn
+    from nodpy.ip_plugin import nodReturn
 
     startingVariables.update({"nodReturn": nodReturn})
 
@@ -418,36 +452,3 @@ def notebook(
         #             app.shell.user_ns_hidden.update(newStackFrame.frame.f_builtins)
         # TODO nonlocal promote
         # switch back to first frame
-
-
-def _jupyter_labextension_paths():
-    return [{"src": "labextension", "dest": "nod"}]
-
-
-def _jupyter_server_extension_points():
-    return [
-        {
-            "module": "nodpy",
-            "app": Nod,
-        }
-    ]
-
-
-def _jupyter_server_extension_paths() -> list[dict[str, str]]:
-    return [{"module": "notebook"}]
-
-
-# def _load_jupyter_server_extension(self, serverapp):  # type: ignore
-#     """Registers the API handler to receive HTTP requests from the frontend extension.
-
-#     Parameters
-#     ----------
-#     server_app: jupyterlab.labapp.LabApp
-#         JupyterLab application instance
-#     """
-#     setup_route_handlers(serverapp.web_app)
-#     name = "nodpy"
-#     serverapp.log.info(f"Registered {name} server extension")
-
-
-# load_jupyter_server_extension = _load_jupyter_server_extension
