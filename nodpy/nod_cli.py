@@ -1,4 +1,3 @@
-import asyncio
 import base64
 import json
 import logging
@@ -9,7 +8,6 @@ import shlex
 import subprocess
 import sys
 import atexit
-import signal
 from tempfile import TemporaryDirectory
 from typing import List, Optional
 import psutil  # type: ignore[import-untyped]
@@ -97,28 +95,11 @@ def main(
     cli_cmds_64 = base64.b64encode(" ".join(commands).encode("utf-8")).decode("utf-8")
     cmd = (
         "jupyter lab"
-        # + " "
-        # + "--KernelProvisionerFactory.default_provisioner_name=NodProvisioner"
         + " "
         + "--ContentsManager.allow_hidden=True"
         + " "
         + "--ServerApp.webbrowser_open_new=0"
         + " "
-        # + "--LabApp.default_url=/lab?reset"
-        # + " "
-        # + "--ServerApp.base_url= "
-        # + " "
-        # + "--ServerApp.kernel_manager_class=nod.kernelmanager.NodMappingKernelManager"
-        # + " "
-        # + "--ServerApp.websocket_ping_interval=0"
-        # + " "
-        # + "--ServerApp.websocket_ping_timeout=0"
-        # + " "
-        # + "--ServerApp.external_connection_dir="
-        # + os.path.join(hiddenDir, "kernel")
-        # + " "
-        # + "--AsyncMultiKernelManager.use_pending_kernels=True"
-        # + " "
         + (
             (
                 "--ServerApp.log_level="
@@ -140,14 +121,6 @@ def main(
                 else ""
             )
         )
-        # + "--KernelSpecManager.kernel_dirs=['"
-        # + connection_dir
-        # + "']"
-        # + " "
-        # + "--notebook-dir"
-        # + " "
-        # + os.path.dirname(notebook_call.filename)
-        # + " "
         + "--Nod.active=True"
         + " "
         + "--Nod.connection_dir="
@@ -194,13 +167,13 @@ def main(
                 _log.debug("Fixing stderr")
                 os.set_blocking(stderr.fileno(), True)  # type: ignore
                 stderr.flush()
-            # pythonProcess.send_signal(signal.SIGKILL)
 
     atexit.register(cleanup)
+    nb_env = os.environ.copy()
+    nb_env["NOD_CLI_ARGS"] = cli_cmds_64
+    nb_env["NOD_RUNTIME_DIR"] = pm.connection_dir
+
     if existing:
-        nb_env = os.environ.copy()
-        nb_env["NOD_CLI_ARGS"] = cli_cmds_64
-        nb_env["NOD_RUNTIME_DIR"] = pm.connection_dir
         nb_env["JPY_PARENT_PID"] = str(os.getpid())
         print(f"nod: running command: {' '.join(commands)}")
         pythonProcess = subprocess.Popen(
@@ -216,9 +189,7 @@ def main(
             # if pythonProcess is not None:
             import time
 
-            time.sleep(
-                0.1
-            )  # change to async to not block --- this is whats messing up the nudges and the waiting
+            time.sleep(0.1)
             stdout = pythonProcess.stdout
             stderr = pythonProcess.stderr
 
@@ -237,11 +208,7 @@ def main(
                     print(line)
         pythonProcess.wait()
 
-        # app.nod_notebook_process = notebookProcess  # type: ignore
     else:
-        nb_env = os.environ.copy()
-        nb_env["NOD_CLI_ARGS"] = cli_cmds_64
-        nb_env["NOD_RUNTIME_DIR"] = pm.connection_dir
         notebookProcess = subprocess.Popen(
             args,
             env=nb_env,
