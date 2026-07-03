@@ -5,6 +5,7 @@
 Nod is a JupyterLab extension for inserting a notebook anywhere in a running Python program, allowing you to make edits while interacting with the real state of your program wherever you want. Nod is like a breakpoint with a notebook inside.
 
 #### To Get Started:
+
 1. `pip install jupyter` if you don't have Jupyter already installed.
 2. `pip install nodpy && nod --install-kernel`
 3. Call the `notebook()` function somewhere in your program. (See [Usage](#usage) for an example).
