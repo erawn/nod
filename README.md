@@ -6,6 +6,8 @@ Nod is a JupyterLab extension for inserting a notebook anywhere in a running Pyt
 
 To install run `pip install nodpy && nod --install-kernel`
 
+If you don't have Jupyter already installed, run `pip install jupyter` first.
+
 ## Participate in Research!
 
 Interested in using Nod? Try it out in your own work for 3-6 weeks and chat with me about it! Participants recieve a gift card of $50-$100 (depending on how much time we chat for). All the details are in the [Sign Up Form](https://forms.gle/mDhWRuZwCBkG9TdE8).
