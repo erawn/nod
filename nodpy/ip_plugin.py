@@ -30,6 +30,12 @@ class returnTransformer(ast.NodeTransformer):
         # print(ast.dump(module, include_attributes=True))
         return module
 
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> Any:
+        return node
+
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> Any:
+        return node
+
     def visit_Return(self, node: ast.Return) -> Any:
         # print(ast.dump(node))
         if node.value is not None:
