@@ -66,7 +66,7 @@ and you'll see a list in your Nod Session appear on the `Nod Log` panel on the r
 
 Click the <img src="media/nod_log_button.png" alt="markdown language" height="30" > button to put that value into the notebook state.
 
-Variables passed to NodLog must be able to [deepcopy]().
+_Variables passed to NodLog must be able to [deepcopy](https://docs.python.org/3/library/copy.html#copy.deepcopy)_
 
 ### JupyterHub Integration
 
@@ -97,7 +97,7 @@ To configure module-level settings for Nod, call `nodConfig()` at the entry poin
   Options: 'continue', 'exit'
 
 - **dangerously_bypass_readonly**: (default 'false')
-  Once the code in associated with one stack frame in a Nod Session is edited, the others become read-only by default to prevent reaching a confusing state. Set to true to remove this safeguard, if you know what you're doing. -->
+  Once the code in associated with one stack frame in a Nod Session is edited, the others become read-only by default to prevent reaching a confusing state. Set to true to remove this safeguard, if you know what you're doing.
 
 ### How do I recover files if I forget to send my changes back to the source, or Jupyter crashes?
 
