@@ -66,6 +66,8 @@ and you'll see a list in your Nod Session appear on the `Nod Log` panel on the r
 
 Click the <img src="media/nod_log_button.png" alt="markdown language" height="30" > button to put that value into the notebook state.
 
+Variables passed to NodLog must be able to [deepcopy]().
+
 ### JupyterHub Integration
 
 JupyterHub users (and anyone else who doesn't want a new Jupyter window to spawn for every Nod session) can use `-e` or `-existing` in their `nod` call:

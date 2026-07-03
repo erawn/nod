@@ -21,9 +21,10 @@ NODCONFIG
 
 - add restart time to nodConfig? (hmm maybe)
 
-Nod Tracking
 
+Nod Tracking
 - set tracking where?
+
 
 - notebook()
   - NodInfo (but with code transformed)
@@ -38,10 +39,7 @@ Nod Tracking
   - whether we write or not
 
 TODO
-
 - path concat bug
-- merge and publish
-- add question on forum
 - figure out how to install jupyter server extension in jupyter hub
   - https://discourse.jupyter.org/t/how-to-enable-javascript-in-jupyter-notebook/20371
   - try to build nod from brand new template???
@@ -76,7 +74,6 @@ Nice to have
   - or just change the cwd in the outer command? aka nod cd folder && nod python -m module
 
 NOD Log Todo
-
 - have a 'unique' boolean in nod.log() that doesn't save if it compares equal to another obj in the list
 
 Nod Save Args
