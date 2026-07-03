@@ -3,7 +3,7 @@ import {
   JupyterFrontEnd,
   JupyterFrontEndPlugin
 } from '@jupyterlab/application';
-import { INotebookTracker } from '@jupyterlab/notebook';
+import { INotebookTracker, NotebookActions } from '@jupyterlab/notebook';
 import { ISettingRegistry } from '@jupyterlab/settingregistry';
 import { IStateDB } from '@jupyterlab/statedb';
 import {
@@ -15,7 +15,7 @@ import {
 import { nodState } from './state';
 import { addCommands } from './commands';
 import { CodeViewers } from './codeViewers';
-import { getKernels, requestDebug } from './messaging';
+import { getKernels, requestDebug, studyLogSend } from './messaging';
 import { PageConfig } from '@jupyterlab/coreutils';
 import { IMainMenu } from '@jupyterlab/mainmenu';
 import { ITranslator, nullTranslator } from '@jupyterlab/translation';
@@ -26,7 +26,7 @@ import {
   IToolbarWidgetRegistry
 } from '@jupyterlab/apputils';
 import { IConsoleTracker } from '@jupyterlab/console';
-import { INodStackFrame } from './types';
+import { INodStackFrame, nodStudyLogRequest } from './types';
 import { IDocumentManager } from '@jupyterlab/docmanager';
 import { CallstackModel, NodRunningModel } from './model';
 import { NodSidebar } from './callstack';
@@ -92,7 +92,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
     console.log(PageConfig.getOption('nod_active'));
     const isActive = PageConfig.getOption('nod_active') === 'true';
     console.log('nod_active', isActive);
-    let previousStatus = '';
+    // let previousStatus = '';
     // const trans = (translator ?? nullTranslator).load('jupyterlab');
     debuggerService.sessionChanged.connect(() =>
       console.log('debug sessionChanged')
@@ -131,6 +131,33 @@ const plugin: JupyterFrontEndPlugin<void> = {
       console.log(
         'Nod extension loaded, but not called from a nod() call, assuming existing mode'
       ); //Todo assume --existing mode
+    }
+    if (settingRegistry) {
+      Promise.all([app.restored, settingRegistry.load(plugin.id)])
+        .then(([_, setting]) => {
+          const onSettingsUpdate = () => {
+            console.log('settings updated!');
+          };
+          onSettingsUpdate();
+          setting.changed.connect(onSettingsUpdate);
+        })
+        .catch(error => {
+          console.error(
+            'Failed to load notebook table of content settings.',
+            error
+          );
+        });
+    }
+
+    if (settingRegistry) {
+      settingRegistry
+        .load(plugin.id)
+        .then(settings => {
+          console.log('nod settings loaded:', settings.composite);
+        })
+        .catch(reason => {
+          console.error('Failed to load settings for nod.', reason);
+        });
     }
 
     console.log('JupyterLab extension nod is activated!');
@@ -277,8 +304,18 @@ const plugin: JupyterFrontEndPlugin<void> = {
       }
       sessionContextDialogs.restart = restart;
     });
-
+    NotebookActions.executed.connect((slot, params) => {
+      const { cell } = params;
+      const data: nodStudyLogRequest = {
+        kind: 'execute_cell',
+        cell: JSON.stringify(cell.model.sharedModel.toJSON()),
+        function_id: nodState.Instance().currentFrame?.function_id ?? undefined,
+        key: nodState.Instance().pythonInfo?.key ?? ''
+      };
+      studyLogSend(data);
+    });
     notebookTracker.widgetUpdated.connect((tracker, panel) => {
+      console.log('widget updated');
       panel.sessionContext.kernelPreference = {
         ...panel.sessionContext.kernelPreference,
         autoStartDefault: false,
@@ -286,7 +323,6 @@ const plugin: JupyterFrontEndPlugin<void> = {
         shouldStart: false
       };
     });
-
     notebookTracker.currentChanged.connect((tracker, panel) => {
       console.log('current nb Changed');
       if (panel) {
@@ -300,7 +336,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
           console.log('STATUS CHANGED', status);
           console.log('Previous kernel', context.prevKernelName);
 
-          if (status === 'idle' && previousStatus !== 'idle') {
+          if (status === 'idle') {
             const newId = state.currentFrame?.function_id;
             if (newId !== undefined) {
               state.nodLogSidebar.log.updateVariables(newId);
@@ -322,7 +358,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
             console.log('status changed to dead');
             checkKernelStatus();
           }
-          previousStatus = status;
+          // previousStatus = status;
         });
       }
     });
@@ -432,6 +468,12 @@ const plugin: JupyterFrontEndPlugin<void> = {
             nodLogSidebar.log.updateVariables(function_id);
             nodLogSidebar.update();
           }
+          const data: nodStudyLogRequest = {
+            kind: 'navigate_stackframe',
+            function_id: function_id,
+            key: nodState.Instance().pythonInfo?.key ?? ''
+          };
+          studyLogSend(data);
         });
       } else {
         console.error('Notebook file is undefined', state.currentFrame);
@@ -454,6 +496,15 @@ const plugin: JupyterFrontEndPlugin<void> = {
       jupyter_state?.save('nod_state_kernel_id', { id: id });
     });
     nodState.Instance().pythonInfoChanged.connect((state, info) => {
+      if (info !== null) {
+        const data: nodStudyLogRequest = {
+          kind: 'notebook_start',
+          nodInfo: info ?? undefined,
+          key: info.key
+        };
+        studyLogSend(data);
+      }
+
       console.log('python info changed');
       console.log('setting nod_kernel_key to ', info?.key);
       jupyter_state?.save('nod_state_kernel_key', { key: info?.key });
@@ -471,7 +522,6 @@ const plugin: JupyterFrontEndPlugin<void> = {
           // state.sessionManager.shutdown(session.id)
         }
       }
-      state.tracker.forEach(panel => {});
       const newId = state.currentFrame?.function_id;
       if (newId !== undefined) {
         nodLogSidebar.log.updateVariables(newId);
@@ -509,34 +559,6 @@ const plugin: JupyterFrontEndPlugin<void> = {
         nodState.Instance().currentFrameIndex = frame?.id;
       }
     });
-
-    // if (settingRegistry) {
-    //   Promise.all([app.restored, settingRegistry.load(plugin.id)])
-    //     .then(([_, setting]) => {
-    //       const onSettingsUpdate = () => {
-    //         console.log("settings updated!")
-    //       };
-    //       onSettingsUpdate();
-    //       setting.changed.connect(onSettingsUpdate);
-    //     })
-    //     .catch(error => {
-    //       console.error(
-    //         'Failed to load notebook table of content settings.',
-    //         error
-    //       );
-    //     });
-    // }
-
-    // if (settingRegistry) {
-    //   settingRegistry
-    //     .load(plugin.id)
-    //     .then(settings => {
-    //       console.log('nod settings loaded:', settings.composite);
-    //     })
-    //     .catch(reason => {
-    //       console.error('Failed to load settings for nod.', reason);
-    //     });
-    // }
 
     // https://github.com/fails-components/jupyterfails/blob/master/packages/interceptor/src/index.ts
   }

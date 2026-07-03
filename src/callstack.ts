@@ -126,6 +126,7 @@ export class NodSidebar extends SidePanel {
     // const buttonPanel = buttonTab(translator)
     // this.addWidget(buttonPanel)
   }
+
   refreshKernels() {
     getKernels().then(reply => {
       console.log('refresh kernels', reply);
@@ -156,7 +157,7 @@ export class NodSidebar extends SidePanel {
     if (nodState.Instance().callstackSidebar.interval === undefined) {
       nodState.Instance().callstackSidebar.interval = setInterval(
         nodState.Instance().callstackSidebar.refreshKernels,
-        1000
+        5000
       );
     }
 

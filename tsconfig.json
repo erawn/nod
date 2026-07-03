@@ -6,11 +6,7 @@
     "esModuleInterop": true,
     "incremental": true,
     "jsx": "react",
-    "lib": [
-      "DOM",
-      "ES2018",
-      "ES2020.Intl"
-    ],
+    "lib": ["DOM", "ES2018", "ES2020.Intl"],
     "module": "esnext",
     "moduleResolution": "bundler",
     "noEmitOnError": true,
@@ -23,12 +19,7 @@
     "strict": true,
     "strictNullChecks": true,
     "target": "esnext",
-    "types": [
-      "jest",
-      "node"
-    ]
+    "types": ["jest", "node"]
   },
-  "include": [
-    "src/*"
-  ]
+  "include": ["src/*"]
 }

@@ -159,7 +159,7 @@ def nodLog(*args):
 
 
 _fmt: t.Literal["light", "percent"] = "light"
-_filter: list[str] = [os.getcwd() + "/*"]
+_filter: list[str] = [os.getcwd() + "/**"]
 _how_restart: t.Union[t.Literal["continue"], int] = "continue"
 _dangerously_bypass_readonly: bool = False
 

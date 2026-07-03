@@ -31,7 +31,7 @@
     },
     "scripts": {
         "deepclean": "jlpm clean:all && git clean -dfx --exclude='.venv'",
-        "fullbuild": "pip install --editable '.[dev,test]' && jupyter-builder develop . --overwrite && jupyter server extension enable nodpy && jlpm build",
+        "fullbuild": "jupyter-builder develop . --overwrite && jupyter server extension enable nodpy && jlpm build",
         "build": "jlpm build:lib && jlpm build:labextension:dev",
         "build:prod": "jlpm clean && jlpm build:lib:prod && jlpm build:labextension",
         "build:labextension": "jupyter-builder build .",

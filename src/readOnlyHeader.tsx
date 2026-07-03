@@ -14,13 +14,11 @@ export class ReadOnlyHeader extends ReactWidget {
     return (
       <>
         <span className="jp-nod-pluginstatus-maintext">
-          {trans.__(
-            'this notebook is readonly while another notebook has changes not pushed to source'
-          )}
+          {trans.__('Notebook is Readonly After Edits To Another Notebook')}
         </span>
         <br></br>
         <span className="jp-nod-pluginstatus-bottomtext">
-          {trans.__('Export and Restart the edited Nod Notebook to Continue')}
+          {trans.__('Restart the edited Nod Notebook to Edit Other Notebooks')}
         </span>
       </>
     );

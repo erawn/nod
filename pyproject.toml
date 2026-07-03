@@ -40,6 +40,9 @@ dynamic = ["version", "description", "authors", "urls", "keywords"]
 dev = [
     "jupyterlab>=4.0.0",
     "jupyter-builder>=1.0.0",
+    "hatch",
+    "build",
+    "twine",
 ]
 test = [
     "coverage",
