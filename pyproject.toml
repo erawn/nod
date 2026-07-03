@@ -31,8 +31,8 @@ dependencies = [
     "orjson",
     "libcst",
     "typer",
-    "nbformat"
-
+    "nbformat",
+    "jupyterlab>=4.0.0"
 ]
 dynamic = ["version", "description", "authors", "urls", "keywords"]
 

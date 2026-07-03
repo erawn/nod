@@ -367,11 +367,11 @@ const plugin: JupyterFrontEndPlugin<void> = {
       console.log('running changed', model);
       if (state.status === 'active') {
         // checkKernelStatus();
-        // const newId = state.currentFrame?.function_id;
-        // if (newId !== undefined) {
-        //   nodLogSidebar.log.updateVariables(newId);
-        //   nodLogSidebar.update();
-        // }
+        const newId = state.currentFrame?.function_id;
+        if (newId !== undefined) {
+          nodLogSidebar.log.updateVariables(newId);
+          nodLogSidebar.update();
+        }
         // getNodKernel()
       }
     });

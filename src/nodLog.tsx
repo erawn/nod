@@ -151,18 +151,19 @@ class NodLog extends PanelWithToolbar {
       if (!this.model.scopes.some(scope => scope.name === function_id)) {
         console.log('getting variables', function_id);
         const variables = (await getDefinedVariables(function_id)) ?? [];
-
-        console.log('update variables', variables);
-        // variables.map(variable =>{
-        //     variable.
-        // })
-        const variableScopes = [
-          {
-            name: function_id,
-            variables: variables
-          }
-        ];
-        this.model.scopes = variableScopes;
+        if (variables.length > 0) {
+          console.log('update variables', variables);
+          // variables.map(variable =>{
+          //     variable.
+          // })
+          const variableScopes = [
+            {
+              name: function_id,
+              variables: variables
+            }
+          ];
+          this.model.scopes = variableScopes;
+        }
       }
     } catch (e) {
       console.error((e as Error).message);

@@ -28,6 +28,7 @@ import traceback
 import queue
 from logging.handlers import QueueHandler
 from logging.handlers import QueueListener
+import warnings
 
 # paths.jupyter_data_dir()
 # paths.prefer_environment_over_user()
@@ -92,9 +93,10 @@ class NodStudyLogHandler(APIHandler):
 
         json_load = json.loads(body)
         # _log.info(json_load)
-        log_entry = nodStudyLogRequest.from_dict(json_load)
-        res = study_log(log_entry)
-        self.finish()
+        with warnings.catch_warnings(action="ignore"):
+            log_entry = nodStudyLogRequest.from_dict(json_load)
+            res = study_log(log_entry)
+            self.finish()
 
 
 def findNodRuntimeFile(
@@ -241,38 +243,41 @@ class WriteFileRouteHandler(APIHandler):
             _log.info("RECEIVED WRITE REQUEST")
             json_load = json.loads(body)
             # _log.info(json_load)
-            request = writeRequest.from_dict(json_load)
-            _log.info("REQUEST")
-            _log.debug(request)
-            if request.study_log:
-                log_entry = nodStudyLogRequest(
-                    "write_request", writeRequest=request, key=request.key
+            with warnings.catch_warnings(action="ignore"):
+                request = writeRequest.from_dict(json_load)
+                _log.info("REQUEST")
+                _log.debug(request)
+                if request.study_log:
+                    log_entry = nodStudyLogRequest(
+                        "write_request", writeRequest=request, key=request.key
+                    )
+                    if not study_log(log_entry):
+                        _log.error("failed to study log write request")
+                decoded_content = base64.b64decode(request.notebookContent).decode(
+                    "utf-8"
                 )
-                if not study_log(log_entry):
-                    _log.error("failed to study log write request")
-            decoded_content = base64.b64decode(request.notebookContent).decode("utf-8")
-            _log.debug(decoded_content)
-            nb = jupytext.reads(decoded_content, "ipynb")
-            _log.debug("NB")
-            _log.info(nb)
-            nb_content_to_write = jupytext.writes(
-                nb, fmt=long_form_one_format(f"py:{request.program_info.fmt}")
-            )
-            _log.info(nb_content_to_write)
-            fileInfo = request.program_info.file_info
-            if fileInfo is not None:
-                file_content = (
-                    fileInfo.text_above
-                    + fileInfo.text_header
-                    + textwrap.indent(
-                        nb_content_to_write,
-                        " " * fileInfo.indent,
-                    ).splitlines(True)
-                    + fileInfo.text_below
+                _log.debug(decoded_content)
+                nb = jupytext.reads(decoded_content, "ipynb")
+                _log.debug("NB")
+                _log.info(nb)
+                nb_content_to_write = jupytext.writes(
+                    nb, fmt=long_form_one_format(f"py:{request.program_info.fmt}")
                 )
-                _log.info(file_content)
-                with open(request.program_info.source_file, "w") as f:
-                    f.writelines(file_content)
+                _log.info(nb_content_to_write)
+                fileInfo = request.program_info.file_info
+                if fileInfo is not None:
+                    file_content = (
+                        fileInfo.text_above
+                        + fileInfo.text_header
+                        + textwrap.indent(
+                            nb_content_to_write,
+                            " " * fileInfo.indent,
+                        ).splitlines(True)
+                        + fileInfo.text_below
+                    )
+                    _log.info(file_content)
+                    with open(request.program_info.source_file, "w") as f:
+                        f.writelines(file_content)
 
         except Exception as e:
             self.log.debug("Bad JSON: %r", body)
@@ -359,6 +364,7 @@ def get_study_logger() -> logging.Logger:
         queue_handler = QueueHandler(log_queue)  # Non-blocking handler.
 
         _study_log = logging.getLogger("study")
+        _study_log.propagate = False
         _study_log.addHandler(queue_handler)
 
         log_dir_path = os.path.join(paths.jupyter_config_dir(), "nod_study")
