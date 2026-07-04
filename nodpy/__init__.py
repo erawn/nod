@@ -1,35 +1,38 @@
+import warnings
+
 try:
-    from ._version import __version__
+    from nodpy._version import __version__
 except ImportError:
     # Fallback when using the package in dev mode without installing
     # in editable mode with pip. It is highly recommended to install
     # the package from a stable release or in editable mode: https://pip.pypa.io/en/stable/topics/local-project-installs/#editable-installs
-    import warnings
 
     warnings.warn("Importing 'nodpy' outside a proper installation.")
     __version__ = "dev"
 import atexit
-import base64
 import inspect
-from pprint import pprint
 import shutil
+import traceback
 import sys
 import types
-
-import jupytext  # type: ignore
 import orjson
 import copy
 import re
-import typing as t
 import os
 import logging
-import json
-import os
 from traitlets.config import Config
 import uuid
 from pathlib import Path
 import libcst as cst
+import typing as t
+from typing import Any, cast
+from varname import argname
 from varname.utils import ArgSourceType
+
+from IPython.core.interactiveshell import InteractiveShell
+from IPython.core.getipython import get_ipython
+from IPython.terminal.interactiveshell import TerminalInteractiveShell
+
 from nodpy.ast_tools import FunctionFinder
 from nodpy.exceptions import NodException
 from nodpy.ip_plugin import returnTransformer
@@ -38,25 +41,55 @@ from nodpy.nodTypes import (
     NodConnectionInfo,
     NodInfo,
 )
-from .serverExtension import Nod
-from IPython.core.interactiveshell import InteractiveShell
-from typing import List, Literal, IO, Any, cast
-from nodpy.provisioner import NodProvisioner  # DON'T REMOVE THIS
-from IPython.core.getipython import get_ipython
-from .embed_kernel import embed_kernel
-from .file_helpers import (
+from nodpy.embed_kernel import embed_kernel
+from nodpy.file_helpers import (
     PathManager,
     makeProgramInfo,
 )
+from nodpy.provisioner import NodProvisioner  # DON'T REMOVE THIS
+from nodpy.serverExtension import Nod
 
-from IPython.terminal.interactiveshell import TerminalInteractiveShell
-from varname import argname
-import traceback
+
+def _jupyter_server_extension_points():
+    return [
+        {
+            "module": "nodpy",
+            "app": Nod,
+            "name": "nodpy",
+        }
+    ]
+
+
+# def _jupyter_server_extension_paths() -> list[dict[str, str]]:
+#     return [{"module": "notebook"}]
+
+
+def _jupyter_labextension_paths():
+    return [{"src": "labextension", "dest": "nod"}]
+
+
+# def _jupyter_server_extension_points():
+#     return [{
+#         "module": "nodpy"
+#     }]
+
+
+# def _load_jupyter_server_extension(server_app):
+#     """Registers the API handler to receive HTTP requests from the frontend extension.
+
+#     Parameters
+#     ----------
+#     server_app: jupyterlab.labapp.LabApp
+#         JupyterLab application instance
+#     """
+#     setup_route_handlers(server_app.web_app)
+#     name = "nodpy"
+#     server_app.log.info(f"Registered {name} server extension")
+
 
 _log = logging.getLogger(__name__)
 logging.basicConfig()
 _log.setLevel(logging.WARN)
-_log.addHandler(logging.FileHandler("log.txt"))
 
 DRY_RUN = False
 
@@ -65,10 +98,6 @@ DEBUG: bool = False
 if DEBUG:
     _log.setLevel(logging.DEBUG)
 
-# class Signals(IntEnum):
-#     SIGINT: int
-#     SIGKILL: int
-#     SIGTERM: int
 _nod_log: dict[str, dict[str, t.Any]] = {}
 _nod_log_id_to_func: dict[str, str] = {}
 
@@ -82,9 +111,6 @@ def nodLog(*args):
             return
     except NameError:
         pass
-    # currentFrame = inspect.currentframe()
-    # _log.info(currentFrame.f_locals)
-    # _log.info(currentFrame.f_globals)
     stack = inspect.stack()
     log_call = next((frame for frame in stack if find_func(frame, "nodLog(")), None)
 
@@ -97,8 +123,6 @@ def nodLog(*args):
     finder = FunctionFinder(log_call.function)
     module = wrapper.visit(finder)
     # _log.info(f"log call {log_call.frame.f_locals}")
-
-    # currentFrame = inspect.currentframe()
     if log_call.function == "<module>":
         start_line = 0
     else:
@@ -125,7 +149,7 @@ def nodLog(*args):
 
 
 _fmt: t.Literal["light", "percent"] = "light"
-_filter: list[str] = [os.getcwd() + "/*"]
+_filter: list[str] = [os.getcwd() + "/**"]
 _how_restart: t.Union[t.Literal["continue"], int] = "continue"
 _dangerously_bypass_readonly: bool = False
 
@@ -211,21 +235,22 @@ def notebook(
             return
         if "nodReturn" in globals():
             return
-        # if "nodReturn" in locals():
-        #     return
     except NameError:
         pass
-    print("nod: reached notebook(), starting session...")
 
     # print("NB ENTER")
     runtime_dir = os.environ.get("NOD_RUNTIME_DIR", "")
-
+    if runtime_dir == "":
+        warnings.warn(
+            "Nod: notebook() called outside of Nod session. Run 'nod <command>' in your terminal to start a Nod session (e.g. nod python -m <module>)",
+            UserWarning,
+        )
+        return
+    print("nod: reached notebook(), starting session...")
     _log.info(f"NOD_RUNTIME_DIR: {runtime_dir}")
     nod_cli_args_64 = os.environ.get("NOD_CLI_ARGS", "")
     # _log.info(f"NOD_CLI_ARGS: {nod_cli_args_64}")
     stack = inspect.stack()
-    # print(stack)
-
     notebook_call = next(
         (frame for frame in stack if find_func(frame, "notebook(")), None
     )
@@ -291,7 +316,7 @@ def notebook(
     startingVariables = {}
     startingVariables.update(notebook_call.frame.f_globals)
     startingVariables.update(notebook_call.frame.f_locals)
-    from .ip_plugin import nodReturn
+    from nodpy.ip_plugin import nodReturn
 
     startingVariables.update({"nodReturn": nodReturn})
 
@@ -364,7 +389,7 @@ def notebook(
     regex = re.compile(r".*kernel-(.{2,8})\.json")
     match = regex.match(connection_file)
     if match is None:
-        _log.error("NO PID MATCH")
+        _log.error("Nod: NO PID MATCH")
         return None
     kernel_pid = int(match.group(1))
 
@@ -385,13 +410,10 @@ def notebook(
         info = NodConnectionInfo.from_json(info_str)
         info.kernel_name = "nod"
         info.display_name = "nod"
-        # info["language"] = "python"
         info.metadata = {
             "kernel_provisioner": {"provisioner_name": "nod-provisioner"},
             "nod_info": nod_info,
         }
-        # info["metadata"] = {"kernel_provisioner": {"config": {}}}
-        # _log.info("Connection File: " + str(info))
         nod_info.key = info.key
     with open(connection_file, "w") as f:
         f.write(orjson.dumps(info).decode("utf-8"))
@@ -400,13 +422,11 @@ def notebook(
     shutil.copy(connection_file, nod_connection_file)
 
     jsonInfo = orjson.dumps(nod_info)
-    # _log.info(jsonInfo)
+    _log.debug(jsonInfo)
     with open(nod_info_local_path, "x") as f:
         f.write(jsonInfo.decode("utf-8"))
 
     if not DRY_RUN:
-        # atexit.register(close_notebook)
-
         app.start()
         app.reset_io()
         # if _how_restart == 'continue':
@@ -418,36 +438,3 @@ def notebook(
         #             app.shell.user_ns_hidden.update(newStackFrame.frame.f_builtins)
         # TODO nonlocal promote
         # switch back to first frame
-
-
-def _jupyter_labextension_paths():
-    return [{"src": "labextension", "dest": "nod"}]
-
-
-def _jupyter_server_extension_points():
-    return [
-        {
-            "module": "nodpy",
-            "app": Nod,
-        }
-    ]
-
-
-def _jupyter_server_extension_paths() -> list[dict[str, str]]:
-    return [{"module": "notebook"}]
-
-
-# def _load_jupyter_server_extension(self, serverapp):  # type: ignore
-#     """Registers the API handler to receive HTTP requests from the frontend extension.
-
-#     Parameters
-#     ----------
-#     server_app: jupyterlab.labapp.LabApp
-#         JupyterLab application instance
-#     """
-#     setup_route_handlers(serverapp.web_app)
-#     name = "nodpy"
-#     serverapp.log.info(f"Registered {name} server extension")
-
-
-# load_jupyter_server_extension = _load_jupyter_server_extension

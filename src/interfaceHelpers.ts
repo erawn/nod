@@ -2,6 +2,8 @@ import { Dialog } from '@jupyterlab/apputils';
 import { nodState } from './state';
 import { NotebookPanel } from '@jupyterlab/notebook';
 import { getNodInfo, getNodKernel, launchNodKernel } from './kernelHelpers';
+import { nodStudyLogRequest } from './types';
+import { studyLogSend } from './messaging';
 
 export function kernelWaitDialog() {
   const trans = nodState.Instance().translator.load('jupyterlab');
@@ -149,12 +151,21 @@ export function onCurrentNotebookChanged(panel: NotebookPanel) {
     console.log('new index', newIndex);
     if (newIndex !== undefined) {
       nodState.Instance().currentFrameIndex = newIndex;
+      nodState.Instance().nodLogSidebar.log.updateVariables(frame.function_id);
     }
   }
 
   updateLockedUI(panel);
   panel.content.model?.cells.changed.connect((cellList, changeArgs) => {
     if (panel.isRevealed) {
+      const state = nodState.Instance();
+      const data: nodStudyLogRequest = {
+        kind: 'edit_notebook',
+        cellChangeArgs: JSON.stringify(changeArgs),
+        function_id: state.currentFrame?.function_id,
+        key: state.pythonInfo?.key ?? ''
+      };
+      studyLogSend(data);
       //this means its a user-edit
       updateLockedUI(panel);
     }

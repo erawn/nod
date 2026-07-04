@@ -1,9 +1,9 @@
 import { IDocumentManager } from '@jupyterlab/docmanager';
 import { nodState } from './state';
-import { nodSchema } from './types';
+import { nodSchema, nodStudyLogRequest } from './types';
 import { Dialog, ISessionContext, showDialog } from '@jupyterlab/apputils';
 import { checkKernelStatus, kernelWaitDialog } from './interfaceHelpers';
-import { setKernelToOpen, writeChange } from './messaging';
+import { setKernelToOpen, studyLogSend, writeChange } from './messaging';
 import { requestAPI } from './request';
 import { Kernel } from '@jupyterlab/services';
 
@@ -387,6 +387,13 @@ export async function NodRestart(): Promise<boolean> {
       }
     }
     // await restartOptions?.onBeforeRestart();
+    const data: nodStudyLogRequest = {
+      kind: 'restart',
+      restartSave: result.button.label === 'Export and Restart',
+      nodInfo: nodState.Instance().pythonInfo ?? undefined,
+      key: nodState.Instance().pythonInfo?.key ?? ''
+    };
+    studyLogSend(data);
     const restartPromise = sessionContext.restartKernel(); //TODO--let program continue?
     kernelWaitDialog();
     await restartPromise;

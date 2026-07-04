@@ -144,22 +144,27 @@ class NodLog extends PanelWithToolbar {
   //     }
   // }
   async updateVariables(function_id: string) {
-    const trans = (this.translator ?? nullTranslator).load('jupyterlab');
+    // const trans = (this.translator ?? nullTranslator).load('jupyterlab');
     try {
-      console.log('getting variables', function_id);
-      const variables = (await getDefinedVariables(function_id)) ?? [];
-
-      console.log('update variables', variables);
-      // variables.map(variable =>{
-      //     variable.
-      // })
-      const variableScopes = [
-        {
-          name: trans.__('Globals'),
-          variables: variables
+      // console.log("updateVariables", this.model.scopes, function_id, this.model.scopes.findIndex(scope => { scope.name === function_id }))
+      // console.log(this.model.scopes.some(scope => scope.name === function_id))
+      if (!this.model.scopes.some(scope => scope.name === function_id)) {
+        console.log('getting variables', function_id);
+        const variables = (await getDefinedVariables(function_id)) ?? [];
+        if (variables.length > 0) {
+          console.log('update variables', variables);
+          // variables.map(variable =>{
+          //     variable.
+          // })
+          const variableScopes = [
+            {
+              name: function_id,
+              variables: variables
+            }
+          ];
+          this.model.scopes = variableScopes;
         }
-      ];
-      this.model.scopes = variableScopes;
+      }
     } catch (e) {
       console.error((e as Error).message);
     }

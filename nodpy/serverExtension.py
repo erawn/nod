@@ -1,7 +1,10 @@
 from dataclasses import dataclass
+import gzip
 import json
 import logging
+import logging.handlers
 import os
+import shutil
 import subprocess
 import textwrap
 from jupyter_server.extension.application import ExtensionApp
@@ -10,17 +13,22 @@ import orjson
 import psutil  # type: ignore[import-untyped]
 from traitlets.traitlets import Bool, Unicode
 import base64
-from dacite import from_dict
 from nodpy.nodTypes import (
     NodConnectionInfo,
     NodInfo,
     ProgramInfo,
+    nodStudyLogRequest,
+    writeRequest,
 )
 from tornado import web
 import jupyter_core.paths as paths
 from pathlib import Path
 import typing as t
 import traceback
+import queue
+from logging.handlers import QueueHandler
+from logging.handlers import QueueListener
+import warnings
 
 # paths.jupyter_data_dir()
 # paths.prefer_environment_over_user()
@@ -29,6 +37,7 @@ _log = logging.getLogger(__name__)
 # import os
 # import sys
 # import time
+_study_log: None | logging.Logger = None
 
 
 import json
@@ -73,6 +82,21 @@ class NodServerFileRouteHandler(APIHandler):
             self.finish(out)
             return
         self.finish()
+
+
+class NodStudyLogHandler(APIHandler):
+    @tornado.web.authenticated
+    def post(self):
+
+        body = self.request.body.strip().decode("utf-8")
+        _log.info(f"nod study route handler post {body}")
+
+        json_load = json.loads(body)
+        # _log.info(json_load)
+        with warnings.catch_warnings(action="ignore"):
+            log_entry = nodStudyLogRequest.from_dict(json_load)
+            res = study_log(log_entry)
+            self.finish()
 
 
 def findNodRuntimeFile(
@@ -208,12 +232,6 @@ class ExistingKernelsRouteHandler(APIHandler):
         )
 
 
-@dataclass
-class writeRequest:
-    program_info: ProgramInfo
-    notebookContent: str
-
-
 class WriteFileRouteHandler(APIHandler):
 
     @tornado.web.authenticated
@@ -225,32 +243,41 @@ class WriteFileRouteHandler(APIHandler):
             _log.info("RECEIVED WRITE REQUEST")
             json_load = json.loads(body)
             # _log.info(json_load)
-            request = from_dict(writeRequest, json_load)
-            _log.info("REQUEST")
-            _log.debug(request)
-            decoded_content = base64.b64decode(request.notebookContent).decode("utf-8")
-            _log.debug(decoded_content)
-            nb = jupytext.reads(decoded_content, "ipynb")
-            _log.debug("NB")
-            _log.info(nb)
-            nb_content_to_write = jupytext.writes(
-                nb, fmt=long_form_one_format(f"py:{request.program_info.fmt}")
-            )
-            _log.info(nb_content_to_write)
-            fileInfo = request.program_info.file_info
-            if fileInfo is not None:
-                file_content = (
-                    fileInfo.text_above
-                    + fileInfo.text_header
-                    + textwrap.indent(
-                        nb_content_to_write,
-                        " " * fileInfo.indent,
-                    ).splitlines(True)
-                    + fileInfo.text_below
+            with warnings.catch_warnings(action="ignore"):
+                request = writeRequest.from_dict(json_load)
+                _log.info("REQUEST")
+                _log.debug(request)
+                if request.study_log:
+                    log_entry = nodStudyLogRequest(
+                        "write_request", writeRequest=request, key=request.key
+                    )
+                    if not study_log(log_entry):
+                        _log.error("failed to study log write request")
+                decoded_content = base64.b64decode(request.notebookContent).decode(
+                    "utf-8"
                 )
-                _log.info(file_content)
-                with open(request.program_info.source_file, "w") as f:
-                    f.writelines(file_content)
+                _log.debug(decoded_content)
+                nb = jupytext.reads(decoded_content, "ipynb")
+                _log.debug("NB")
+                _log.info(nb)
+                nb_content_to_write = jupytext.writes(
+                    nb, fmt=long_form_one_format(f"py:{request.program_info.fmt}")
+                )
+                _log.info(nb_content_to_write)
+                fileInfo = request.program_info.file_info
+                if fileInfo is not None:
+                    file_content = (
+                        fileInfo.text_above
+                        + fileInfo.text_header
+                        + textwrap.indent(
+                            nb_content_to_write,
+                            " " * fileInfo.indent,
+                        ).splitlines(True)
+                        + fileInfo.text_below
+                    )
+                    _log.info(file_content)
+                    with open(request.program_info.source_file, "w") as f:
+                        f.writelines(file_content)
 
         except Exception as e:
             self.log.debug("Bad JSON: %r", body)
@@ -278,12 +305,10 @@ class Nod(ExtensionApp):
         nod_route_pattern = url_path_join(base_url, "nodpy", "kernels")
         write_file_route_pattern = url_path_join(base_url, "nodpy", "write_file")
         get_file_route_pattern = url_path_join(base_url, "nodpy", "file")
-        path_regex = r"(?P<path>\w+)"
+        study_log_route_pattern = url_path_join(base_url, "nodpy", "study_log")
 
-        # default_handlers = [
-        #     ,
         handlers = [
-            # (rf"/{base_url}/nodpy/file/%s" % path_regex, NodServerFileRouteHandler),
+            (study_log_route_pattern, NodStudyLogHandler),
             (get_file_route_pattern, NodServerFileRouteHandler),
             (nod_route_pattern, ExistingKernelsRouteHandler),
             (write_file_route_pattern, WriteFileRouteHandler),
@@ -304,21 +329,80 @@ class Nod(ExtensionApp):
         serverapp = self.serverapp
         if serverapp is not None:
             serverapp.kernel_manager.add_traits(nod_key=Unicode())
-        # _log.info(self.cli_cmd)
-        # self.runUserProgram(self.cli_cmd)
 
-    # async def _start_jupyter_server_extension(
-    #     self,
-    #     serverapp: ServerApp,
-    # ):
-    #     watch_file = "my_file.txt"
-    #     # info_decoded = base64.b64decode(self.info).decode("utf-8")
-    #     # _log.info("infodecoded")
-    #     # _log.info(info_decoded)
-    #     # info_dict = orjson.loads(info_decoded)
-    #     # info_dict.get("")
-    #     watcher = Watcher(watch_file)
-    #     _log.info("serverext connection dir")
-    #     _log.info(self.connection_dir)
-    #     watcher = Watcher(self.connection_dir, self.dir_changed_callback)
-    #     watcher.watch()  # start the watch going
+        extra = {"key": "Super App"}
+
+
+def study_log(log_entry: nodStudyLogRequest) -> bool:
+    try:
+        _log.info(f"Study Log Logging: {log_entry.kind}")
+        out = base64.b64encode(orjson.dumps(log_entry)).decode("utf-8")
+        if log_entry.key is None:
+            log_entry.key = ""
+        get_study_logger().info(f"[{log_entry.kind}|{log_entry.key}] {out}")
+        return True
+    except:
+        return False
+
+
+def namer(name):
+    return name + ".gz"
+
+
+def rotator(source, dest):
+    with open(source, "rb") as f_in:
+        with gzip.open(dest, "wb") as f_out:
+            shutil.copyfileobj(f_in, f_out)  # pyright: ignore[reportArgumentType]
+    os.remove(source)
+
+
+def get_study_logger() -> logging.Logger:
+    global _study_log
+    if _study_log is None:
+
+        log_queue = queue.Queue()
+        queue_handler = QueueHandler(log_queue)  # Non-blocking handler.
+
+        _study_log = logging.getLogger("study")
+        _study_log.propagate = False
+        _study_log.addHandler(queue_handler)
+
+        log_dir_path = os.path.join(paths.jupyter_config_dir(), "nod_study")
+        if not os.path.exists(log_dir_path):
+            os.makedirs(log_dir_path, exist_ok=True)
+        path = os.path.join(log_dir_path, "nod_study_log.log")
+        _log.info(f"making new studylog {path}")
+        study_file_handler = logging.handlers.RotatingFileHandler(
+            path,
+            maxBytes=200000000,
+            backupCount=100000,
+        )
+        formatter = logging.Formatter("%(asctime)s : %(message)s")
+        study_file_handler.setFormatter(formatter)
+        _study_log.setLevel(logging.INFO)
+        # _study_log.addHandler(study_file_handler)
+        queue_listener = QueueListener(log_queue, study_file_handler)
+        queue_listener.start()
+        return _study_log
+    else:
+        return _study_log
+
+
+# _log.info(self.cli_cmd)
+# self.runUserProgram(self.cli_cmd)
+
+# async def _start_jupyter_server_extension(
+#     self,
+#     serverapp: ServerApp,
+# ):
+#     watch_file = "my_file.txt"
+#     # info_decoded = base64.b64decode(self.info).decode("utf-8")
+#     # _log.info("infodecoded")
+#     # _log.info(info_decoded)
+#     # info_dict = orjson.loads(info_decoded)
+#     # info_dict.get("")
+#     watcher = Watcher(watch_file)
+#     _log.info("serverext connection dir")
+#     _log.info(self.connection_dir)
+#     watcher = Watcher(self.connection_dir, self.dir_changed_callback)
+#     watcher.watch()  # start the watch going

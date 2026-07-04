@@ -97,11 +97,11 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
         ret = 0
         if self.python_process is not None:
             ret = self.python_process.poll()
-            _log.info(f"python process poll{ret}")
+            _log.debug(f"python process poll{ret}")
         elif self.kernel_process is not None:
             try:
                 ret = None if self.kernel_process.is_running() else 0
-                _log.info(
+                _log.debug(
                     f"kernel process poll{ret}, status: {self.kernel_process.status()}"
                 )
             except psutil.NoSuchProcess as e:
@@ -110,7 +110,7 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
             # ret = self.nod_info.python_process.poll()
         else:
             _log.info(f"{self.kernel_id} Neither Process Poll Ret : {ret}")
-        _log.info(f"poll returning : {ret}")
+        _log.debug(f"poll returning : {ret}")
         return ret
 
     async def wait(self):

@@ -2,6 +2,7 @@ import { IDebugger } from '@jupyterlab/debugger';
 import * as z from 'zod';
 import { nodState } from './state';
 const lineInfo = z.object({ line: z.number(), column: z.number() });
+
 export const nodSchema = z.object({
   stack_info: z.array(
     z.object({
@@ -53,6 +54,27 @@ export type nodSchema = z.infer<typeof nodSchema>;
 export const nodSchemas = z.array(nodSchema);
 export type nodSchemas = z.infer<typeof nodSchemas>;
 export type stackInfo = nodSchema['stack_info'];
+export const nodStudyLogRequest = z.object({
+  kind: z.literal([
+    'notebook_start',
+    'write_request',
+    'execute_cell',
+    'navigate_stackframe',
+    'edit_notebook',
+    'restart',
+    'nod_log_inject_state'
+  ]),
+  key: z.string(),
+  nodInfo: z.optional(nodSchema),
+  function_id: z.optional(z.string()),
+  cell: z.optional(z.string()),
+  cellChangeArgs: z.optional(z.string()),
+  varname: z.optional(z.string()),
+  restartSave: z.optional(z.boolean()),
+  var_string: z.optional(z.string())
+});
+export type nodStudyLogRequest = z.infer<typeof nodStudyLogRequest>;
+
 export const hasFileInfo = (
   frame: NonNullable<nodState['currentFrame']>
 ): frame is Required<NonNullable<nodState['currentFrame']>> => {

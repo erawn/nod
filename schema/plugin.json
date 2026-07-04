@@ -25,21 +25,15 @@
       }
     ]
   },
-  "title": "nod",
-  "description": "nod settings.",
+  "title": "Nod",
+  "description": "Nod settings.",
   "type": "object",
   "properties": {
-    "enablePlugin": {
+    "enableStudyLog": {
       "type": "boolean",
-      "title": "Enable Pagebreaks?",
-      "description": "Whether to activate the Pagebreaks Plugin.",
-      "default": true
-    },
-    "compareValues": {
-      "type": "boolean",
-      "title": "Enable Read-Only Exports",
-      "description": "If checked, exported variables will be enforced as read-only. Pagebreaks will compare exported variables before and after each cell execution for equality, reverting the notebook state to before execution if a discrepancy is found. May cause performance issues with very large variables. If you see a ",
-      "default": true
+      "title": "Enable Study Logger?",
+      "description": "If participating in the Nod study, check this box to generate usage logs. Logs are stored in a /nod_study/ folder in your Jupyter config directory. To find this directory, run 'jupyter --paths' in a terminal and look under 'config'",
+      "default": false
     }
   },
   "additionalProperties": false
