@@ -47,10 +47,15 @@ from nodpy.file_helpers import (
     makeProgramInfo,
 )
 from nodpy.provisioner import NodProvisioner  # DON'T REMOVE THIS
-from nodpy.serverExtension import Nod
+from nodpy.serverExtension import Nod, setup_handlers
+
+_log = logging.getLogger(__name__)
+logging.basicConfig()
+_log.setLevel(logging.WARN)
 
 
 def _jupyter_server_extension_points():
+    # _log.error("SERVER EXTENSION POINTS")
     return [
         {
             "module": "nodpy",
@@ -60,11 +65,17 @@ def _jupyter_server_extension_points():
     ]
 
 
-# def _jupyter_server_extension_paths() -> list[dict[str, str]]:
-#     return [{"module": "notebook"}]
+def _jupyter_server_extension_paths():
+    return [
+        {
+            "module": "nodpy",
+            "app": Nod,
+        }
+    ]
 
 
 def _jupyter_labextension_paths():
+    # _log.error("SERVER EXTENSION PATHS")
     return [{"src": "labextension", "dest": "nod"}]
 
 
@@ -74,22 +85,18 @@ def _jupyter_labextension_paths():
 #     }]
 
 
-# def _load_jupyter_server_extension(server_app):
-#     """Registers the API handler to receive HTTP requests from the frontend extension.
+def _load_jupyter_server_extension(server_app):
+    """Registers the API handler to receive HTTP requests from the frontend extension.
 
-#     Parameters
-#     ----------
-#     server_app: jupyterlab.labapp.LabApp
-#         JupyterLab application instance
-#     """
-#     setup_route_handlers(server_app.web_app)
-#     name = "nodpy"
-#     server_app.log.info(f"Registered {name} server extension")
+    Parameters
+    ----------
+    server_app: jupyterlab.labapp.LabApp
+        JupyterLab application instance
+    """
+    setup_handlers(server_app.web_app)
+    name = "nodpy"
+    server_app.log.info(f"Registered {name} server extension")
 
-
-_log = logging.getLogger(__name__)
-logging.basicConfig()
-_log.setLevel(logging.WARN)
 
 DRY_RUN = False
 

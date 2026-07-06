@@ -300,6 +300,7 @@ class Nod(ExtensionApp):
     connection_dir = Unicode("", help="Nod Connection Directory").tag(config=True)
 
     def initialize_handlers(self):
+        # _log.error("INITIALIZE HANDLERS")
         host_pattern = ".*$"
         base_url = self.serverapp.web_app.settings["base_url"]  # type: ignore
         nod_route_pattern = url_path_join(base_url, "nodpy", "kernels")
@@ -314,9 +315,12 @@ class Nod(ExtensionApp):
             (write_file_route_pattern, WriteFileRouteHandler),
         ]
         self.handlers.extend(handlers)
+        host_pattern = ".*$"
+        self.serverapp.web_app.add_handlers(host_pattern, handlers)
 
     def initialize_settings(self):
         super().initialize_settings()
+        # _log.error("INITIALIZE SETTINGS")
         web_app = self.serverapp.web_app  # type: ignore
         settings = web_app.settings
         page_config = settings.setdefault("page_config_data", {})
@@ -406,3 +410,22 @@ def get_study_logger() -> logging.Logger:
 #     _log.info(self.connection_dir)
 #     watcher = Watcher(self.connection_dir, self.dir_changed_callback)
 #     watcher.watch()  # start the watch going
+
+
+# def setup_handlers(web_app):
+#     _log.error("SETUP HANDLERS")
+#     host_pattern = ".*$"
+#     base_url = web_app.settings["base_url"]
+#     nod_route_pattern = url_path_join(base_url, "nodpy", "kernels")
+#     write_file_route_pattern = url_path_join(base_url, "nodpy", "write_file")
+#     get_file_route_pattern = url_path_join(base_url, "nodpy", "file")
+#     study_log_route_pattern = url_path_join(base_url, "nodpy", "study_log")
+
+#     handlers = [
+#         (study_log_route_pattern, NodStudyLogHandler),
+#         (get_file_route_pattern, NodServerFileRouteHandler),
+#         (nod_route_pattern, ExistingKernelsRouteHandler),
+#         (write_file_route_pattern, WriteFileRouteHandler),
+#     ]
+
+#     web_app.add_handlers(host_pattern, handlers)

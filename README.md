@@ -7,7 +7,7 @@ Nod is a JupyterLab extension for inserting a notebook anywhere in a running Pyt
 #### To Get Started:
 
 1. `pip install jupyter` if you don't have Jupyter already installed.
-2. `pip install nodpy && nod --install-kernel`
+2. `pip install --user nodpy && nod --install-kernel`
 3. Call the `notebook()` function somewhere in your program. (See [Usage](#usage) for an example).
 4. Run your python program with `nod <command to execute your python script>`
 
@@ -75,15 +75,17 @@ _Variables passed to NodLog must be able to [deepcopy](https://docs.python.org/3
 
 ### JupyterHub Integration
 
+**Important**: JupyterHub users will need to manually place a config file to activate the extension. See the [JupyterHub Installation Tutorial](#jupyterhub-installation) below
+
 JupyterHub users (and anyone else who doesn't want a new Jupyter window to spawn for every Nod session) can use `-e` or `-existing` in their `nod` call:
 `nod -e python -m module`
 and the session will appear in the left panel under "Sessions":
 
 <img src="media/nod_existing.png" alt="markdown language" width="300" >
 
-Press "Connect" to open the session in Jupyterlab. JupyterHub users might have trouble installing the server extension portion of Nod. This is still a work in progress. Please make an issue if you are trying to get Nod working in a JupyterHub enviornment and I'll do my best to help.
+Press "Connect" to open the session in Jupyterlab.
 
-**Important**: JupyterLab can't open files located outside of its home directory or any subdirectories, so make sure you call `nod -e <cmd>` in a directory you can see in the JupyterLab file navigator.
+JupyterLab can't open files located outside of its home directory or any subdirectories, so make sure you call `nod -e <cmd>` in a directory you can see in the JupyterLab file navigator.
 
 ### NodConfig
 
@@ -107,3 +109,30 @@ To configure module-level settings for Nod, call `nodConfig()` at the entry poin
 ### How do I recover files if I forget to send my changes back to the source, or Jupyter crashes?
 
 In the directory you call `nod <cmd>` in, a `./nod/` folder will be created to store the current notebooks (`/nod/connection/`) and previous ones (`/nod/archive/`), so you should be able to recover any notebooks in there (including notebook checkpoints), as long as they were saved (you pressed `CTRL+S` in Jupyterlab).
+
+## JupyterHub Installation
+
+Run `jupyter server extension list` in a terminal in JupyterHub. If you don't see `nodpy`, you'll need to manually place
+a json file named `nodpy.json` with this content:
+
+```
+{
+  "ServerApp": {
+    "jpserver_extensions": {
+      "nodpy": true
+    }
+  }
+}
+```
+
+inside of your jupyter config directory.
+
+To find this path, run `jupyter --config-dir`. You should see a path which ends in a `.jupyter` folder (if you don't, run `jupyter --paths` and find the config folder which ends in `.jupyter`).
+
+Inside that `.jupyter` config folder, make a new folder called `jupyter_server_config.d` if one doesn't exist, and place the `nodpy.json` file in there. The final path should look like `<user>/.jupyter/jupyter_server_config.d/nodpy.json`.
+
+Run `jupyter server extension list` again and you should see nodpy in the list now.
+
+Now restart your Jupyter Server. You can usually do this by going to `File` -> `Hub Control Panel` and pressing `Stop My Server`, then `Start My Server`.
+
+This is still a work in progress. Please make an issue if you are trying to get Nod working in a JupyterHub enviornment and I'll do my best to help.
