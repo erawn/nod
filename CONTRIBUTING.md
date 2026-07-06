@@ -20,7 +20,7 @@ source .venv/bin/activate
 pip install --editable ".[dev,test]"
 pre-commit install
 # Link your development version of the extension with JupyterLab
-jupyter-builder develop . --overwrite
+jupyter labextension develop . --overwrite
 # Server extension must be manually installed in develop mode
 jupyter server extension enable nodpy
 
@@ -55,7 +55,7 @@ jupyter server extension disable nodpy
 pip uninstall nodpy
 ```
 
-In development mode, you will also need to remove the symlink created by `jupyter-builder develop`
+In development mode, you will also need to remove the symlink created by `jupyter labextension develop`
 command. To find its location, you can run `jupyter labextension list` to figure out where the `labextensions`
 folder is located. Then you can remove the symlink named `nod` within that folder.
 
@@ -70,7 +70,8 @@ Install test dependencies (needed only once):
 ```sh
 pip install -e ".[test]"
 # Each time you install the Python package, you need to restore the front-end extension link
-jupyter-builder develop . --overwrite
+jupyter labextension develop . --overwrite
+jupyter server extension enable nodpy
 ```
 
 To execute them, run:
