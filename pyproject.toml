@@ -103,7 +103,7 @@ allow-direct-references = true
 
 [tool.jupyter-releaser.hooks]
 before-build-npm = [
-    "python -m pip install 'jupyter-builder>=1.0.0,<2'",
+    "python -m pip install 'jupyterlab>=4.5.0,<5'",
     "jlpm",
     "jlpm build:prod"
 ]
