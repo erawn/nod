@@ -40,7 +40,10 @@ nod python -m myfile
 ```
 
 and you'll see a Jupyter editor with the current state of your program when you called `notebook()`:
-![](media/nod_demo.png)
+<p align="center">
+  <img src="media/nod_demo.png" alt="markdown language" width="500" >
+</p>
+
 
 Notice above that we haven't executed `x = 1` yet, but `x` is in our kernel state, because we had defined it before we called `notebook()`. Any variable you would be able to reference in your Python program at the `notebook()` call will be available in your Jupyter session. 
 
@@ -66,8 +69,10 @@ f()
 ```
 
 and you'll see a list in your Nod Session appear on the `Nod Log` panel on the right:
+<p align="center">
+  <img src="media/nod_log.png" width="200px"/>
+</p>
 
-<img src="media/nod_log.png" width="200px"/>
 
 Click the <img src="media/nod_log_button.png" alt="markdown language" height="30" > button to put that value into the notebook state.
 
@@ -81,7 +86,10 @@ JupyterHub users (and anyone else who doesn't want a new Jupyter window to spawn
 `nod -e python -m module`
 and the session will appear in the left panel under "Sessions":
 
-<img src="media/nod_existing.png" alt="markdown language" width="300" >
+<p align="center">
+    <img src="media/nod_existing.png" alt="markdown language" width="300" >
+</p>
+
 
 Press "Connect" to open the session in Jupyterlab.
 
