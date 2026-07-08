@@ -44,9 +44,9 @@ and you'll see a Jupyter editor with the current state of your program when you 
 
 Notice above that we haven't executed `x = 1` yet, but `x` is in our kernel state, because we had defined it before we called `notebook()`. Any variable you would be able to reference in your Python program at the `notebook()` call will be available in your Jupyter session. 
 
-Nod will open everything in the _current function body_ to edit.
+Nod converts everything in the _current function body_ to edit. By default, empty lines are converted to cell breaks, and markdown cells are converted to comments (e.g. ##, ###).
 
-On the left side is a panel to navigate up and down your callstack---your notebook state will switch automatically to the variables at that place in the program. You'll notice three buttons at the top of the Nod Panel:
+The left panel navigates up and down your callstack---your notebook state will switch automatically to the variables at that place in the program. You'll notice three buttons at the top of the left panel:
 
 - <img src="media/nod_dl.png" alt="markdown language" height="30" > Sends any text changes made in the notebook back to your source files. By default, the notebook is converted to [light](https://jupytext.org/formats/scripts) format \(see [Config](#nodconfig) for more options.\)
 - <img src="media/nod_restart.png" alt="markdown language" height="30" > Restarts your original python program by re-executing the `<command>` from your `nod <command>` command line invocation, and updates the Jupyter editor to match. If you want to make changes directly to your source file and pull them to your Nod Jupyter session, just press "Restart without Saving" at the prompt when you restart.
