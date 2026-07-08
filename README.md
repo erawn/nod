@@ -2,7 +2,7 @@
 
 ### Put a Notebook Anywhere
 
-Nod is a JupyterLab extension for inserting a notebook anywhere in a running Python program, allowing you to make edits while interacting with the real state of your program wherever you want. Nod is like a breakpoint with a notebook inside.
+Nod is a JupyterLab extension for inserting a notebook anywhere in a running Python program, allowing you to write and debug your program while interacting with its state. Nod is like a breakpoint with a notebook inside. From anywhere in your program, just add `notebook()` and run it. When the program execution reaches `notebook()`, the program will pause, and a JupyterLab session will start with the variables available at that line. The code within the function that calls `notebook()` will be converted to a notebook and will open automatically. Make edits, rerun code, inspect the output, and at the end, you can send your changes back to your source file with a button at the top of the notebook. 
 
 #### To Get Started:
 
