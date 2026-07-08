@@ -42,7 +42,7 @@ nod python -m myfile
 and you'll see a Jupyter editor with the current state of your program when you called `notebook()`:
 ![](media/nod_demo.png)
 
-Notice above that we haven't executed `x = 1` yet, but `x` is in our kernel state. This is because `x` was in the current stack frame of the program when we called `notebook()`!
+Notice above that we haven't executed `x = 1` yet, but `x` is in our kernel state, because we had defined it before we called `notebook()`. Any variable you would be able to reference in your Python program at the `notebook()` call will be available in your Jupyter session. 
 
 Nod will open everything in the _current function body_ to edit.
 
