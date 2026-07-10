@@ -103,6 +103,9 @@ export function makeCodeViewer(
       if (source.startsWith('\n')) {
         source = source.slice(source.indexOf('\n'));
       }
+      if (source.endsWith('\n')) {
+        source = source.slice(0, source.lastIndexOf('\n'));
+      }
       editor = makeCodeViewerWidget(className, source);
       return editor;
     }

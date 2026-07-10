@@ -1,7 +1,5 @@
-from abc import ABC
 import asyncio
 import base64
-import glob
 import json
 import logging
 import os
@@ -13,26 +11,18 @@ import subprocess
 import sys
 import time
 import jupyter_core.paths as paths
-from math import isclose
-from types import NoneType
 import typing
-from jupyter_client import kernelspec
-from jupyter_client.manager import KernelManager
-from jupyter_client.multikernelmanager import MultiKernelManager
 from typing import Any
 import typing as t
 import psutil  # type: ignore
 from jupyter_client.provisioning.local_provisioner import LocalProvisioner
 from jupyter_client.provisioning.provisioner_base import (
     KernelProvisionerBase,
-    KernelProvisionerMeta,
 )
+from jupyter_client.manager import KernelManager
+from jupyter_client.multikernelmanager import MultiKernelManager
 from jupyter_client.launcher import launch_kernel
 from traitlets.traitlets import Bool, Unicode, Integer
-import jupyter_core
-
-# from nod.datastore import StartingVariables
-from jupyter_client import find_connection_file
 from subprocess import PIPE, Popen
 
 from nodpy.exceptions import NodException
@@ -391,7 +381,7 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
                 connection_file_path
             ):
                 self.connection_file = connection_file_path
-            if psutil.pid_exists(info.kernel_pid):
+            if info.kernel_pid is not None and psutil.pid_exists(info.kernel_pid):
                 self.kernel_process = psutil.Process(info.kernel_pid)
                 self.python_process = None
                 km: KernelManager = self.parent  # type: ignore

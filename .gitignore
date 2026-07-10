@@ -128,3 +128,5 @@ dmypy.json
 
 # Yarn cache
 .yarn/
+
+nodpy/tests/nod/**

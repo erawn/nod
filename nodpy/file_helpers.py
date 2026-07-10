@@ -1,5 +1,6 @@
 import base64
 from inspect import FrameInfo
+import logging
 import os
 from pathlib import Path
 import shutil
@@ -16,6 +17,8 @@ from libcst import Module
 from jupytext.formats import long_form_one_format  # type: ignore
 import libcst as cst
 from nodpy.nodTypes import FileInfo, ProgramInfo
+
+_log = logging.getLogger(__name__)
 
 
 class PathManager:
@@ -191,7 +194,7 @@ def makeProgramInfo(
         )
 
     wrapper = cst.MetadataWrapper(module)
-    finder = FunctionFinder(stackFrame.function)
+    finder = FunctionFinder(stackFrame.function, stackFrame.lineno)
     module = wrapper.visit(finder)
     source_lines = module.code.splitlines(True)
 
@@ -199,6 +202,7 @@ def makeProgramInfo(
     func_head_start = finder.parent_pos.start.line
     func_body_start = finder.body_indent.start.line
     func_end = finder.body_indent.end.line
+    # _log.warning(f"{indent}, {func_head_start}, {func_body_start}, {func_end}")
 
     info = ProgramInfo(
         index=index,
