@@ -53,7 +53,7 @@ from nodpy.serverExtension import Nod
 
 _log = logging.getLogger(__name__)
 logging.basicConfig()
-_log.setLevel(logging.INFO)
+_log.setLevel(logging.WARN)
 
 
 def _jupyter_server_extension_points():
