@@ -30,15 +30,9 @@ from logging.handlers import QueueHandler
 from logging.handlers import QueueListener
 import warnings
 
-# paths.jupyter_data_dir()
-# paths.prefer_environment_over_user()
 _log = logging.getLogger(__name__)
 
-# import os
-# import sys
-# import time
 _study_log: None | logging.Logger = None
-
 
 import json
 from jupytext.formats import long_form_one_format  # type: ignore
@@ -316,7 +310,7 @@ class Nod(ExtensionApp):
         ]
         self.handlers.extend(handlers)
         host_pattern = ".*$"
-        self.serverapp.web_app.add_handlers(host_pattern, handlers)
+        self.serverapp.web_app.add_handlers(host_pattern, handlers)  # type: ignore
 
     def initialize_settings(self):
         super().initialize_settings()

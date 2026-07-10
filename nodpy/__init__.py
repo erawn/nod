@@ -26,6 +26,7 @@ from pathlib import Path
 import libcst as cst
 import typing as t
 from typing import Any, cast
+
 from varname import argname
 from varname.utils import ArgSourceType
 
@@ -41,17 +42,18 @@ from nodpy.nodTypes import (
     NodConnectionInfo,
     NodInfo,
 )
-from nodpy.embed_kernel import embed_kernel
+
+
 from nodpy.file_helpers import (
     PathManager,
     makeProgramInfo,
 )
 from nodpy.provisioner import NodProvisioner  # DON'T REMOVE THIS
-from nodpy.serverExtension import Nod, setup_handlers
+from nodpy.serverExtension import Nod
 
 _log = logging.getLogger(__name__)
 logging.basicConfig()
-_log.setLevel(logging.WARN)
+_log.setLevel(logging.INFO)
 
 
 def _jupyter_server_extension_points():
@@ -93,7 +95,7 @@ def _load_jupyter_server_extension(server_app):
     server_app: jupyterlab.labapp.LabApp
         JupyterLab application instance
     """
-    setup_handlers(server_app.web_app)
+    # setup_handlers(server_app.web_app)
     name = "nodpy"
     server_app.log.info(f"Registered {name} server extension")
 
@@ -127,7 +129,7 @@ def nodLog(*args):
         program_text = f.read()
     module = cst.parse_module(program_text)
     wrapper = cst.MetadataWrapper(module)
-    finder = FunctionFinder(log_call.function)
+    finder = FunctionFinder(log_call.function, log_call.lineno)
     module = wrapper.visit(finder)
     # _log.info(f"log call {log_call.frame.f_locals}")
     if log_call.function == "<module>":
@@ -326,6 +328,7 @@ def notebook(
     from nodpy.ip_plugin import nodReturn
 
     startingVariables.update({"nodReturn": nodReturn})
+    from nodpy.embed_kernel import embed_kernel
 
     app = embed_kernel(
         local_ns=startingVariables,

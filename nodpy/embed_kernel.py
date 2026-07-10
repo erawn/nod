@@ -1,20 +1,13 @@
-import base64
-import inspect
 import logging
 import os
-from signal import SIGINT
 import sys
-import typing
 from ipykernel.kernelapp import IPKernelApp
 from IPython.utils.frame import extract_module_locals
 from ipykernel.ipkernel import IPythonKernel
 from ipykernel.debugger import Debugger
 from IPython.core.interactiveshell import InteractiveShell
-from IPython.core.extensions import ExtensionManager
-from IPython.core.getipython import get_ipython
 from inspect import FrameInfo
-from typing import List, Type, cast
-from ipykernel.zmqshell import ZMQInteractiveShell
+from typing import List, cast
 import typing as t
 from ipykernel.debugger import _DummyPyDB
 from ipykernel.compiler import get_file_name

@@ -22,20 +22,26 @@ class FunctionFinder(m.MatcherDecoratableTransformer):
     body_indent: CodeRange
     target_function: str
 
-    def __init__(self, target_function: str):
+    def __init__(self, target_function: str, line_no: int):
         super(__class__, self).__init__()  # type: ignore
         self.target_function: str = target_function
+        self.line_no: int = line_no
+        self.def_stack: List[cst.FunctionDef] = []
 
     @m.visit(m.FunctionDef())
     def visit_function(self, node: cst.FunctionDef):
         if m.matches(node, m.FunctionDef(m.Name(self.target_function))):
-            self.parent_node = node
-            parent_pos = self.get_metadata(PositionProvider, node)
-            if isinstance(parent_pos, CodeRange):
-                self.parent_pos = parent_pos
             body_indent = self.get_metadata(PositionProvider, node.body)
             if isinstance(body_indent, CodeRange):
-                self.body_indent = body_indent
+                if (
+                    body_indent.start.line <= self.line_no
+                    and body_indent.end.line >= self.line_no
+                ):
+                    self.body_indent = body_indent
+                    self.parent_node = node
+                    parent_pos = self.get_metadata(PositionProvider, node)
+                    if isinstance(parent_pos, CodeRange):
+                        self.parent_pos = parent_pos
 
 
 class NodFinder(m.MatcherDecoratableTransformer):
@@ -51,6 +57,16 @@ class NodFinder(m.MatcherDecoratableTransformer):
         super(__class__, self).__init__()  # type: ignore
         self.lineno = lineno
         self.indent_stack: List[cst.IndentedBlock] = []
+        self.def_stack: List[cst.FunctionDef] = []
+
+    def visit_FunctionDef(self, node: cst.FunctionDef):
+        self.def_stack.append(cst.ensure_type(node, cst.FunctionDef))
+
+    def leave_FunctionDef(
+        self, original_node: cst.FunctionDef, updated_node: cst.FunctionDef
+    ):
+        self.def_stack.pop()
+        return original_node
 
     @m.visit(m.Call())
     def visit_notebook_call(self, node: cst.Call):
@@ -61,13 +77,20 @@ class NodFinder(m.MatcherDecoratableTransformer):
                     indent_block = self.indent_stack[-1]
                     parent_node = self.get_metadata(ParentNodeProvider, indent_block)
                     if isinstance(parent_node, cst.CSTNode):
-                        self.parent_node = parent_node
-                        parent_pos = self.get_metadata(PositionProvider, parent_node)
-                        if isinstance(parent_pos, CodeRange):
-                            self.parent_pos = parent_pos
                         body_indent = self.get_metadata(PositionProvider, indent_block)
                         if isinstance(body_indent, CodeRange):
+
                             self.body_indent = body_indent
+                            self.parent_node = parent_node
+                            parent_pos = self.get_metadata(
+                                PositionProvider, parent_node
+                            )
+                            if isinstance(parent_pos, CodeRange):
+                                self.parent_pos = parent_pos
+
+                if len(self.def_stack) > 0:
+                    function_def = self.def_stack[-1]
+                    _log.warning(f"function_def: {function_def}")
 
     def visit_IndentedBlock(self, node):
         self.indent_stack.append(cst.ensure_type(node, cst.IndentedBlock))

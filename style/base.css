@@ -3,6 +3,18 @@
 
     https://jupyterlab.readthedocs.io/en/stable/developer/css.html
 */
+.jp-nod-viewer .cm-content.cm-lineWrapping {
+  padding-bottom: 0;
+  padding-top: 0;
+}
+
+.jp-nod-Header {
+  padding-bottom: 0;
+}
+
+.jp-nod-Function {
+  padding-top: 0;
+}
 
 .lm-Widget.jp-Cell.jp-Notebook-cell.nod-export {
   opacity: 0.5;
