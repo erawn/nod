@@ -2,7 +2,7 @@
 
 ### Put a Notebook Anywhere
 
-Nod is a JupyterLab extension for inserting a notebook anywhere in a running Python program, allowing you to write and debug your program while interacting with its state. Nod is like a breakpoint with a notebook inside. From anywhere in your program, just add `notebook()` and run it. When the program execution reaches `notebook()`, the program will pause, and a JupyterLab session will start with the variables available at that line. The code within the function that calls `notebook()` will be converted to a notebook and will open automatically. Make edits, rerun code, inspect the output, and at the end, you can send your changes back to your source file with a button at the top of the notebook. 
+Nod is a JupyterLab extension for inserting a notebook anywhere in a running Python program, allowing you to write and debug your program while interacting with its state. Nod is like a breakpoint with a notebook inside. From anywhere in your program, just add `notebook()` and run it. When the program execution reaches `notebook()`, the program will pause, and a JupyterLab session will start with the variables available at that line. The code within the function that calls `notebook()` will be converted to a notebook and will open automatically. Make edits, rerun code, inspect the output, and at the end, you can send your changes back to your source file with a button at the top of the notebook.
 
 #### To Get Started:
 
@@ -44,8 +44,7 @@ and you'll see a Jupyter editor with the current state of your program when you 
   <img src="media/nod_demo.png" alt="markdown language" width="500" >
 </p>
 
-
-Notice above that we haven't executed `x = 1` yet, but `x` is in our kernel state, because we had defined it before we called `notebook()`. Any variable you would be able to reference in your Python program at the `notebook()` call will be available in your Jupyter session. 
+Notice above that we haven't executed `x = 1` yet, but `x` is in our kernel state, because we had defined it before we called `notebook()`. Any variable you would be able to reference in your Python program at the `notebook()` call will be available in your Jupyter session.
 
 Nod converts everything in the _current function body_ to edit. By default, empty lines are converted to cell breaks, and markdown cells are converted to comments (e.g. ##, ###).
 
@@ -73,7 +72,6 @@ and you'll see a list in your Nod Session appear on the `Nod Log` panel on the r
   <img src="media/nod_log.png" width="200px"/>
 </p>
 
-
 Click the <img src="media/nod_log_button.png" alt="markdown language" height="30" > button to put that value into the notebook state.
 
 _Variables passed to NodLog must be able to [deepcopy](https://docs.python.org/3/library/copy.html#copy.deepcopy)_
@@ -89,7 +87,6 @@ and the session will appear in the left panel under "Sessions":
 <p align="center">
     <img src="media/nod_existing.png" alt="markdown language" width="300" >
 </p>
-
 
 Press "Connect" to open the session in Jupyterlab.
 

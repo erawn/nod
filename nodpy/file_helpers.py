@@ -135,6 +135,7 @@ def makeProgramInfo(
     module: Module | None,
     pm: PathManager,
     fmt: t.Literal["light", "percent"],
+    zoom_out: int = -1,
 ) -> ProgramInfo:
 
     rel_source_file = os.path.relpath(stackFrame.filename, os.getcwd())
@@ -196,12 +197,24 @@ def makeProgramInfo(
     wrapper = cst.MetadataWrapper(module)
     finder = FunctionFinder(stackFrame.function, stackFrame.lineno)
     module = wrapper.visit(finder)
+    _log.debug(module)
     source_lines = module.code.splitlines(True)
+    body_indent = finder.body_indent
+    parent_pos = finder.parent_pos
+    func_head_start = parent_pos.start.line
+    if zoom_out > -1:
+        nodFinder = NodFinder(stackFrame.lineno, zoom_out=zoom_out)
+        wrapper.visit(nodFinder)
+        if (
+            nodFinder.indent_pos.start.line >= finder.body_indent.start.line
+            and nodFinder.indent_pos.end.line <= finder.body_indent.end.line
+        ):
+            body_indent = nodFinder.indent_pos
+            func_head_start = nodFinder.indent_pos.start.line
+    indent = body_indent.start.column
+    func_body_start = body_indent.start.line
+    func_end = body_indent.end.line
 
-    indent = finder.body_indent.start.column
-    func_head_start = finder.parent_pos.start.line
-    func_body_start = finder.body_indent.start.line
-    func_end = finder.body_indent.end.line
     # _log.warning(f"{indent}, {func_head_start}, {func_body_start}, {func_end}")
 
     info = ProgramInfo(
@@ -211,7 +224,7 @@ def makeProgramInfo(
         connection_dir=pm.connection_dir,
         function_name=stackFrame.function,
         function_id=FrameIdentifiers(
-            stackFrame.function, finder.parent_pos.start.line, stackFrame.filename
+            stackFrame.function, parent_pos.start.line, stackFrame.filename
         ).get_id(),
         # base64.b64encode(
         #     FrameIdentifiers(stackFrame).get_id().encode("utf-8")
@@ -219,8 +232,8 @@ def makeProgramInfo(
         frame_xml=list(stackFrame.frame.f_locals.keys()),
         fmt=fmt,
         file_info=FileInfo(
-            function_body_position=finder.body_indent,
-            indent=finder.body_indent.start.column,
+            function_body_position=body_indent,
+            indent=body_indent.start.column,
             text_header=source_lines[func_head_start - 1 : func_body_start - 1],
             text_body=[
                 line[indent:] if line[:indent] == """ """ * indent else line
