@@ -52,8 +52,8 @@ class NodFinder(m.MatcherDecoratableTransformer):
     parent_node: cst.CSTNode
     parent_pos: CodeRange
     body_indent: CodeRange
-    indent_block: cst.IndentedBlock
-    indent_pos: CodeRange
+    indent_block: cst.IndentedBlock | None
+    indent_pos: CodeRange | None
 
     def __init__(self, lineno: int, zoom_out: int):
         super(__class__, self).__init__()  # type: ignore
@@ -90,7 +90,7 @@ class NodFinder(m.MatcherDecoratableTransformer):
                             if isinstance(parent_pos, CodeRange):
                                 self.parent_pos = parent_pos
 
-                    if len(self.indent_stack) >= self.zoom_out:
+                    if len(self.indent_stack) > self.zoom_out:
                         # if self.zoom_out == 0:
                         #     stack_entry = self.indent_stack[-1]
                         stack_entry = self.indent_stack[-1 * (self.zoom_out + 1)]
@@ -99,6 +99,9 @@ class NodFinder(m.MatcherDecoratableTransformer):
                         # _log.warning(
                         #     f"indent_block: {self.indent_block}, {self.indent_pos}"
                         # )
+                    else:
+                        self.indent_block = None
+                        self.indent_pos = None
 
     def visit_IndentedBlock(self, node):
         indent_pos = self.get_metadata(PositionProvider, node)

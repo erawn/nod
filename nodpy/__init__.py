@@ -271,7 +271,6 @@ def notebook(
     notebook_call_index = stack.index(notebook_call)
     if notebook_call_index + 1 > len(stack):
         raise IndexError
-    notebook_parent_frame = stack[notebook_call_index + 1]
     frozenPattern = re.compile("<frozen .*>")
     relevant_stack_frames = [
         frame
@@ -302,16 +301,16 @@ def notebook(
     # _log.warning(module_sources)
     stack_info = []
     if zoom_out > -1:
-        stack_info.append(
-            makeProgramInfo(
-                notebook_call,
-                0,
-                module_sources.get(notebook_call.filename, None),
-                pm,
-                _fmt,
-                zoom_out=zoom_out,
-            )
+        zoomInfo = makeProgramInfo(
+            notebook_call,
+            0,
+            module_sources.get(notebook_call.filename, None),
+            pm,
+            _fmt,
+            zoom_out=zoom_out,
         )
+        stack_info.append(zoomInfo)
+        # _log.warning(zoomInfo)
     stack_info.extend(
         [
             makeProgramInfo(

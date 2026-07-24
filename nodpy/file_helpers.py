@@ -160,54 +160,29 @@ def makeProgramInfo(
             frame_xml=list(stackFrame.frame.f_locals.keys()),
             fmt=fmt,
         )
-    # print(sys.argv)
-    if stackFrame.function == "<module>":
-        no_position_source_lines = module.code.splitlines(True)
-
-        return writeNotebook(
-            ProgramInfo(
-                index=index,
-                source_file=stackFrame.filename,
-                connection_dir=pm.connection_dir,
-                relative_source_file=rel_source_file,
-                function_name="<module>",
-                function_id=FrameIdentifiers(
-                    stackFrame.function, 0, stackFrame.filename
-                ).get_id(),
-                # base64.b64encode(
-                #     FrameIdentifiers(stackFrame).get_id().encode("utf-8")
-                # ).decode("utf-8"),
-                frame_xml=list(stackFrame.frame.f_locals.keys()),
-                fmt=fmt,
-                file_info=FileInfo(
-                    function_body_position=CodeRange(
-                        CodePosition(0, 0),
-                        CodePosition(len(no_position_source_lines) + 1, 0),
-                    ),
-                    indent=0,
-                    text_header=[],
-                    text_body=no_position_source_lines,
-                    text_above=[],
-                    text_below=[],
-                    notebook_file=os.path.join(os.getcwd(), tempNotebook),
-                ),
-            )
-        )
-
-    wrapper = cst.MetadataWrapper(module)
-    finder = FunctionFinder(stackFrame.function, stackFrame.lineno)
-    module = wrapper.visit(finder)
-    _log.debug(module)
+        # print(sys.argv)
     source_lines = module.code.splitlines(True)
-    body_indent = finder.body_indent
-    parent_pos = finder.parent_pos
-    func_head_start = parent_pos.start.line
+    wrapper = cst.MetadataWrapper(module)
+    if stackFrame.function == "<module>":
+        func_head_start = 0
+        body_indent = CodeRange(
+            CodePosition(0, 0),
+            CodePosition(len(source_lines) + 1, 0),
+        )
+    else:
+        finder = FunctionFinder(stackFrame.function, stackFrame.lineno)
+        module = wrapper.visit(finder)
+        _log.debug(module)
+        body_indent = finder.body_indent
+        func_head_start = finder.parent_pos.start.line
     if zoom_out > -1:
         nodFinder = NodFinder(stackFrame.lineno, zoom_out=zoom_out)
         wrapper.visit(nodFinder)
         if (
-            nodFinder.indent_pos.start.line >= finder.body_indent.start.line
-            and nodFinder.indent_pos.end.line <= finder.body_indent.end.line
+            nodFinder.indent_block is not None
+            and nodFinder.indent_pos is not None
+            and nodFinder.indent_pos.start.line >= body_indent.start.line
+            and nodFinder.indent_pos.end.line <= body_indent.end.line
         ):
             body_indent = nodFinder.indent_pos
             func_head_start = nodFinder.indent_pos.start.line
@@ -215,35 +190,69 @@ def makeProgramInfo(
     func_body_start = body_indent.start.line
     func_end = body_indent.end.line
 
+    return writeNotebook(
+        ProgramInfo(
+            index=index,
+            source_file=stackFrame.filename,
+            connection_dir=pm.connection_dir,
+            relative_source_file=rel_source_file,
+            function_name=stackFrame.function,
+            function_id=FrameIdentifiers(
+                stackFrame.function, func_head_start, stackFrame.filename
+            ).get_id(),
+            # base64.b64encode(
+            #     FrameIdentifiers(stackFrame).get_id().encode("utf-8")
+            # ).decode("utf-8"),
+            frame_xml=list(stackFrame.frame.f_locals.keys()),
+            fmt=fmt,
+            file_info=FileInfo(
+                function_body_position=body_indent,
+                indent=indent,
+                text_header=source_lines[
+                    max(func_head_start - 1, 0) : max(func_body_start - 1, 0)
+                ],
+                text_body=[
+                    line[indent:] if line[:indent] == """ """ * indent else line
+                    for line in source_lines[max(func_body_start - 1, 0) : func_end]
+                ],
+                text_above=source_lines[0 : max(func_head_start - 1, 0)],
+                text_below=source_lines[
+                    min(func_end, len(source_lines)) : len(source_lines)
+                ],
+                notebook_file=os.path.join(os.getcwd(), tempNotebook),
+            ),
+        )
+    )
+
     # _log.warning(f"{indent}, {func_head_start}, {func_body_start}, {func_end}")
 
-    info = ProgramInfo(
-        index=index,
-        relative_source_file=rel_source_file,
-        source_file=stackFrame.filename,
-        connection_dir=pm.connection_dir,
-        function_name=stackFrame.function,
-        function_id=FrameIdentifiers(
-            stackFrame.function, parent_pos.start.line, stackFrame.filename
-        ).get_id(),
-        # base64.b64encode(
-        #     FrameIdentifiers(stackFrame).get_id().encode("utf-8")
-        # ).decode("utf-8"),
-        frame_xml=list(stackFrame.frame.f_locals.keys()),
-        fmt=fmt,
-        file_info=FileInfo(
-            function_body_position=body_indent,
-            indent=body_indent.start.column,
-            text_header=source_lines[func_head_start - 1 : func_body_start - 1],
-            text_body=[
-                line[indent:] if line[:indent] == """ """ * indent else line
-                for line in source_lines[func_body_start - 1 : func_end]
-            ],
-            text_above=source_lines[0 : func_head_start - 1],
-            text_below=source_lines[
-                min(func_end, len(source_lines) - 1) : len(source_lines)
-            ],
-            notebook_file=os.path.join(os.getcwd(), tempNotebook),
-        ),
-    )
-    return writeNotebook(info)
+    # info = ProgramInfo(
+    #     index=index,
+    #     relative_source_file=rel_source_file,
+    #     source_file=stackFrame.filename,
+    #     connection_dir=pm.connection_dir,
+    #     function_name=stackFrame.function,
+    #     function_id=FrameIdentifiers(
+    #         stackFrame.function, parent_pos.start.line, stackFrame.filename
+    #     ).get_id(),
+    #     # base64.b64encode(
+    #     #     FrameIdentifiers(stackFrame).get_id().encode("utf-8")
+    #     # ).decode("utf-8"),
+    #     frame_xml=list(stackFrame.frame.f_locals.keys()),
+    #     fmt=fmt,
+    #     file_info=FileInfo(
+    #         function_body_position=body_indent,
+    #         indent=body_indent.start.column,
+    #         text_header=source_lines[func_head_start - 1 : func_body_start - 1],
+    #         text_body=[
+    #             line[indent:] if line[:indent] == """ """ * indent else line
+    #             for line in source_lines[func_body_start - 1 : func_end]
+    #         ],
+    #         text_above=source_lines[0 : func_head_start - 1],
+    #         text_below=source_lines[
+    #             min(func_end, len(source_lines) - 1) : len(source_lines)
+    #         ],
+    #         notebook_file=os.path.join(os.getcwd(), tempNotebook),
+    #     ),
+    # )
+    # return writeNotebook(info)
