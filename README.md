@@ -73,22 +73,23 @@ for i in range(10):
   if i > 5:
     notebook(zoom_out=0)
 ```
+
 <p align="center">
     <img src="media/nod_zoom_0.png" alt="markdown language" width="300" >
 </p>
 
 while this program opens the body of the `for` loop:
+
 ```python
 from nodpy import notebook
 for i in range(10):
   if i > 5:
     notebook(zoom_out=1)
 ```
+
 <p align="center">
     <img src="media/nod_zoom_1.png" alt="markdown language" width="300" >
 </p>
-
-
 
 ### NodLog
 
@@ -112,7 +113,6 @@ Click the <img src="media/nod_log_button.png" alt="markdown language" height="30
 
 _Variables passed to NodLog must be able to [deepcopy](https://docs.python.org/3/library/copy.html#copy.deepcopy)_
 
-
 ### NodConfig
 
 To configure module-level settings for Nod, call `nodConfig()` at the entry point for your Python program. Options are:
@@ -131,6 +131,7 @@ To configure module-level settings for Nod, call `nodConfig()` at the entry poin
 
 - **dangerously_bypass_readonly**: (default 'false')
   Once the code in associated with one stack frame in a Nod Session is edited, the others become read-only by default to prevent reaching a confusing state. Set to true to remove this safeguard, if you know what you're doing.
+
 ### `--existing` (for JupyterHub users)
 
 **Important**: JupyterHub users will need to manually place a config file to activate the extension. See the [JupyterHub Installation Tutorial](#jupyterhub-installation) below
@@ -177,8 +178,8 @@ Now restart your Jupyter Server. You can usually do this by going to `File` -> `
 
 This is still a work in progress. Please make an issue if you are trying to get Nod working in a JupyterHub enviornment and I'll do my best to help.
 
-
 ## Running Nod as a VSCode Task
+
 To execute Nod without going to the command line each time, add Nod as a VSCode task. If you don't already have a `.vscode/tasks.json` file in your directory, create it with this content:
 
 ```
@@ -200,6 +201,7 @@ To execute Nod without going to the command line each time, add Nod as a VSCode 
     ]
 }
 ```
+
 Where `<ACTIVATE VIRTUAL ENV IF USING>` is the command to activate your virtual enviornment (e.g. `source venv/bin/activate`) and `<CMD TO RUN PYTHON FILE>` is how you run your Python file (e.g. `python -m myfile1`).
 
 Now execute the task by selecting `Run Task` from the pallette `CTRL+SHIFT+P` and selecting `Nod`.
