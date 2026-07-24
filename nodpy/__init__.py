@@ -158,7 +158,7 @@ def nodLog(*args):
 
 
 _fmt: t.Literal["light", "percent"] = "light"
-_filter: list[str] = [os.getcwd() + "/**"]
+_filter: list[str] = ["**"]
 _how_restart: t.Union[t.Literal["continue"], int] = "continue"
 _dangerously_bypass_readonly: bool = False
 
@@ -299,7 +299,18 @@ def notebook(
                 _log.info(f"Couldn't find source for {stackFrame.filename}")
                 pass
     # _log.warning(module_sources)
-    stack_info = []
+
+    # _log.warning(zoomInfo)
+    stack_info = [
+        makeProgramInfo(
+            stackFrame,
+            index,
+            module_sources.get(stackFrame.filename, None),
+            pm,
+            _fmt,
+        )
+        for index, stackFrame in enumerate(relevant_stack_frames, start=1)
+    ]
     if zoom_out > -1:
         zoomInfo = makeProgramInfo(
             notebook_call,
@@ -309,20 +320,8 @@ def notebook(
             _fmt,
             zoom_out=zoom_out,
         )
-        stack_info.append(zoomInfo)
-        # _log.warning(zoomInfo)
-    stack_info.extend(
-        [
-            makeProgramInfo(
-                stackFrame,
-                index,
-                module_sources.get(stackFrame.filename, None),
-                pm,
-                _fmt,
-            )
-            for index, stackFrame in enumerate(relevant_stack_frames, start=1)
-        ]
-    )
+        relevant_stack_frames.insert(0, notebook_call)
+        stack_info.insert(0, zoomInfo)
     if filter == []:
         module_filters = _filter
     else:

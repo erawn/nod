@@ -63,18 +63,20 @@ class NodServerFileRouteHandler(APIHandler):
         #             nodInfo,
         #         )
         #     ).decode("utf-8")
+        if os.path.exists(full_path):
+            with open(full_path, "r") as f:
+                info_str = f.read()
+                nod_info = NodInfo.from_json(info_str)
+                out = base64.b64encode(
+                    orjson.dumps(
+                        nod_info,
+                    )
+                ).decode("utf-8")
 
-        with open(full_path, "r") as f:
-            info_str = f.read()
-            nod_info = NodInfo.from_json(info_str)
-            out = base64.b64encode(
-                orjson.dumps(
-                    nod_info,
-                )
-            ).decode("utf-8")
-
-            self.finish(out)
-            return
+                self.finish(out)
+                return
+        else:
+            _log.info(f"{full_path} does not exist")
         self.finish()
 
 

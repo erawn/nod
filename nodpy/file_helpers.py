@@ -165,6 +165,7 @@ def makeProgramInfo(
     wrapper = cst.MetadataWrapper(module)
     if stackFrame.function == "<module>":
         func_head_start = 0
+        func_head_start_id = 0
         body_indent = CodeRange(
             CodePosition(0, 0),
             CodePosition(len(source_lines) + 1, 0),
@@ -175,6 +176,7 @@ def makeProgramInfo(
         _log.debug(module)
         body_indent = finder.body_indent
         func_head_start = finder.parent_pos.start.line
+        func_head_start_id = finder.parent_pos.start.line
     if zoom_out > -1:
         nodFinder = NodFinder(stackFrame.lineno, zoom_out=zoom_out)
         wrapper.visit(nodFinder)
@@ -198,7 +200,7 @@ def makeProgramInfo(
             relative_source_file=rel_source_file,
             function_name=stackFrame.function,
             function_id=FrameIdentifiers(
-                stackFrame.function, func_head_start, stackFrame.filename
+                stackFrame.function, func_head_start_id, stackFrame.filename
             ).get_id(),
             # base64.b64encode(
             #     FrameIdentifiers(stackFrame).get_id().encode("utf-8")
