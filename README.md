@@ -65,7 +65,7 @@ The left panel navigates up and down your callstack---your notebook state will s
 
 ### `zoom_out`
 
-To focus your Notebook-on-demand to a specific part of your function, call `notebook()` with the `zoom_out` parameter, set to the number of indent levels to capture. For example, this program opens an editable notebook just on the body of the `if` statement:
+To focus your Notebook-on-demand on a specific part of your code, call `notebook()` with the `zoom_out` parameter, set to the number of indent levels to capture. For example, this program opens an editable notebook just on the body of the `if` statement:
 
 ```python
 from nodpy import notebook
