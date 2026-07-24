@@ -55,7 +55,7 @@ and you'll see a Jupyter editor with the current state of your program when you 
 
 Notice above that we haven't executed `x = 1` yet, but `x` is in our kernel state, because we had defined it before we called `notebook()`. Any variable you would be able to reference in your Python program at the `notebook()` call will be available in your Jupyter session.
 
-Nod converts everything in the _current function body_ to edit. By default, empty lines are converted to cell breaks, and markdown cells are converted to comments (e.g. ##, ###).
+By default Nod converts everything in the _current function body_ to edit (see [`zoom_out`](#zoom_out) for more options). By default, empty lines are converted to cell breaks, and markdown cells are converted to comments (e.g. ##, ###).
 
 The left panel navigates up and down your callstack---your notebook state will switch automatically to the variables at that place in the program. You'll notice three buttons at the top of the left panel:
 
