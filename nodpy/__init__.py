@@ -217,14 +217,15 @@ def find_func(frame: inspect.FrameInfo, func: str):
 
 def notebook(
     filter: list[str] = [],
-    # indent: int = 1,
+    zoom_out: int = -1,
     # on_condition: bool = True,
     # deep_copy: bool = False,
 ):
     """Invoke a Jupyter Notebook at this location in the source code, with code in the same indent block being editable.
     filter:
         list of filter (as strings) to include in the trace. __main__ included by default.
-
+    zoom_out:
+        How many indent levels of code Nod should capture around notebook(). Defaults to nearest function definition, 0 is just the indent level of notebook().
 
     """
     # on_condition
@@ -270,7 +271,6 @@ def notebook(
     notebook_call_index = stack.index(notebook_call)
     if notebook_call_index + 1 > len(stack):
         raise IndexError
-    notebook_parent_frame = stack[notebook_call_index + 1]
     frozenPattern = re.compile("<frozen .*>")
     relevant_stack_frames = [
         frame
@@ -298,17 +298,31 @@ def notebook(
             except:
                 _log.info(f"Couldn't find source for {stackFrame.filename}")
                 pass
-
-    stack_info = [
-        makeProgramInfo(
-            stackFrame,
-            index,
-            module_sources.get(stackFrame.filename, None),
+    # _log.warning(module_sources)
+    stack_info = []
+    if zoom_out > -1:
+        zoomInfo = makeProgramInfo(
+            notebook_call,
+            0,
+            module_sources.get(notebook_call.filename, None),
             pm,
             _fmt,
+            zoom_out=zoom_out,
         )
-        for index, stackFrame in enumerate(relevant_stack_frames)
-    ]
+        stack_info.append(zoomInfo)
+        # _log.warning(zoomInfo)
+    stack_info.extend(
+        [
+            makeProgramInfo(
+                stackFrame,
+                index,
+                module_sources.get(stackFrame.filename, None),
+                pm,
+                _fmt,
+            )
+            for index, stackFrame in enumerate(relevant_stack_frames, start=1)
+        ]
+    )
     if filter == []:
         module_filters = _filter
     else:
