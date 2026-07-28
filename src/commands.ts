@@ -18,6 +18,7 @@ export namespace nodCommands {
   export const exportNotebook = 'nod:export';
   export const exitNotebook = 'nod:exitNotebook';
   export const toggleForExport = 'nod:toggle-for-export';
+  export const pullSourceChanges = 'nod:pullSourceChanges'
 }
 
 // namespace NotebookCommands {
@@ -125,7 +126,30 @@ export function addCommands(
       const frame = nodState.Instance().currentFrame;
       const panel = nodState.Instance().tracker.currentWidget;
       if (frame !== undefined && panel !== null) {
-        writeChange(panel, frame).then(() => {});
+        writeChange(panel, frame).then(() => { });
+      }
+    },
+    isEnabled
+  });
+  commands.addCommand(nodCommands.pullSourceChanges, {
+    label: trans.__('Pull Source Changes'),
+    describedBy: {
+      args: {
+        type: 'object',
+        properties: {
+          activate: {
+            type: 'boolean',
+            description: trans.__('Pull Source Changes')
+          }
+        }
+      }
+    },
+    execute: args => {
+      //TODO--check if this is the locked nb
+      const frame = nodState.Instance().currentFrame;
+      const panel = nodState.Instance().tracker.currentWidget;
+      if (frame !== undefined && panel !== null) {
+        writeChange(panel, frame).then(() => { });
       }
     },
     isEnabled

@@ -68,6 +68,17 @@ export class NodSidebar extends SidePanel {
       })
     );
     this.toolbar.addItem(
+      'nod-export',
+      new ToolbarButton({
+        className: 'nod-pull',
+        icon: openKernelSourceIcon,
+        onClick: (): void => {
+          nodState.Instance().app.commands.execute(nodCommands.pullSourceChanges);
+        },
+        tooltip: trans.__('Dangerously Pull Source Changes To Notebook')
+      })
+    );
+    this.toolbar.addItem(
       'nod-restart',
       new ToolbarButton({
         className: 'nod-restart',
