@@ -338,6 +338,8 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
         _log.info(f"{self.nod_cwd} CWD")
         scrubbed_kwargs = LocalProvisioner._scrub_kwargs(kwargs)
         scrubbed_kwargs.pop("cwd", None)
+        env = scrubbed_kwargs.pop("env", os.environ)
+        env.update({"NOD_RUNTIME_DIR": self.nod_cwd})
         self.python_process = launch_kernel(
             cmd,
             stdout=subprocess.PIPE,

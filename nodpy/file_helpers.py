@@ -78,7 +78,7 @@ class PathManager:
                         shutil.move(hidden_file, archive_file)
 
             if os.path.exists(self.connection_dir) and clear:
-                os.rmdir(self.connection_dir)
+                shutil.rmtree(self.connection_dir)
 
         os.makedirs(self.connection_dir, exist_ok=True)
         os.makedirs(self.notebook_checkpoints, exist_ok=True)
