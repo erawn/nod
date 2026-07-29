@@ -28,6 +28,7 @@ from subprocess import PIPE, Popen
 from nodpy.exceptions import NodException
 from nodpy.nodTypes import NodInfo
 from nodpy.serverExtension import findNodRuntimeFile
+from tornado import web
 
 _log = logging.getLogger(__name__)
 regex = re.compile(r".*kernel-(.{2,8})\.json")
@@ -304,6 +305,7 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
         return None, None
 
     def log_kernel(self):
+        found_error = ""
         if self.python_process is not None:
             stdout = self.python_process.stdout
             stderr = self.python_process.stderr
@@ -316,7 +318,10 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
                         break
                     out_lines.append(line)
                 if len(out_lines) > 0:
+                    old_level = self.log.level
+                    self.log.setLevel(logging.INFO)
                     self.log.info("".join(out_lines))
+                    self.log.setLevel(old_level)
                     # _log.info("".join(out_lines))
                 error_lines = []
                 for line in iter(stderr.readline, ""):
@@ -324,8 +329,10 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
                         break
                     error_lines.append(line)
                 if len(error_lines) > 0:
+                    found_error = "".join(error_lines)
                     self.log.error("".join(error_lines))
                     # _log.error("".join(out_lines))
+        return found_error
 
     # async def kernel_watcher(self):
     #     while True:
@@ -355,18 +362,26 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
         connection_file, pid = self.get_most_recent_connection_file(connection_dir)
         _log.info("LAUNCH KERNEL DONE")
         _log.info("looking for Nod Session...")
-        self.log_kernel()
+        found_error = self.log_kernel()
+        # tcp_error_msg = "[IPKernelApp] WARNING | Kernel is running over TCP without encryption. All communication (including code and outputs) is sent in plain text and is susceptible to eavesdropping. Use IPC transport or launch with kernel manager-provisioned CurveZMQ keys to enable transport encryption.""
         while (
             connection_file is None
             or not os.path.exists(connection_file)
             or pid is None
             or ((os.path.getmtime(connection_file) - launch_time) < -1)
             or not psutil.pid_exists(pid)
-        ):
-            self.log_kernel()
+        ) and (found_error == "" or "Traceback" not in found_error):
+            # _log.error(found_error)
+            found_error = self.log_kernel()
             connection_file, pid = self.get_most_recent_connection_file(connection_dir)
             await asyncio.sleep(0.1)
         self.connection_file = connection_file
+        if found_error != "" and "Traceback" in found_error:
+            err_message = f"Program Failed to Execute with Message: {found_error} "
+            # raise RuntimeError(err_message)
+            # self.log.debug("Bad JSON: %r", body)
+            # self.log.error("Couldn't parse JSON", exc_info=True)
+            raise web.HTTPError(400, found_error)
 
     async def launch_kernel(self, cmd, **kwargs):  # type: ignore
         _log.info(f"{self.kernel_id} PROVISIONER LAUNCH KERNEL {cmd}")

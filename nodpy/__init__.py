@@ -165,10 +165,10 @@ _dangerously_bypass_readonly: bool = False
 
 def nodConfig(
     fmt: t.Literal["light", "percent"] = "light",
-    filter: list[str] = [],
+    filter: list[str] = ["**"],
     how_restart: t.Union[t.Literal["continue"], int] = "continue",
-    dangerously_bypass_readonly: bool = False,
     notebook_on_exception=False,
+    dangerously_bypass_readonly: bool = False,
 ):
     """Configure Nod Settings
     filter: (default ['<CWD>/**'])
@@ -183,6 +183,9 @@ def nodConfig(
         "continue" returns to let the program finish, and "exit" will stop the program.
         Options: 'continue', 'exit'
 
+    notebook_on_exception: (default 'false')
+        calls notebook() on exceptions. Replaces existing exception hook when Python program is run with 'nod' from the terminal.
+
     dangerously_bypass_readonly: (default 'false')
         Once the code in associated with one stack frame in a Nod Session is edited, the others become read-only by default to prevent reaching a confusing state. Set to true to remove this safeguard, if you know what you're doing.
     """
@@ -195,11 +198,13 @@ def nodConfig(
     global _dangerously_bypass_readonly
     _dangerously_bypass_readonly = dangerously_bypass_readonly
 
-    if notebook_on_exception:
+    # print(f"setting notebook exceptionhook? {os.environ.get("NOD_RUNTIME_DIR", "")}")
+    if notebook_on_exception and os.environ.get("NOD_RUNTIME_DIR", "") != "":
 
-        def nb(type, value, tb):
-            traceback.print_exception(type, value, tb)
-            notebook()
+        def nb(type, value, tb: types.TracebackType | None):
+            if tb is not None:
+                traceback.print_exception(type, value, tb)
+                notebook(__traceback=tb)
 
         sys.excepthook = nb
 
@@ -220,6 +225,7 @@ def notebook(
     zoom_out: int = -1,
     # on_condition: bool = True,
     # deep_copy: bool = False,
+    **kwargs,
 ):
     """Invoke a Jupyter Notebook at this location in the source code, with code in the same indent block being editable.
     filter:
@@ -260,11 +266,17 @@ def notebook(
     _log.info(f"NOD_RUNTIME_DIR: {runtime_dir}")
     nod_cli_args_64 = os.environ.get("NOD_CLI_ARGS", "")
     # _log.info(f"NOD_CLI_ARGS: {nod_cli_args_64}")
-    stack = inspect.stack()
-    notebook_call = next(
-        (frame for frame in stack if find_func(frame, "notebook(")), None
-    )
 
+    tb: types.TracebackType = kwargs.get("__traceback", None)  # type: ignore
+    if tb is not None:
+        stack = inspect.getinnerframes(tb)
+        notebook_call = stack[-1]
+        # print(stack)
+    else:
+        stack = inspect.stack()
+        notebook_call = next(
+            (frame for frame in stack if find_func(frame, "notebook(")), None
+        )
     if notebook_call is None:
         raise NodException("Cannot find notebook() function call in callstack")
 

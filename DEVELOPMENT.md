@@ -38,11 +38,15 @@ Nod Tracking
   - whether we write or not
 
 TODO
-
+- full stackframes not displaying on tb hook notebook
+- add jupytext linked editing-- no just add button
+- run restarts in jupyter terminal window?
+- show if other stuff is hidden in callstack
+- show nodlogs in order 
 - path concat bug
-- figure out how to install jupyter server extension in jupyter hub
-  - https://discourse.jupyter.org/t/how-to-enable-javascript-in-jupyter-notebook/20371
-  - try to build nod from brand new template???
+- After crash can’t restart 
+- Nodlog not appearing on zoom_out window 
+- Global variables not showing in stackframe
 - test on savio and tinyhub
 - nod on exception https://ipython.readthedocs.io/en/stable/interactive/magics.html#magic-pdb
 - rename setting to "how_exit"?
@@ -54,6 +58,7 @@ TODO
   0.00s - make the debugger miss breakpoints. Please pass -Xfrozen_modules=off
   0.00s - to python to disable frozen modules.
   0.00s - Note: Debugging will proceed. Set PYDEVD_DISABLE_FILE_VALIDATION=1 to disable this validation.
+- security warning
 
 Nice to have
 
