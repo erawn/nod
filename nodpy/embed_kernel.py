@@ -455,13 +455,13 @@ class nodKernel(IPythonKernel):
                     "nod_inspect_variables",
                 )
                 if self.debugger.is_started is False:
-                    self.debugger.start()
-                #     return {
-                #         "type": "response",
-                #         "request_seq": msg["seq"],
-                #         "success": False,
-                #         "command": msg["command"],
-                #     }
+                    # self.debugger.start()
+                    return {
+                        "type": "response",
+                        "request_seq": msg["seq"],
+                        "success": False,
+                        "command": msg["command"],
+                    }
                 """Handle an inspect variables message."""
                 if self.variable_explorer is not None:
                     self.variable_explorer.untrack_all()

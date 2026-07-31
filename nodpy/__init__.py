@@ -327,7 +327,9 @@ def notebook(
             pm,
             _fmt,
         )
-        for index, stackFrame in enumerate(relevant_stack_frames, start=1)
+        for index, stackFrame in enumerate(
+            relevant_stack_frames, start=(1 if zoom_out > -1 else 0)
+        )
     ]
     if zoom_out > -1:
         zoomInfo = makeProgramInfo(
