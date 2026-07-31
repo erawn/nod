@@ -130,14 +130,16 @@ export async function studyLogSend(request: nodStudyLogRequest) {
     .getStudyLogEnabled()
     .then(async enabled => {
       if (enabled) {
-        const codeTracking = await nodState.Instance().getCodeTrackingDisabled()
+        const codeTracking = await nodState
+          .Instance()
+          .getCodeTrackingDisabled();
         if (codeTracking) {
-          request.function_id = undefined
-          request.cell = undefined
-          request.cellChangeArgs = undefined
-          request.nodInfo = undefined
-          request.var_string = undefined
-          request.varname = undefined
+          request.function_id = undefined;
+          request.cell = undefined;
+          request.cellChangeArgs = undefined;
+          request.nodInfo = undefined;
+          request.var_string = undefined;
+          request.varname = undefined;
         }
         requestAPI<any>('study_log', {
           body: JSON.stringify(request),
@@ -168,12 +170,11 @@ export async function writeChange(
       const code_tracking = await nodState.Instance().getCodeTrackingDisabled();
       let study_option;
       if (study_log && code_tracking) {
-        study_option = "usage_only"
+        study_option = 'usage_only';
       } else if (study_log && !code_tracking) {
-        study_option = "full"
-      }
-      else if (!study_log) {
-        study_option = 'none'
+        study_option = 'full';
+      } else if (!study_log) {
+        study_option = 'none';
       }
       console.debug('nb_content', nb_content);
       const dataToSend = {

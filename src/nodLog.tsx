@@ -125,20 +125,24 @@ class NodLog extends PanelWithToolbar {
       // console.log(this.model.scopes.some(scope => scope.name === function_id))
       if (!this.model.scopes.some(scope => scope.name === function_id)) {
         console.log('getting variables', function_id);
-        const variables = (await getDefinedVariables(function_id));
+        const variables = await getDefinedVariables(function_id);
         if (variables !== undefined && variables.length > 0) {
           console.log('update variables', variables);
           // variables.map(variable =>{
           //     variable.
           // })
-          variables.sort((a, b) => { return parseInt(a.evaluateName?.split('_')[1] ?? "0") - parseInt(b.evaluateName?.split('_')[1] ?? "0") })
+          variables.sort((a, b) => {
+            return (
+              parseInt(a.evaluateName?.split('_')[1] ?? '0') -
+              parseInt(b.evaluateName?.split('_')[1] ?? '0')
+            );
+          });
           const variableScopes = [
             {
               name: function_id,
               variables: variables
             }
           ];
-          variableScopes
           this.model.scopes = variableScopes;
         }
       }

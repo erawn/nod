@@ -148,16 +148,15 @@ export async function launchNodKernel(
   } catch (e: any) {
     console.log(e);
     const trans = nodState.Instance().translator.load('jupyterlab');
-    nodState.Instance().dialogID
     const idSearch = Dialog.tracker.find(
       dialog => dialog.id === nodState.Instance().dialogID
     );
     if (idSearch !== undefined) {
       idSearch.reject();
-      nodState.Instance().dialogID = ""
+      nodState.Instance().dialogID = '';
     }
     await showDialog({
-      title: trans.__("Error In Python Program \n "),
+      title: trans.__('Error In Python Program \n '),
       //If \'notebook_on_exception\' is set to \'True\', Notebook will open on error. Otherwise, restart Nod.\n "),
       body: `${e}`,
       buttons: [Dialog.okButton({ ariaLabel: trans.__('OK') })]
@@ -340,7 +339,8 @@ export async function NodRestart(): Promise<boolean> {
   if (sessionContext === undefined) {
     await showDialog({
       title: trans.__('No Nod Session To Restart!'),
-      body: trans.__("Start a Nod Session Again From the Command Line to Continue"
+      body: trans.__(
+        'Start a Nod Session Again From the Command Line to Continue'
       )
     });
     return false;
@@ -417,7 +417,7 @@ export async function NodRestart(): Promise<boolean> {
     };
     studyLogSend(data);
     try {
-      const restartPromise = sessionContext.session?.kernel?.restart();//sessionContext.restartKernel(); //TODO--let program continue?
+      const restartPromise = sessionContext.session?.kernel?.restart(); //sessionContext.restartKernel(); //TODO--let program continue?
       kernelWaitDialog();
       await restartPromise;
       console.log('POST RESTART');
@@ -427,21 +427,19 @@ export async function NodRestart(): Promise<boolean> {
     } catch (e: any) {
       console.log(e);
       const trans = nodState.Instance().translator.load('jupyterlab');
-      nodState.Instance().dialogID
       const idSearch = Dialog.tracker.find(
         dialog => dialog.id === nodState.Instance().dialogID
       );
       if (idSearch !== undefined) {
         idSearch.reject();
-        nodState.Instance().dialogID = ""
+        nodState.Instance().dialogID = '';
       }
       await showDialog({
-        title: trans.__("Error In Python Program \n "),
+        title: trans.__('Error In Python Program \n '),
         //If \'notebook_on_exception\' is set to \'True\', Notebook will open on error. Otherwise, restart Nod.\n "),
         body: `${e}`,
         buttons: [Dialog.okButton({ ariaLabel: trans.__('OK') })]
       });
-
     }
   }
   return false;
