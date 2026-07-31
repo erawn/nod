@@ -85,6 +85,7 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
         # self.log.setLevel(logging.INFO)
 
     async def poll(self):
+        self.log_kernel()
         ret = 0
         if self.python_process is not None:
             ret = self.python_process.poll()
