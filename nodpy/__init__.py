@@ -275,7 +275,8 @@ def notebook(
     tb: types.TracebackType = kwargs.get("__traceback", None)  # type: ignore
     if tb is not None:
         stack = inspect.getinnerframes(tb)
-        notebook_call = stack[-1]
+        stack.reverse()
+        notebook_call = stack[0]
         # print(stack)
     else:
         stack = inspect.stack()
