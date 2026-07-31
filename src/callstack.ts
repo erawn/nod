@@ -67,17 +67,7 @@ export class NodSidebar extends SidePanel {
         // label: trans.__('Export')
       })
     );
-    this.toolbar.addItem(
-      'nod-export',
-      new ToolbarButton({
-        className: 'nod-pull',
-        icon: openKernelSourceIcon,
-        onClick: (): void => {
-          nodState.Instance().app.commands.execute(nodCommands.pullSourceChanges);
-        },
-        tooltip: trans.__('Dangerously Pull Source Changes To Notebook')
-      })
-    );
+
     this.toolbar.addItem(
       'nod-restart',
       new ToolbarButton({
@@ -102,6 +92,7 @@ export class NodSidebar extends SidePanel {
         // label: trans.__('Exit')
       })
     );
+
 
     const model = options.model;
     const callstack = new Callstack({
@@ -171,6 +162,23 @@ export class NodSidebar extends SidePanel {
         5000
       );
     }
+    nodState.Instance().getPullChangesButton().then(result => {
+      if (result) {
+        const trans = nodState.Instance().translator.load('jupyterlab');
+        this.toolbar.addItem(
+          'nod-pull',
+          new ToolbarButton({
+            className: 'jp-nod-pullChanges',
+            icon: openKernelSourceIcon,
+            onClick: (): void => {
+              nodState.Instance().app.commands.execute(nodCommands.pullSourceChanges);
+            },
+            tooltip: trans.__('Dangerously Pull Source Changes To Notebook'),
+            iconClass: "jp-nod-pullChanges"
+          })
+        );
+      }
+    })
 
     // (function loop() {
     //   setTimeout(() => {

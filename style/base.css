@@ -15,6 +15,9 @@
 .jp-nod-Function {
   padding-top: 0;
 }
+.jp-nod-pullChanges {
+  transform: scaleX(-1);
+}
 
 .lm-Widget.jp-Cell.jp-Notebook-cell.nod-export {
   opacity: 0.5;

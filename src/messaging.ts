@@ -178,6 +178,37 @@ export async function writeChange(
         });
     });
 }
+export async function pullChange(
+  panel: NotebookPanel,
+  frame: NonNullable<nodState['currentFrame']>
+) {
+  const contentsManager = nodState.Instance().contentsManager;
+  await nodState.Instance().app.commands.execute('docmanager:save-all');
+  await contentsManager
+    .get(frame.relative_source_file, { type: 'file', format: 'text', content: true })
+    .then(async file_content => {
+      console.log(file_content)
+    })
+  // const study_log = await nodState.Instance().getStudyLogEnabled();
+  // const dataToSend = {
+  //   program_info: frame,
+  //   study_log: study_log,
+  //   key: nodState.Instance().pythonInfo?.key
+  // };
+  // console.debug('sending write request: ', dataToSend);
+  // requestAPI<any>('pull_changes', {
+  //   body: JSON.stringify(dataToSend),
+  //   method: 'POST'
+  // })
+  //   .then(reply => {
+  //     console.log('pull changes successful');
+  //   })
+  //   .catch(reason => {
+  //     console.error(
+  //       `Error on POST /nodpy/pull_changes ${dataToSend}.\n${reason}`
+  //     );
+  //   });
+}
 
 export async function getKernels(): Promise<nodSchemas | undefined> {
   // console.log('sending kernels request');

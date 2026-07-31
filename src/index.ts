@@ -13,7 +13,7 @@ import {
   Session
 } from '@jupyterlab/services';
 import { nodState } from './state';
-import { addCommands } from './commands';
+import { addCommands, nodCommands } from './commands';
 import { CodeViewers } from './codeViewers';
 import { getKernels, requestDebug, studyLogSend } from './messaging';
 import { PageConfig } from '@jupyterlab/coreutils';
@@ -23,7 +23,8 @@ import { ITranslator, nullTranslator } from '@jupyterlab/translation';
 import {
   ICommandPalette,
   ISessionContextDialogs,
-  IToolbarWidgetRegistry
+  IToolbarWidgetRegistry,
+  ToolbarButton
 } from '@jupyterlab/apputils';
 import { IConsoleTracker } from '@jupyterlab/console';
 import { INodStackFrame, nodStudyLogRequest } from './types';
@@ -42,6 +43,7 @@ import {
 import { NodLogModel, NodLogSidebar } from './nodLog';
 import { IDebugger, IDebuggerHandler } from '@jupyterlab/debugger';
 import { IRenderMimeRegistry } from '@jupyterlab/rendermime';
+import { openKernelSourceIcon } from '@jupyterlab/ui-components';
 /**
  * Initialization data for the nod extension.
  */
@@ -132,22 +134,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
         'Nod extension loaded, but not called from a nod() call, assuming existing mode'
       ); //Todo assume --existing mode
     }
-    if (settingRegistry) {
-      Promise.all([app.restored, settingRegistry.load(plugin.id)])
-        .then(([_, setting]) => {
-          const onSettingsUpdate = () => {
-            console.log('settings updated!');
-          };
-          onSettingsUpdate();
-          setting.changed.connect(onSettingsUpdate);
-        })
-        .catch(error => {
-          console.error(
-            'Failed to load notebook table of content settings.',
-            error
-          );
-        });
-    }
+
 
     if (settingRegistry) {
       settingRegistry
@@ -237,7 +224,44 @@ const plugin: JupyterFrontEndPlugin<void> = {
       type: 'Debugger',
       rank: 400
     });
-
+    if (settingRegistry) {
+      Promise.all([app.restored, settingRegistry.load(plugin.id)])
+        .then(([_, setting]) => {
+          const onSettingsUpdate = () => {
+            console.log('settings updated!');
+            state.getPullChangesButton().then(result => {
+              if (result) {
+                callstackSidebar.toolbar.addItem(
+                  'nod-pull',
+                  new ToolbarButton({
+                    className: 'jp-nod-pullChanges',
+                    icon: openKernelSourceIcon,
+                    onClick: (): void => {
+                      nodState.Instance().app.commands.execute(nodCommands.pullSourceChanges);
+                    },
+                    tooltip: trans.__('Dangerously Pull Source Changes To Notebook'),
+                    iconClass: "jp-nod-pullChanges"
+                  })
+                );
+              } else {
+                for (const child of callstackSidebar.toolbar.children()) {
+                  console.log(child)
+                  if (child.id === "nod-pull") {
+                    child.dispose()
+                  }
+                }
+              }
+            })
+          };
+          setting.changed.connect(onSettingsUpdate);
+        })
+        .catch(error => {
+          console.error(
+            'Failed to load notebook table of content settings.',
+            error
+          );
+        });
+    }
     app.started.then(() => {
       console.log('started');
       // disableKernelSwitching(sessionContextDialogs, toolbarRegistry);

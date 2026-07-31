@@ -1,7 +1,7 @@
 import { IMainMenu } from '@jupyterlab/mainmenu';
 import { ITranslator } from '@jupyterlab/translation';
 import { nodState } from './state';
-import { exitSession, writeChange } from './messaging';
+import { exitSession, pullChange, writeChange } from './messaging';
 import { ICommandPalette, showDialog, Dialog } from '@jupyterlab/apputils';
 import { IConsoleTracker } from '@jupyterlab/console';
 import { checkIcon } from '@jupyterlab/ui-components';
@@ -149,7 +149,7 @@ export function addCommands(
       const frame = nodState.Instance().currentFrame;
       const panel = nodState.Instance().tracker.currentWidget;
       if (frame !== undefined && panel !== null) {
-        writeChange(panel, frame).then(() => { });
+        pullChange(panel, frame).then(() => { });
       }
     },
     isEnabled

@@ -228,7 +228,7 @@ class ExistingKernelsRouteHandler(APIHandler):
         )
 
 
-class WriteFileRouteHandler(APIHandler):
+class PullChangesRouteHandler(APIHandler):
 
     @tornado.web.authenticated
     def post(self):
@@ -249,6 +249,60 @@ class WriteFileRouteHandler(APIHandler):
                     )
                     if not study_log(log_entry):
                         _log.error("failed to study log write request")
+                decoded_content = base64.b64decode(request.notebookContent).decode(
+                    "utf-8"
+                )
+                _log.debug(decoded_content)
+                nb = jupytext.reads(decoded_content, "ipynb")
+                _log.debug("NB")
+                _log.info(nb)
+                nb_content_to_write = jupytext.writes(
+                    nb, fmt=long_form_one_format(f"py:{request.program_info.fmt}")
+                )
+                _log.info(nb_content_to_write)
+                fileInfo = request.program_info.file_info
+                if fileInfo is not None:
+                    file_content = (
+                        fileInfo.text_above
+                        + fileInfo.text_header
+                        + textwrap.indent(
+                            nb_content_to_write,
+                            " " * fileInfo.indent,
+                        ).splitlines(True)
+                        + fileInfo.text_below
+                    )
+                    _log.info(file_content)
+                    with open(request.program_info.source_file, "w") as f:
+                        f.writelines(file_content)
+
+        except Exception as e:
+            self.log.debug("Bad JSON: %r", body)
+            self.log.error("Couldn't parse JSON", exc_info=True)
+            raise web.HTTPError(400, "Invalid JSON in body of request") from e
+        self.finish()
+
+
+class WriteFileRouteHandler(APIHandler):
+
+    @tornado.web.authenticated
+    def post(self):
+        # input_data is a dictionary with a key "name"
+        # Do we need to call body.decode('utf-8') here?
+        body = self.request.body.strip().decode("utf-8")
+        try:
+            _log.info("RECEIVED WRITE REQUEST")
+            json_load = json.loads(body)
+            # _log.info(json_load)
+            with warnings.catch_warnings(action="ignore"):
+                request = writeRequest.from_dict(json_load)
+                _log.info("REQUEST")
+                _log.debug(request)
+                # if request.study_log:
+                #     log_entry = nodStudyLogRequest(
+                #         "write_request", writeRequest=request, key=request.key
+                #     )
+                #     if not study_log(log_entry):
+                #         _log.error("failed to study log write request")
                 decoded_content = base64.b64decode(request.notebookContent).decode(
                     "utf-8"
                 )
@@ -303,12 +357,14 @@ class Nod(ExtensionApp):
         write_file_route_pattern = url_path_join(base_url, "nodpy", "write_file")
         get_file_route_pattern = url_path_join(base_url, "nodpy", "file")
         study_log_route_pattern = url_path_join(base_url, "nodpy", "study_log")
+        pull_changes_route_pattern = url_path_join(base_url, "nodpy", "pull_changes")
 
         handlers = [
             (study_log_route_pattern, NodStudyLogHandler),
             (get_file_route_pattern, NodServerFileRouteHandler),
             (nod_route_pattern, ExistingKernelsRouteHandler),
             (write_file_route_pattern, WriteFileRouteHandler),
+            (pull_changes_route_pattern, PullChangesRouteHandler),
         ]
         self.handlers.extend(handlers)
         host_pattern = ".*$"
