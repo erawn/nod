@@ -109,6 +109,9 @@ if DEBUG:
 
 _nod_log: dict[str, dict[str, t.Any]] = {}
 _nod_log_id_to_func: dict[str, str] = {}
+_nod_log_id_to_time: dict[str, float] = {}
+
+_nod_log_count = 0
 
 
 def nodLog(*args):
@@ -142,7 +145,9 @@ def nodLog(*args):
     # )
     function_id = frame_id.get_id()
     argnames = t.cast(tuple[ArgSourceType], argname("args"))
-    entry_id = "nl_" + uuid.uuid4().hex
+    global _nod_log_count
+    entry_id = "nl_" + str(_nod_log_count) + "_" + uuid.uuid4().hex
+    _nod_log_count += 1
     variables: dict[str, t.Any] = {}
     for name, val in zip(argnames, args):
         try:
@@ -158,17 +163,17 @@ def nodLog(*args):
 
 
 _fmt: t.Literal["light", "percent"] = "light"
-_filter: list[str] = [os.getcwd() + "/**"]
+_filter: list[str] = ["**"]
 _how_restart: t.Union[t.Literal["continue"], int] = "continue"
 _dangerously_bypass_readonly: bool = False
 
 
 def nodConfig(
     fmt: t.Literal["light", "percent"] = "light",
-    filter: list[str] = [],
+    filter: list[str] = ["**"],
     how_restart: t.Union[t.Literal["continue"], int] = "continue",
-    dangerously_bypass_readonly: bool = False,
     notebook_on_exception=False,
+    dangerously_bypass_readonly: bool = False,
 ):
     """Configure Nod Settings
     filter: (default ['<CWD>/**'])
@@ -183,6 +188,9 @@ def nodConfig(
         "continue" returns to let the program finish, and "exit" will stop the program.
         Options: 'continue', 'exit'
 
+    notebook_on_exception: (default 'false')
+        calls notebook() on exceptions. Replaces existing exception hook when Python program is run with 'nod' from the terminal.
+
     dangerously_bypass_readonly: (default 'false')
         Once the code in associated with one stack frame in a Nod Session is edited, the others become read-only by default to prevent reaching a confusing state. Set to true to remove this safeguard, if you know what you're doing.
     """
@@ -195,11 +203,13 @@ def nodConfig(
     global _dangerously_bypass_readonly
     _dangerously_bypass_readonly = dangerously_bypass_readonly
 
-    if notebook_on_exception:
+    # print(f"setting notebook exceptionhook? {os.environ.get("NOD_RUNTIME_DIR", "")}")
+    if notebook_on_exception and os.environ.get("NOD_RUNTIME_DIR", "") != "":
 
-        def nb(type, value, tb):
-            traceback.print_exception(type, value, tb)
-            notebook()
+        def nb(type, value, tb: types.TracebackType | None):
+            if tb is not None:
+                traceback.print_exception(type, value, tb)
+                notebook(__traceback=tb)
 
         sys.excepthook = nb
 
@@ -220,6 +230,7 @@ def notebook(
     zoom_out: int = -1,
     # on_condition: bool = True,
     # deep_copy: bool = False,
+    **kwargs,
 ):
     """Invoke a Jupyter Notebook at this location in the source code, with code in the same indent block being editable.
     filter:
@@ -260,11 +271,18 @@ def notebook(
     _log.info(f"NOD_RUNTIME_DIR: {runtime_dir}")
     nod_cli_args_64 = os.environ.get("NOD_CLI_ARGS", "")
     # _log.info(f"NOD_CLI_ARGS: {nod_cli_args_64}")
-    stack = inspect.stack()
-    notebook_call = next(
-        (frame for frame in stack if find_func(frame, "notebook(")), None
-    )
 
+    tb: types.TracebackType = kwargs.get("__traceback", None)  # type: ignore
+    if tb is not None:
+        stack = inspect.getinnerframes(tb)
+        stack.reverse()
+        notebook_call = stack[0]
+        # print(stack)
+    else:
+        stack = inspect.stack()
+        notebook_call = next(
+            (frame for frame in stack if find_func(frame, "notebook(")), None
+        )
     if notebook_call is None:
         raise NodException("Cannot find notebook() function call in callstack")
 
@@ -299,7 +317,20 @@ def notebook(
                 _log.info(f"Couldn't find source for {stackFrame.filename}")
                 pass
     # _log.warning(module_sources)
-    stack_info = []
+
+    # _log.warning(zoomInfo)
+    stack_info = [
+        makeProgramInfo(
+            stackFrame,
+            index,
+            module_sources.get(stackFrame.filename, None),
+            pm,
+            _fmt,
+        )
+        for index, stackFrame in enumerate(
+            relevant_stack_frames, start=(1 if zoom_out > -1 else 0)
+        )
+    ]
     if zoom_out > -1:
         zoomInfo = makeProgramInfo(
             notebook_call,
@@ -309,20 +340,8 @@ def notebook(
             _fmt,
             zoom_out=zoom_out,
         )
-        stack_info.append(zoomInfo)
-        # _log.warning(zoomInfo)
-    stack_info.extend(
-        [
-            makeProgramInfo(
-                stackFrame,
-                index,
-                module_sources.get(stackFrame.filename, None),
-                pm,
-                _fmt,
-            )
-            for index, stackFrame in enumerate(relevant_stack_frames, start=1)
-        ]
-    )
+        relevant_stack_frames.insert(0, notebook_call)
+        stack_info.insert(0, zoomInfo)
     if filter == []:
         module_filters = _filter
     else:

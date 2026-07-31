@@ -63,18 +63,20 @@ class NodServerFileRouteHandler(APIHandler):
         #             nodInfo,
         #         )
         #     ).decode("utf-8")
+        if os.path.exists(full_path):
+            with open(full_path, "r") as f:
+                info_str = f.read()
+                nod_info = NodInfo.from_json(info_str)
+                out = base64.b64encode(
+                    orjson.dumps(
+                        nod_info,
+                    )
+                ).decode("utf-8")
 
-        with open(full_path, "r") as f:
-            info_str = f.read()
-            nod_info = NodInfo.from_json(info_str)
-            out = base64.b64encode(
-                orjson.dumps(
-                    nod_info,
-                )
-            ).decode("utf-8")
-
-            self.finish(out)
-            return
+                self.finish(out)
+                return
+        else:
+            _log.info(f"{full_path} does not exist")
         self.finish()
 
 
@@ -241,10 +243,14 @@ class WriteFileRouteHandler(APIHandler):
                 request = writeRequest.from_dict(json_load)
                 _log.info("REQUEST")
                 _log.debug(request)
-                if request.study_log:
+                if request.study_log == "full":
                     log_entry = nodStudyLogRequest(
                         "write_request", writeRequest=request, key=request.key
                     )
+                    if not study_log(log_entry):
+                        _log.error("failed to study log write request")
+                elif request.study_log == "usage_only":
+                    log_entry = nodStudyLogRequest("write_request", key=request.key)
                     if not study_log(log_entry):
                         _log.error("failed to study log write request")
                 decoded_content = base64.b64decode(request.notebookContent).decode(

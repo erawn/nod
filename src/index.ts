@@ -461,13 +461,15 @@ const plugin: JupyterFrontEndPlugin<void> = {
 
       const notebookFile = state.currentFrame?.file_info?.notebook_file;
       if (notebookFile !== undefined) {
-        openNotebookWithNodKernel(notebookFile, docManager).then(() => {
-          requestDebug('nod_switch', { stackIndex: frameNum });
+        openNotebookWithNodKernel(notebookFile, docManager).then(async () => {
+          console.log('nod switch', frameNum);
+          await requestDebug('nod_switch', { stackIndex: frameNum })?.done;
           const function_id = state.currentFrame?.function_id;
           if (function_id !== undefined) {
             nodLogSidebar.log.updateVariables(function_id);
             nodLogSidebar.update();
           }
+          nodLogSidebar.variables.update();
           const data: nodStudyLogRequest = {
             kind: 'navigate_stackframe',
             function_id: function_id,

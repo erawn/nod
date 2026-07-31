@@ -91,7 +91,7 @@ class NodConnectionInfo(DataClassJsonMixin):
 class writeRequest(DataClassJsonMixin):
     program_info: ProgramInfo
     notebookContent: str
-    study_log: bool = False
+    study_log: t.Literal["none", "full", "usage_only"] = "none"
     key: str = ""
 
 

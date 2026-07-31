@@ -145,8 +145,23 @@ export async function launchNodKernel(
 
     // }
     // launching = false;
-  } catch (e) {
+  } catch (e: any) {
     console.log(e);
+    const trans = nodState.Instance().translator.load('jupyterlab');
+    const idSearch = Dialog.tracker.find(
+      dialog => dialog.id === nodState.Instance().dialogID
+    );
+    if (idSearch !== undefined) {
+      idSearch.reject();
+      nodState.Instance().dialogID = '';
+    }
+    await showDialog({
+      title: trans.__('Error In Python Program \n '),
+      //If \'notebook_on_exception\' is set to \'True\', Notebook will open on error. Otherwise, restart Nod.\n "),
+      body: `${e}`,
+      buttons: [Dialog.okButton({ ariaLabel: trans.__('OK') })]
+    });
+
     return undefined;
   }
   // }
@@ -318,12 +333,19 @@ export async function restart(
 export async function NodRestart(): Promise<boolean> {
   // sessionContext: ISessionContext,
   // restartOptions?: ISessionContext.IRestartOptions
+  const trans = nodState.Instance().translator.load('jupyterlab');
   const sessionContext =
     nodState.Instance().tracker.currentWidget?.sessionContext;
   if (sessionContext === undefined) {
+    await showDialog({
+      title: trans.__('No Nod Session To Restart!'),
+      body: trans.__(
+        'Start a Nod Session Again From the Command Line to Continue'
+      )
+    });
     return false;
   }
-  const trans = nodState.Instance().translator.load('jupyterlab');
+
   const kernel = sessionContext.session?.kernel;
   console.log('NOD RESTART', kernel?.name);
   if (!kernel && sessionContext.prevKernelName) {
@@ -394,13 +416,31 @@ export async function NodRestart(): Promise<boolean> {
       key: nodState.Instance().pythonInfo?.key ?? ''
     };
     studyLogSend(data);
-    const restartPromise = sessionContext.restartKernel(); //TODO--let program continue?
-    kernelWaitDialog();
-    await restartPromise;
-    console.log('POST RESTART');
-    state.unlock();
-    checkKernelStatus();
-    return true;
+    try {
+      const restartPromise = sessionContext.session?.kernel?.restart(); //sessionContext.restartKernel(); //TODO--let program continue?
+      kernelWaitDialog();
+      await restartPromise;
+      console.log('POST RESTART');
+      state.unlock();
+      checkKernelStatus();
+      return true;
+    } catch (e: any) {
+      console.log(e);
+      const trans = nodState.Instance().translator.load('jupyterlab');
+      const idSearch = Dialog.tracker.find(
+        dialog => dialog.id === nodState.Instance().dialogID
+      );
+      if (idSearch !== undefined) {
+        idSearch.reject();
+        nodState.Instance().dialogID = '';
+      }
+      await showDialog({
+        title: trans.__('Error In Python Program \n '),
+        //If \'notebook_on_exception\' is set to \'True\', Notebook will open on error. Otherwise, restart Nod.\n "),
+        body: `${e}`,
+        buttons: [Dialog.okButton({ ariaLabel: trans.__('OK') })]
+      });
+    }
   }
   return false;
 }

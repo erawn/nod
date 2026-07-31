@@ -289,11 +289,21 @@ class nodKernel(IPythonKernel):
         # return
 
     async def do_debug_request(self, msg):
+
+        debugger = t.cast(Debugger, self.debugger)
         _log.info(f"debug request { msg}")
         _log.info(f"_is_debugpy_available { _is_debugpy_available}")
-        debugger = t.cast(Debugger, self.debugger)
+        _log.info(f"is debugger active { self.debugger.is_started}")
+
         match msg["command"]:
             case "nod_switch":
+                if self.debugger.is_started is False:
+                    return {
+                        "type": "response",
+                        "request_seq": msg["seq"],
+                        "success": False,
+                        "command": msg["command"],
+                    }
                 if hasattr(self, "relevant_stack_frames"):
                     self.relevant_stack_frames = cast(
                         List[FrameInfo], self.relevant_stack_frames  # type: ignore
@@ -305,6 +315,7 @@ class nodKernel(IPythonKernel):
                         self.shell.user_ns.update(newStackFrame.frame.f_locals)
                         self.shell.user_global_ns.update(newStackFrame.frame.f_globals)
                         self.shell.user_ns_hidden.update(newStackFrame.frame.f_builtins)
+                        _log.warning(f"nod_switch {stackIndex}, {newStackFrame}")
                     return {
                         "type": "response",
                         "request_seq": msg["seq"],
@@ -313,6 +324,13 @@ class nodKernel(IPythonKernel):
                     }
             case "nod_log_push":
                 _log.info(f"Kernel: Nod Log Push: {msg}")
+                if self.debugger.is_started is False:
+                    return {
+                        "type": "response",
+                        "request_seq": msg["seq"],
+                        "success": False,
+                        "command": msg["command"],
+                    }
                 if (
                     self.variable_explorer is not None
                     and self.variable_explorer.frame is not None
@@ -406,6 +424,13 @@ class nodKernel(IPythonKernel):
                 }
             case "nod_variables":
                 """Handle a variables message."""
+                if self.debugger.is_started is False:
+                    return {
+                        "type": "response",
+                        "request_seq": msg["seq"],
+                        "success": False,
+                        "command": msg["command"],
+                    }
                 reply = {}
                 # if not self.stopped_threads:
                 if self.variable_explorer is not None:
@@ -426,6 +451,17 @@ class nodKernel(IPythonKernel):
                         ]
                     return debugger._build_variables_response(msg, variables)
             case "nod_inspect_variables":
+                _log.info(
+                    "nod_inspect_variables",
+                )
+                if self.debugger.is_started is False:
+                    # self.debugger.start()
+                    return {
+                        "type": "response",
+                        "request_seq": msg["seq"],
+                        "success": False,
+                        "command": msg["command"],
+                    }
                 """Handle an inspect variables message."""
                 if self.variable_explorer is not None:
                     self.variable_explorer.untrack_all()
@@ -439,7 +475,7 @@ class nodKernel(IPythonKernel):
                 )
                 self.variable_explorer.track()
                 variables = self.variable_explorer.get_children_variables()
-                _log.info(variables)
+                _log.info(f"variables {variables}")
                 formatted_variables = []
                 for variable in variables:
                     var_ref = variable.get("variablesReference")
@@ -450,7 +486,7 @@ class nodKernel(IPythonKernel):
                         child_variables = [
                             c
                             for c in children
-                            if c.get("name")
+                            if c.get("name", None)
                             not in [
                                 "special variables",
                                 "function variables",
@@ -467,9 +503,18 @@ class nodKernel(IPythonKernel):
                             variable["name"] = new_name
                             formatted_variables.append(variable)
                 _log.info(f"formatted variables: {formatted_variables}")
-                return debugger._build_variables_response(msg, formatted_variables)
+                response = debugger._build_variables_response(msg, formatted_variables)
+                # _embed_log.info(response)
+                return response
 
             case "nod_inspect_rich_variable":
+                if self.debugger.is_started is False:
+                    return {
+                        "type": "response",
+                        "request_seq": msg["seq"],
+                        "success": False,
+                        "command": msg["command"],
+                    }
                 """Handle a rich inspect variables message."""
                 reply = {
                     "type": "response",
