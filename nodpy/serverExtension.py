@@ -243,10 +243,14 @@ class WriteFileRouteHandler(APIHandler):
                 request = writeRequest.from_dict(json_load)
                 _log.info("REQUEST")
                 _log.debug(request)
-                if request.study_log:
+                if request.study_log == "full":
                     log_entry = nodStudyLogRequest(
                         "write_request", writeRequest=request, key=request.key
                     )
+                    if not study_log(log_entry):
+                        _log.error("failed to study log write request")
+                elif request.study_log == "usage_only":
+                    log_entry = nodStudyLogRequest("write_request", key=request.key)
                     if not study_log(log_entry):
                         _log.error("failed to study log write request")
                 decoded_content = base64.b64decode(request.notebookContent).decode(

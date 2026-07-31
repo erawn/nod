@@ -34,6 +34,12 @@
       "title": "Enable Study Logger?",
       "description": "If participating in the Nod study, check this box to generate usage logs. Logs are stored in a /nod_study/ folder in your Jupyter config directory. To find this directory, run 'jupyter --paths' in a terminal and look under 'config'",
       "default": false
+    },
+    "disableCodeTracking": {
+      "type": "boolean",
+      "title": "Disable Code Tracking",
+      "description": "If Enabled, Study Logger will only record anonymous usage data.",
+      "default": false
     }
   },
   "additionalProperties": false

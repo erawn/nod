@@ -39,7 +39,9 @@ Nod Tracking
 
 TODO
 - full stackframes not displaying on tb hook notebook
-- add jupytext linked editing-- no just add button
+
+
+- just add button to pull changes
 - run restarts in jupyter terminal window?
 - show if other stuff is hidden in callstack
 - show nodlogs in order 

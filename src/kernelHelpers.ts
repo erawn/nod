@@ -157,7 +157,8 @@ export async function launchNodKernel(
       nodState.Instance().dialogID = ""
     }
     await showDialog({
-      title: trans.__('Error In Python Program \n If \'notebook_on_exception\' is set to \'True\', Notebook will open on error. Otherwise, restart Nod.\n'),
+      title: trans.__("Error In Python Program \n "),
+      //If \'notebook_on_exception\' is set to \'True\', Notebook will open on error. Otherwise, restart Nod.\n "),
       body: `${e}`,
       buttons: [Dialog.okButton({ ariaLabel: trans.__('OK') })]
     });
@@ -435,7 +436,8 @@ export async function NodRestart(): Promise<boolean> {
         nodState.Instance().dialogID = ""
       }
       await showDialog({
-        title: trans.__('Error In Python Program \n If \'notebook_on_exception\' is set to \'True\', Notebook will open on error. Otherwise, restart Nod.\n'),
+        title: trans.__("Error In Python Program \n "),
+        //If \'notebook_on_exception\' is set to \'True\', Notebook will open on error. Otherwise, restart Nod.\n "),
         body: `${e}`,
         buttons: [Dialog.okButton({ ariaLabel: trans.__('OK') })]
       });

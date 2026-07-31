@@ -381,6 +381,8 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
             # raise RuntimeError(err_message)
             # self.log.debug("Bad JSON: %r", body)
             # self.log.error("Couldn't parse JSON", exc_info=True)
+            # km: KernelManager = self.parent  # type: ignore
+            # km.parent
             raise web.HTTPError(400, found_error)
 
     async def launch_kernel(self, cmd, **kwargs):  # type: ignore
@@ -402,6 +404,7 @@ class NodProvisioner(KernelProvisionerBase, metaclass=NodProvisionerMeta):
                 self.kernel_process = psutil.Process(info.kernel_pid)
                 self.python_process = None
                 km: KernelManager = self.parent  # type: ignore
+                km.parent
                 _log.info(f"Mode : {self.mode}")
                 if km and self.mode != "non_existing":
                     km.autorestart = False
