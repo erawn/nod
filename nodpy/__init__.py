@@ -109,6 +109,9 @@ if DEBUG:
 
 _nod_log: dict[str, dict[str, t.Any]] = {}
 _nod_log_id_to_func: dict[str, str] = {}
+_nod_log_id_to_time: dict[str, float] = {}
+
+_nod_log_count = 0
 
 
 def nodLog(*args):
@@ -142,7 +145,9 @@ def nodLog(*args):
     # )
     function_id = frame_id.get_id()
     argnames = t.cast(tuple[ArgSourceType], argname("args"))
-    entry_id = "nl_" + uuid.uuid4().hex
+    global _nod_log_count
+    entry_id = "nl_" + str(_nod_log_count) + "_" + uuid.uuid4().hex
+    _nod_log_count += 1
     variables: dict[str, t.Any] = {}
     for name, val in zip(argnames, args):
         try:
