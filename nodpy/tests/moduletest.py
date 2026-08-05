@@ -1,10 +1,19 @@
 from nodpy import notebook, nodLog
 
 
-def f():
+def f(x):
+
     for i in range(10):
         nodLog(i)
-    notebook()
+    
+# # execute notebook when $i = 8$
+    
+        if i == 8:
+            notebook()
 
 
-f()
+def g():
+    f(10)
+
+
+g()
