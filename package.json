@@ -1,6 +1,6 @@
 {
     "name": "nod",
-    "version": "0.4.8",
+    "version": "0.4.9",
     "description": "Put a Notebook Anywhere",
     "keywords": [
         "jupyter",
@@ -34,8 +34,9 @@
         "fullbuild": "jupyter-builder develop . --overwrite && jupyter server extension enable nodpy && jlpm build",
         "build": "jlpm build:lib && jlpm build:labextension:dev",
         "build:prod": "jlpm clean && jlpm build:lib:prod && jlpm build:labextension",
-        "build:labextension": "jupyter labextension build .",
-        "build:labextension:dev": "jupyter labextension build --development True .",
+        "build:labextension": "jupyter-builder build .",
+        "build:labextension:dev": "jupyter-builder build --development True .",
+        "watch:labextension": "jupyter-builder watch .",
         "build:lib": "tsc --sourceMap",
         "build:lib:prod": "tsc",
         "clean": "jlpm clean:lib",
@@ -55,8 +56,7 @@
         "stylelint:check": "stylelint --cache \"style/**/*.css\"",
         "test": "jest --coverage",
         "watch": "run-p watch:src watch:labextension",
-        "watch:src": "tsc -w --sourceMap",
-        "watch:labextension": "jupyter labextension watch ."
+        "watch:src": "tsc -w --sourceMap"
     },
     "dependencies": {
         "@jupyter/react-components": "^0.16.0",
@@ -96,8 +96,8 @@
     },
     "devDependencies": {
         "@eslint/js": "^9.0.0",
+        "@jupyter/builder": "^1.0.0",
         "@jupyter/eslint-plugin": "^0.0.5",
-        "@jupyterlab/builder": "^4.0.0",
         "@jupyterlab/testutils": "^4.0.0",
         "@types/jest": "^29.2.0",
         "@types/json-schema": "^7.0.11",
