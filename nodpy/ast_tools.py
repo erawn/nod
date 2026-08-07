@@ -5,7 +5,11 @@ from typing import List, Optional, Sequence, Union, Tuple
 import libcst as cst
 from libcst.display import dump
 import libcst.matchers as m
-from libcst.metadata import PositionProvider, ParentNodeProvider
+from libcst.metadata import (
+    PositionProvider,
+    ParentNodeProvider,
+    WhitespaceInclusivePositionProvider,
+)
 from libcst.metadata import CodePosition, CodeRange
 
 _log = logging.getLogger(__name__)
@@ -16,10 +20,12 @@ class FunctionFinder(m.MatcherDecoratableTransformer):
     METADATA_DEPENDENCIES = (
         ParentNodeProvider,
         PositionProvider,
+        WhitespaceInclusivePositionProvider,
     )
     parent_node: cst.CSTNode
     parent_pos: CodeRange
     body_indent: CodeRange
+    body_indent_whitespace: CodeRange
     target_function: str
 
     def __init__(self, target_function: str, line_no: int):
@@ -32,12 +38,18 @@ class FunctionFinder(m.MatcherDecoratableTransformer):
     def visit_function(self, node: cst.FunctionDef):
         if m.matches(node, m.FunctionDef(m.Name(self.target_function))):
             body_indent = self.get_metadata(PositionProvider, node.body)
-            if isinstance(body_indent, CodeRange):
+            body_indent_whitespace = self.get_metadata(
+                WhitespaceInclusivePositionProvider, node.body
+            )
+            if isinstance(body_indent, CodeRange) and isinstance(
+                body_indent_whitespace, CodeRange
+            ):
                 if (
                     body_indent.start.line <= self.line_no
                     and body_indent.end.line >= self.line_no
                 ):
                     self.body_indent = body_indent
+                    self.body_indent_whitespace = body_indent_whitespace
                     self.parent_node = node
                     parent_pos = self.get_metadata(PositionProvider, node)
                     if isinstance(parent_pos, CodeRange):
@@ -48,17 +60,20 @@ class NodFinder(m.MatcherDecoratableTransformer):
     METADATA_DEPENDENCIES = (
         ParentNodeProvider,
         PositionProvider,
+        WhitespaceInclusivePositionProvider,
     )
     parent_node: cst.CSTNode
     parent_pos: CodeRange
     body_indent: CodeRange
+    body_indent_whitespace: CodeRange
     indent_block: cst.IndentedBlock | None
     indent_pos: CodeRange | None
+    indent_pos_whitespace: CodeRange | None
 
     def __init__(self, lineno: int, zoom_out: int):
         super(__class__, self).__init__()  # type: ignore
         self.lineno = lineno
-        self.indent_stack: List[Tuple[cst.IndentedBlock, CodeRange]] = []
+        self.indent_stack: List[Tuple[cst.IndentedBlock, CodeRange, CodeRange]] = []
         self.def_stack: List[cst.FunctionDef] = []
         self.zoom_out = zoom_out
 
@@ -81,8 +96,14 @@ class NodFinder(m.MatcherDecoratableTransformer):
                     parent_node = self.get_metadata(ParentNodeProvider, indent_block)
                     if isinstance(parent_node, cst.CSTNode):
                         body_indent = self.get_metadata(PositionProvider, indent_block)
-                        if isinstance(body_indent, CodeRange):
+                        body_indent_whitespace = self.get_metadata(
+                            WhitespaceInclusivePositionProvider, indent_block
+                        )
+                        if isinstance(body_indent, CodeRange) and isinstance(
+                            body_indent_whitespace, CodeRange
+                        ):
                             self.body_indent = body_indent
+                            self.body_indent_whitespace = body_indent_whitespace
                             self.parent_node = parent_node
                             parent_pos = self.get_metadata(
                                 PositionProvider, parent_node
@@ -96,6 +117,7 @@ class NodFinder(m.MatcherDecoratableTransformer):
                         stack_entry = self.indent_stack[-1 * (self.zoom_out + 1)]
                         self.indent_block = stack_entry[0]
                         self.indent_pos = stack_entry[1]
+                        self.indent_pos_whitespace = stack_entry[2]
                         # _log.warning(
                         #     f"indent_block: {self.indent_block}, {self.indent_pos}"
                         # )
@@ -105,9 +127,18 @@ class NodFinder(m.MatcherDecoratableTransformer):
 
     def visit_IndentedBlock(self, node):
         indent_pos = self.get_metadata(PositionProvider, node)
-        if isinstance(indent_pos, CodeRange):
+        indent_pos_whitespace = self.get_metadata(
+            WhitespaceInclusivePositionProvider, node
+        )
+        if isinstance(indent_pos, CodeRange) and isinstance(
+            indent_pos_whitespace, CodeRange
+        ):
             self.indent_stack.append(
-                (cst.ensure_type(node, cst.IndentedBlock), indent_pos)
+                (
+                    cst.ensure_type(node, cst.IndentedBlock),
+                    indent_pos,
+                    indent_pos_whitespace,
+                )
             )
 
     def leave_IndentedBlock(self, original_node, updated_node):
