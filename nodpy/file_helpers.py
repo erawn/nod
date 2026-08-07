@@ -166,15 +166,27 @@ def makeProgramInfo(
     if stackFrame.function == "<module>":
         func_head_start = 0
         func_head_start_id = 0
+        func_body_start = 0
+        func_end = len(source_lines) + 1
         body_indent = CodeRange(
+            CodePosition(0, 0),
+            CodePosition(len(source_lines) + 1, 0),
+        )
+        body_indent_whitespace = CodeRange(
             CodePosition(0, 0),
             CodePosition(len(source_lines) + 1, 0),
         )
     else:
         finder = FunctionFinder(stackFrame.function, stackFrame.lineno)
         module = wrapper.visit(finder)
-        _log.debug(module)
+        # _log.info(module)
         body_indent = finder.body_indent
+        func_body_start = finder.body_indent_whitespace.start.line + 1
+        while source_lines[max(func_body_start - 1, 0)] == "\n":
+            func_body_start += 1
+        func_end = finder.body_indent_whitespace.end.line - 1
+        while source_lines[min(func_end - 1, len(source_lines) - 1)] == "\n":
+            func_end -= 1
         func_head_start = finder.parent_pos.start.line
         func_head_start_id = finder.parent_pos.start.line
     if zoom_out > -1:
@@ -183,15 +195,25 @@ def makeProgramInfo(
         if (
             nodFinder.indent_block is not None
             and nodFinder.indent_pos is not None
+            and nodFinder.indent_pos_whitespace is not None
             and nodFinder.indent_pos.start.line >= body_indent.start.line
             and nodFinder.indent_pos.end.line <= body_indent.end.line
         ):
             body_indent = nodFinder.indent_pos
-            func_head_start = nodFinder.indent_pos.start.line
+            func_body_start = nodFinder.indent_pos_whitespace.start.line + 1
+            while source_lines[max(func_body_start - 1, 0)] == "\n":
+                func_body_start += 1
+            # func_body_start = nodFinder.indent_pos.start.line
+            func_end = nodFinder.indent_pos.end.line
+            func_head_start = func_body_start
+            _log.info(f"Zoom Out = {zoom_out}")
+            _log.info(nodFinder.indent_pos_whitespace)
     indent = body_indent.start.column
-    func_body_start = body_indent.start.line
-    func_end = body_indent.end.line
 
+    _log.info(
+        f"indent = {indent}, func_body_start = {func_body_start}, func_end = {func_end}"
+    )
+    _log.info(body_indent)
     return writeNotebook(
         ProgramInfo(
             index=index,
@@ -208,13 +230,27 @@ def makeProgramInfo(
             frame_xml=list(stackFrame.frame.f_locals.keys()),
             fmt=fmt,
             file_info=FileInfo(
-                function_body_position=body_indent,
+                function_body_position=CodeRange(
+                    CodePosition(
+                        func_body_start,
+                        body_indent.start.column,
+                    ),
+                    CodePosition(
+                        func_end,
+                        body_indent.start.column,
+                    ),
+                ),
                 indent=indent,
                 text_header=source_lines[
                     max(func_head_start - 1, 0) : max(func_body_start - 1, 0)
                 ],
                 text_body=[
-                    line[indent:] if line[:indent] == """ """ * indent else line
+                    (
+                        line[indent:]
+                        if line[:indent] == """ """ * indent
+                        # else line.lstrip() if line.lstrip().startswith("#")
+                        else line
+                    )
                     for line in source_lines[max(func_body_start - 1, 0) : func_end]
                 ],
                 text_above=source_lines[0 : max(func_head_start - 1, 0)],

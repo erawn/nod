@@ -272,7 +272,7 @@ class WriteFileRouteHandler(APIHandler):
                         + textwrap.indent(
                             nb_content_to_write,
                             " " * fileInfo.indent,
-                            lambda x: not x.startswith("#"),
+                            # lambda x: not x.startswith("#"),
                         ).splitlines(True)
                         + fileInfo.text_below
                     )
