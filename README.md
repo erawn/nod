@@ -27,7 +27,7 @@ If you run into a `nod: command not found` error , try installing in a [virtual 
 
 Interested in using Nod? Try it out for 3-6 weeks and chat with me about it! Participants recieve a gift card of \$50-\$100 (depending on how much time we chat for). All the details are in the [Sign Up Form](https://forms.gle/mDhWRuZwCBkG9TdE8).
 
-My name is Eric Rawn. I'm a PhD Student at UC Berkeley. To build the best system I can (and do some research along the way), I want to see how folks are using Nod in their own work, and I'd really love your insight! If you decide to participate, the extension will log some usage data locally on your machine, which you'll send to me manually at the end of the study. We'll have a few conversations about your experience with the extension and the kind of work you do.
+My name is Eric Rawn. I'm a PhD Student at UC Berkeley. To build the best system I can (and do some research along the way), I want to see how folks are using Nod in their own work, and I'd really love your insight! If you decide to participate you'll just use Nod in your own work for a few weeks as its useful. We'll have a few conversations about your experience with the tool and the kind of programming you do.
 
 If you have any questions at all, send me an email at erawn@berkeley.edu, and feel free to send this page to anyone you think might be interested! Thanks so much!
 
