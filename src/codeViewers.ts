@@ -27,7 +27,7 @@ const NOD_FUNC_CLASS = 'jp-nod-Function';
 
 function addCodeViewers(panel: NotebookPanel) {
   const innerPanel = panel.node.getElementsByClassName(
-    'jp-WindowedPanel-inner'
+    'jp-WindowedPanel-viewport'
   )[0] as HTMLElement;
   const parentNode = innerPanel.parentElement;
   const currentFrame = nodState.Instance().getFrameFromPath(panel.context.path);
@@ -43,16 +43,32 @@ function addCodeViewers(panel: NotebookPanel) {
 
     if (parentNode) {
       if (panel.isAttached) {
-        Widget.attach(header, parentNode, innerPanel);
-        Widget.attach(func, parentNode, innerPanel);
-        Widget.attach(footer, parentNode);
+        let ref = panel.content.viewportNode.children[0];
+        header.processMessage(Widget.Msg.BeforeAttach)
+        func.processMessage(Widget.Msg.BeforeAttach)
+        footer.processMessage(Widget.Msg.BeforeAttach)
+        panel.content.viewportNode.insertBefore(header.node, ref)
+        panel.content.viewportNode.insertBefore(func.node, ref)
+        panel.content.viewportNode.appendChild(footer.node)
+        header.processMessage(Widget.Msg.AfterAttach)
+        func.processMessage(Widget.Msg.AfterAttach)
+        footer.processMessage(Widget.Msg.AfterAttach)
       } else {
         panel.revealed.then(() => {
-          Widget.attach(header, parentNode, innerPanel);
-          Widget.attach(func, parentNode, innerPanel);
-          Widget.attach(footer, parentNode);
+          let ref = panel.content.viewportNode.children[0];
+          header.processMessage(Widget.Msg.BeforeAttach)
+          func.processMessage(Widget.Msg.BeforeAttach)
+          footer.processMessage(Widget.Msg.BeforeAttach)
+          panel.content.viewportNode.insertBefore(header.node, ref)
+          panel.content.viewportNode.insertBefore(func.node, ref)
+          panel.content.viewportNode.appendChild(footer.node)
+          header.processMessage(Widget.Msg.AfterAttach)
+          func.processMessage(Widget.Msg.AfterAttach)
+          footer.processMessage(Widget.Msg.AfterAttach)
         });
       }
+      panel.update()
+      panel.content.update()
     }
     return [header, footer, func];
   }
@@ -99,7 +115,7 @@ export function makeCodeViewer(
   switch (className) {
     case NOD_HEADER_CLASS: {
       const text_above = currentFrame.file_info.text_above;
-      source = text_above.slice(-10).join('').split('\\n').join('\n');
+      source = text_above.join('').split('\\n').join('\n');
       if (source.startsWith('\n')) {
         source = source.slice(source.indexOf('\n'));
       }
