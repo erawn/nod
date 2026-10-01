@@ -24,8 +24,11 @@ export async function openNotebookWithNodKernel(
 
   await state.app.serviceManager.kernels.refreshRunning();
   const nodKernelId = await getNodKernel();
-  console.log("finding notebook:", notebookFile)
-  state.tracker.forEach(panel => { console.log(panel.context.sessionContext.path); console.log(panel.context.sessionContext.path === notebookFile) })
+  console.log('finding notebook:', notebookFile);
+  state.tracker.forEach(panel => {
+    console.log(panel.context.sessionContext.path);
+    console.log(panel.context.sessionContext.path === notebookFile);
+  });
   const existingNotebook = state.tracker.find(
     panel => panel.context.sessionContext.path === normalized
   );
@@ -33,14 +36,17 @@ export async function openNotebookWithNodKernel(
   const newNotebook = docManager.openOrReveal(normalized, 'default', {
     name: 'nod',
     id: nodKernelId
-  })
+  });
   if (existingNotebook) {
     console.log('Existing Notebook with Path', existingNotebook);
   } else {
-
     newNotebook?.revealed.then(() => {
-      nodState.Instance().tracker.currentWidget?.content.activeCell!.node.scrollIntoView({ block: 'center' })
-    })
+      nodState
+        .Instance()
+        .tracker.currentWidget?.content.activeCell!.node.scrollIntoView({
+          block: 'center'
+        });
+    });
   }
 }
 export async function getNodKernel(): Promise<string | undefined> {

@@ -14,10 +14,10 @@ import {
 } from '@jupyterlab/cells';
 import { nodState } from './state';
 import { NotebookPanel, INotebookModel } from '@jupyterlab/notebook';
-import { Widget } from '@lumino/widgets';
 import { IDisposable, DisposableDelegate } from '@lumino/disposable';
 import { DocumentRegistry } from '@jupyterlab/docregistry';
 import { hasFileInfo } from './types';
+import { Widget } from '@lumino/widgets';
 // const INPUT_AREA_CLASS = 'jp-InputArea';
 // const INPUT_AREA_EDITOR_CLASS = 'jp-InputArea-editor';
 const NOD_VIEWER_CLASS = 'jp-nod-viewer';
@@ -27,7 +27,7 @@ const NOD_FUNC_CLASS = 'jp-nod-Function';
 
 function addCodeViewers(panel: NotebookPanel) {
   const innerPanel = panel.node.getElementsByClassName(
-    'jp-WindowedPanel-viewport'
+    'jp-WindowedPanel-inner'
   )[0] as HTMLElement;
   const parentNode = innerPanel.parentElement;
   const currentFrame = nodState.Instance().getFrameFromPath(panel.context.path);
@@ -43,32 +43,36 @@ function addCodeViewers(panel: NotebookPanel) {
 
     if (parentNode) {
       if (panel.isAttached) {
-        let ref = panel.content.viewportNode.children[0];
-        header.processMessage(Widget.Msg.BeforeAttach)
-        func.processMessage(Widget.Msg.BeforeAttach)
-        footer.processMessage(Widget.Msg.BeforeAttach)
-        panel.content.viewportNode.insertBefore(header.node, ref)
-        panel.content.viewportNode.insertBefore(func.node, ref)
-        panel.content.viewportNode.appendChild(footer.node)
-        header.processMessage(Widget.Msg.AfterAttach)
-        func.processMessage(Widget.Msg.AfterAttach)
-        footer.processMessage(Widget.Msg.AfterAttach)
+        const ref = panel.content.viewportNode.children[0] as HTMLElement;
+        header.processMessage(Widget.Msg.BeforeAttach);
+        func.processMessage(Widget.Msg.BeforeAttach);
+        footer.processMessage(Widget.Msg.BeforeAttach);
+        panel.content.viewportNode.insertBefore(header.node, ref);
+        panel.content.viewportNode.insertBefore(func.node, ref);
+        Widget.attach(footer, parentNode);
+        header.node.dataset.windowedListIndex = `-1`;
+        func.node.dataset.windowedListIndex = `-1`;
+        footer.node.dataset.windowedListIndex = `-1`;
+        header.processMessage(Widget.Msg.AfterAttach);
+        func.processMessage(Widget.Msg.AfterAttach);
+        footer.processMessage(Widget.Msg.AfterAttach);
       } else {
         panel.revealed.then(() => {
-          let ref = panel.content.viewportNode.children[0];
-          header.processMessage(Widget.Msg.BeforeAttach)
-          func.processMessage(Widget.Msg.BeforeAttach)
-          footer.processMessage(Widget.Msg.BeforeAttach)
-          panel.content.viewportNode.insertBefore(header.node, ref)
-          panel.content.viewportNode.insertBefore(func.node, ref)
-          panel.content.viewportNode.appendChild(footer.node)
-          header.processMessage(Widget.Msg.AfterAttach)
-          func.processMessage(Widget.Msg.AfterAttach)
-          footer.processMessage(Widget.Msg.AfterAttach)
+          const ref = panel.content.viewportNode.children[0] as HTMLElement;
+          header.processMessage(Widget.Msg.BeforeAttach);
+          func.processMessage(Widget.Msg.BeforeAttach);
+          footer.processMessage(Widget.Msg.BeforeAttach);
+          panel.content.viewportNode.insertBefore(header.node, ref);
+          panel.content.viewportNode.insertBefore(func.node, ref);
+          Widget.attach(footer, parentNode);
+          header.node.dataset.windowedListIndex = `-1`;
+          func.node.dataset.windowedListIndex = `-1`;
+          footer.node.dataset.windowedListIndex = `-1`;
+          header.processMessage(Widget.Msg.AfterAttach);
+          func.processMessage(Widget.Msg.AfterAttach);
+          footer.processMessage(Widget.Msg.AfterAttach);
         });
       }
-      panel.update()
-      panel.content.update()
     }
     return [header, footer, func];
   }
