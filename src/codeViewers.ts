@@ -14,10 +14,10 @@ import {
 } from '@jupyterlab/cells';
 import { nodState } from './state';
 import { NotebookPanel, INotebookModel } from '@jupyterlab/notebook';
-import { Widget } from '@lumino/widgets';
 import { IDisposable, DisposableDelegate } from '@lumino/disposable';
 import { DocumentRegistry } from '@jupyterlab/docregistry';
 import { hasFileInfo } from './types';
+import { Widget } from '@lumino/widgets';
 // const INPUT_AREA_CLASS = 'jp-InputArea';
 // const INPUT_AREA_EDITOR_CLASS = 'jp-InputArea-editor';
 const NOD_VIEWER_CLASS = 'jp-nod-viewer';
@@ -43,14 +43,34 @@ function addCodeViewers(panel: NotebookPanel) {
 
     if (parentNode) {
       if (panel.isAttached) {
-        Widget.attach(header, parentNode, innerPanel);
-        Widget.attach(func, parentNode, innerPanel);
+        const ref = panel.content.viewportNode.children[0] as HTMLElement;
+        header.processMessage(Widget.Msg.BeforeAttach);
+        func.processMessage(Widget.Msg.BeforeAttach);
+        footer.processMessage(Widget.Msg.BeforeAttach);
+        panel.content.viewportNode.insertBefore(header.node, ref);
+        panel.content.viewportNode.insertBefore(func.node, ref);
         Widget.attach(footer, parentNode);
+        header.node.dataset.windowedListIndex = `-1`;
+        func.node.dataset.windowedListIndex = `-1`;
+        footer.node.dataset.windowedListIndex = `-1`;
+        header.processMessage(Widget.Msg.AfterAttach);
+        func.processMessage(Widget.Msg.AfterAttach);
+        footer.processMessage(Widget.Msg.AfterAttach);
       } else {
         panel.revealed.then(() => {
-          Widget.attach(header, parentNode, innerPanel);
-          Widget.attach(func, parentNode, innerPanel);
+          const ref = panel.content.viewportNode.children[0] as HTMLElement;
+          header.processMessage(Widget.Msg.BeforeAttach);
+          func.processMessage(Widget.Msg.BeforeAttach);
+          footer.processMessage(Widget.Msg.BeforeAttach);
+          panel.content.viewportNode.insertBefore(header.node, ref);
+          panel.content.viewportNode.insertBefore(func.node, ref);
           Widget.attach(footer, parentNode);
+          header.node.dataset.windowedListIndex = `-1`;
+          func.node.dataset.windowedListIndex = `-1`;
+          footer.node.dataset.windowedListIndex = `-1`;
+          header.processMessage(Widget.Msg.AfterAttach);
+          func.processMessage(Widget.Msg.AfterAttach);
+          footer.processMessage(Widget.Msg.AfterAttach);
         });
       }
     }
@@ -99,7 +119,7 @@ export function makeCodeViewer(
   switch (className) {
     case NOD_HEADER_CLASS: {
       const text_above = currentFrame.file_info.text_above;
-      source = text_above.slice(-10).join('').split('\\n').join('\n');
+      source = text_above.join('').split('\\n').join('\n');
       if (source.startsWith('\n')) {
         source = source.slice(source.indexOf('\n'));
       }

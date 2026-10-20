@@ -21,24 +21,16 @@ NODCONFIG
 
 - add restart time to nodConfig? (hmm maybe)
 
-Nod Tracking
-
-- set tracking where?
-
-- notebook()
-  - NodInfo (but with code transformed)
-  - NodLog (but with code transformed)
-- write request
-  - Program info before (but with code transformed)
-  - Program info after (but with code transformed)
-- execute cell
-- navigate stackframe
-- save notebook
-- restart
-  - whether we write or not
 
 TODO
-
+- dont change cwd
+- quit if program finishes without calling notebook?
+— display all code above 
+— Highlight editable code on the scrollbar 
+— Bash command issue 
+— Multiple Nod instances 
+— Modules not available higher up in call stack? 
+- Nod log — quotes around variable name 
 - add dependency for ipython
 - path concat bug
 - run restarts in jupyter terminal window?
@@ -62,7 +54,7 @@ TODO
   0.00s - Note: Debugging will proceed. Set PYDEVD_DISABLE_FILE_VALIDATION=1 to disable this validation.
 
 Nice to have
-
+- edit function arguments
 - persist lock through reload?
 - - clear old kernels from jupyter (get shutdown registering properly??)
     - layoutrestorer, restorablepool

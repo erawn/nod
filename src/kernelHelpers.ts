@@ -24,29 +24,28 @@ export async function openNotebookWithNodKernel(
 
   await state.app.serviceManager.kernels.refreshRunning();
   const nodKernelId = await getNodKernel();
-
+  console.log('finding notebook:', notebookFile);
+  state.tracker.forEach(panel => {
+    console.log(panel.context.sessionContext.path);
+    console.log(panel.context.sessionContext.path === notebookFile);
+  });
   const existingNotebook = state.tracker.find(
-    panel => panel.context.sessionContext.path === notebookFile
+    panel => panel.context.sessionContext.path === normalized
   );
+  console.log('opening', normalized, nodKernelId);
+  const newNotebook = docManager.openOrReveal(normalized, 'default', {
+    name: 'nod',
+    id: nodKernelId
+  });
   if (existingNotebook) {
     console.log('Existing Notebook with Path', existingNotebook);
-    existingNotebook.sessionContext.kernelPreference = {
-      // autoStartDefault: false,
-      name: 'nod',
-      id: nodKernelId,
-      shutdownOnDispose: false
-    };
-    state.app.shell.activateById(existingNotebook.id);
-    // state.sessionManager.connectTo
-    existingNotebook.context.sessionContext.changeKernel({
-      name: 'nod',
-      id: state.nodKernelId
-    });
   } else {
-    console.log('opening', normalized, nodKernelId);
-    docManager.openOrReveal(normalized, 'default', {
-      name: 'nod',
-      id: nodKernelId
+    newNotebook?.revealed.then(() => {
+      nodState
+        .Instance()
+        .tracker.currentWidget?.content.activeCell!.node.scrollIntoView({
+          block: 'center'
+        });
     });
   }
 }
